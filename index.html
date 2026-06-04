@@ -1033,7 +1033,7 @@ async function sendToBackend(){
   document.getElementById('chat-box').scrollTop = 99999;
 
   try {
-    const res  = await fetch('http://localhost:5000/chat', {
+    const res = await fetch('https://cyberguru-ai.onrender.com/chat', {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify({ message })

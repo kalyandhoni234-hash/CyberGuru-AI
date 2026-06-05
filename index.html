@@ -1027,10 +1027,7 @@ if(file){
 
     const formData = new FormData();
 
-    formData.append(
-        "file",
-        file
-    );
+    formData.append("file", file);
 
     const res = await fetch(
         "https://cyberguru-ai.onrender.com/analyze-file",
@@ -1042,7 +1039,10 @@ if(file){
 
     const data = await res.json();
 
-    console.log(data);
+    appendMessage(
+        "bot",
+        data.reply
+    );
 
     return;
 }

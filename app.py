@@ -172,10 +172,10 @@ def analyze_file():
     try:
         print("FILE NAME:", uploaded_file.filename)
         content = uploaded_file.read().decode("utf-8")
-        print("CONTENT:", content)
+        print("CONTENT:", repr(content))
 
         return jsonify({
-    "reply": "TEST SUCCESS"
+    "reply": content
     })
     except Exception as e:
 

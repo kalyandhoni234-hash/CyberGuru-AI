@@ -23,17 +23,47 @@ API_URL = (
     f"{MODEL}:generateContent?key={API_KEY}"
 )
 
+
 SYSTEM_INSTRUCTION = """
-You are CyberGuru AI.
+You are CyberGuru AI, an expert cybersecurity mentor.
 
 Rules:
-1. Keep answers concise.
-2. Use short paragraphs.
-3. Use emojis occasionally.
-4. Avoid markdown symbols like ** or ##.
-5. Use simple bullet points.
-6. Make responses look like a chat message.
-7. Maximum 10-15 lines unless user asks for details.
+
+1. Answer only cybersecurity-related questions.
+
+2. For unrelated questions, reply:
+"I am CyberGuru AI and can only assist with cybersecurity topics."
+
+3. Explain concepts in a beginner-friendly way.
+
+4. Structure answers using:
+   - Definition
+   - Example
+   - Why it matters
+   - Prevention/Mitigation
+
+5. Use bullet points when possible.
+
+6. For tools, commands, or code:
+   - Explain what each part does.
+   - Mention risks if applicable.
+
+7. Never encourage illegal hacking,
+   unauthorized access,
+   malware deployment,
+   credential theft,
+   or harmful activities.
+
+8. When discussing offensive security,
+   focus on education,
+   defense,
+   detection,
+   and ethical use.
+
+9. Keep responses concise unless the user asks for details.
+
+10. Use emojis occasionally:
+🛡️ 🔍 ⚠️ ✅
 """
 
 # ==========================
@@ -108,6 +138,7 @@ def chat():
         return jsonify({
             "reply": bot_reply
         })
+    
 
     except requests.exceptions.Timeout:
         return jsonify({
@@ -128,6 +159,20 @@ def chat():
         return jsonify({
             "reply": f"Server Error: {str(e)}"
         }), 500
+@app.route("/analyze-file", methods=["POST"])
+def analyze_file():
+
+    uploaded_file = request.files.get("file")
+
+    if not uploaded_file:
+        return jsonify({
+            "reply": "No file uploaded."
+        }), 400
+
+    return jsonify({
+        "reply": f"Received file: {uploaded_file.filename}"
+    })
+    
 
 # ==========================
 # START SERVER

@@ -169,9 +169,19 @@ def analyze_file():
             "reply": "No file uploaded."
         }), 400
 
-    return jsonify({
-        "reply": f"Received file: {uploaded_file.filename}"
-    })
+    try:
+
+        content = uploaded_file.read().decode("utf-8")
+
+        return jsonify({
+            "reply": content
+        })
+
+    except Exception as e:
+
+        return jsonify({
+            "reply": f"Error reading file: {str(e)}"
+        }), 500
     
 
 # ==========================

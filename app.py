@@ -4,13 +4,14 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 
+
+print("RUNNING FILE:", __file__)
 app = Flask(__name__)
 CORS(app)
 
 # ==========================
 # CONFIGURATION
 # ==========================
-
 
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
@@ -22,7 +23,6 @@ API_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/"
     f"{MODEL}:generateContent?key={API_KEY}"
 )
-
 
 SYSTEM_INSTRUCTION = """
 You are CyberGuru AI, an expert cybersecurity mentor.
@@ -70,12 +70,14 @@ Rules:
 # HEALTH CHECK ROUTE
 # ==========================
 
+
 @app.route("/", methods=["GET"])
-def home():
-    return jsonify({
-        "status": "running",
-        "message": "Cybersecurity Chatbot Backend is Online"
-    })
+def index():
+    return jsonify({"message": "CyberGuru AI is running 🛡️"}), 200@app.route("/health", methods=["GET"])
+
+def health():
+    return jsonify({"status": "ok"}), 200
+
 
 # ==========================
 # CHAT ROUTE
@@ -85,36 +87,22 @@ def home():
 def chat():
     try:
         data = request.get_json()
-
-        if not data:
-            return jsonify({
-                "reply": "No JSON data received."
-            }), 400
-
         user_message = data.get("message", "").strip()
 
+        # Validate empty message
         if not user_message:
-            return jsonify({
-                "reply": "Please enter a message."
-            }), 400
+            return jsonify({"reply": "Please enter a message."}), 400
 
         payload = {
+            "system_instruction": {
+                "parts": [{"text": SYSTEM_INSTRUCTION}]
+            },
             "contents": [
                 {
-                    "parts": [
-                        {
-                            "text": user_message
-                        }
-                    ]
+                    "role": "user",
+                    "parts": [{"text": user_message}]
                 }
-            ],
-            "systemInstruction": {
-                "parts": [
-                    {
-                        "text": SYSTEM_INSTRUCTION
-                    }
-                ]
-            }
+            ]
         }
 
         response = requests.post(
@@ -128,13 +116,22 @@ def chat():
 
         try:
             response.raise_for_status()
-        except requests.exceptions.HTTPError:
-            print("Status:", response.status_code)
-        print("Body:", response.text)
 
-        return {
-        "reply": "⚠️ AI service temporarily unavailable. Please try again."
-    }
+        except requests.exceptions.HTTPError:
+
+            if response.status_code == 429:
+                return jsonify({
+                    "reply": "⚠️ Gemini rate limit reached. Please wait a minute and try again."
+                })
+
+            elif response.status_code >= 500:
+                return jsonify({
+                    "reply": "⚠️ Gemini service is currently unavailable."
+                })
+
+            return jsonify({
+                "reply": "⚠️ An unexpected API error occurred."
+            })
 
         response_data = response.json()
 
@@ -143,54 +140,95 @@ def chat():
             ["content"]["parts"][0]["text"]
         )
 
-        return jsonify({
-            "reply": bot_reply
-        })
-    
+        return jsonify({"reply": bot_reply})
 
     except requests.exceptions.Timeout:
-        return jsonify({
-            "reply": "Request timed out."
-        }), 500
+        return jsonify({"reply": "Request timed out."}), 500
 
-    except requests.exceptions.RequestException as e:
-        return jsonify({
-            "reply": f"API Request Error: {str(e)}"
-        }), 500
+    except requests.exceptions.RequestException:
+        return jsonify({"reply": "⚠️ Unable to reach Gemini API."}), 500
 
     except KeyError:
-        return jsonify({
-            "reply": "Unexpected response format from Gemini API."
-        }), 500
+        return jsonify({"reply": "Unexpected response format from Gemini API."}), 500
 
     except Exception as e:
-        return jsonify({
-            "reply": f"Server Error: {str(e)}"
-        }), 500
+        return jsonify({"reply": f"Server Error: {str(e)}"}), 500
+
+
+# ==========================
+# ANALYZE FILE ROUTE
+# ==========================
+
 @app.route("/analyze-file", methods=["POST"])
 def analyze_file():
-
     uploaded_file = request.files.get("file")
 
     if not uploaded_file:
-        return jsonify({
-            "reply": "No file uploaded."
-        }), 400
+        return jsonify({"reply": "No file uploaded."}), 400
 
     try:
         print("FILE NAME:", uploaded_file.filename)
         content = uploaded_file.read().decode("utf-8")
         print("CONTENT:", repr(content))
 
-        return jsonify({
-    "reply": content
-    })
-    except Exception as e:
+        # Send file content to Gemini for cybersecurity analysis
+        payload = {
+            "system_instruction": {
+                "parts": [{"text": SYSTEM_INSTRUCTION}]
+            },
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "text": (
+                                f"Analyze the following file content for cybersecurity issues, "
+                                f"vulnerabilities, or suspicious patterns. "
+                                f"File name: {uploaded_file.filename}\n\n"
+                                f"File content:\n{content}"
+                            )
+                        }
+                    ]
+                }
+            ]
+        }
 
+        response = requests.post(
+            API_URL,
+            json=payload,
+            timeout=30
+        )
+
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            if response.status_code == 429:
+                return jsonify({
+                    "reply": "⚠️ Gemini rate limit reached. Please wait a minute and try again."
+                })
+            elif response.status_code >= 500:
+                return jsonify({
+                    "reply": "⚠️ Gemini service is currently unavailable."
+                })
+            return jsonify({"reply": "⚠️ An unexpected API error occurred."})
+
+        response_data = response.json()
+
+        bot_reply = (
+            response_data["candidates"][0]
+            ["content"]["parts"][0]["text"]
+        )
+
+        return jsonify({"reply": bot_reply})
+
+    except UnicodeDecodeError:
         return jsonify({
-            "reply": f"Error reading file: {str(e)}"
-        }), 500
-    
+            "reply": "⚠️ Could not read file. Only plain text files (e.g. .txt, .py, .js, .log) are supported."
+        }), 400
+
+    except Exception as e:
+        return jsonify({"reply": f"Error reading file: {str(e)}"}), 500
+
 
 # ==========================
 # START SERVER
@@ -200,5 +238,5 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=5000,
-        debug=True
+        debug=False  # Set to True only during local development
     )

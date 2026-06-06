@@ -980,6 +980,7 @@ function loadTheme(){
 /* ─── GLOBALS ──────────────────────────────────────────────── */
 const STORAGE_KEY = 'cybguru_chats_v1';
 const ACTIVE_KEY  = 'cybguru_active_v1';
+const API_BASE    = 'http://localhost:5000';   // ← change to your deployed URL when hosting
 
 let chats        = {};   // { id: { title, msgs:[] } }
 let activeChatId = null;
@@ -1189,44 +1190,60 @@ function suggest(text){
 async function sendToBackend(){
   if(isThinking) return;
 
-  const inputEl = document.getElementById('user-input');
-  const message = inputEl.value.trim();
-  const file =
-document.getElementById("fileInput").files[0];
-if(file){
+  const inputEl  = document.getElementById('user-input');
+  const message  = inputEl.value.trim();
+  const fileInput = document.getElementById('fileInput');
+  const file      = fileInput.files[0];
 
-    const formData = new FormData();
-
-    formData.append("file", file);
-
-    const res = await fetch(
-        "https://cyberguru-ai.onrender.com/analyze-file",
-        {
-            method:"POST",
-            body:formData
-        }
-    );
-
-    const data = await res.json();
-    console.log("FILE RESPONSE:", data);
-
-    appendMessage(
-        "bot",
-        data.reply
-    );
-  document.getElementById("fileInput").value = "";
-    return;
-}
-
-if(file){
-    console.log("Selected file:", file.name);
-}
   if(!message && !file) return;
 
   inputEl.value = '';
   autoResize(inputEl);
   isThinking = true;
 
+  // ── FILE UPLOAD PATH ──────────────────────────────────────
+  if(file){
+    // Show user message with filename
+    const userLabel = `📎 Analyzing file: ${file.name}`;
+    if(!activeChatId){
+      activeChatId = 'chat_' + Date.now();
+      chats[activeChatId] = { title: userLabel.slice(0,40) + '…', msgs:[] };
+      localStorage.setItem(ACTIVE_KEY, activeChatId);
+    }
+    chats[activeChatId].msgs.push({ role:'user', text:userLabel });
+    saveToStorage();
+    renderHistoryList();
+    appendMessage('user', userLabel);
+
+    const typer = document.getElementById('typing-indicator');
+    typer.style.display = 'block';
+    document.getElementById('chat-box').scrollTop = 99999;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res  = await fetch(`${API_BASE}/analyze-file`, { method:'POST', body:formData });
+      const data = await res.json();
+      typer.style.display = 'none';
+      const reply = data.reply || '⚠️ Empty response from server.';
+      chats[activeChatId].msgs.push({ role:'bot', text:reply });
+      saveToStorage();
+      appendMessage('bot', reply);
+    } catch(err){
+      typer.style.display = 'none';
+      const errMsg = '❌ Could not reach the Flask backend. Make sure it\'s running on localhost:5000.';
+      chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
+      saveToStorage();
+      appendMessage('bot', errMsg);
+    }
+
+    fileInput.value = '';
+    isThinking = false;
+    return;
+  }
+
+  // ── TEXT CHAT PATH ────────────────────────────────────────
   // Create a new chat session if needed
   if(!activeChatId){
     activeChatId = 'chat_' + Date.now();
@@ -1246,7 +1263,7 @@ if(file){
   document.getElementById('chat-box').scrollTop = 99999;
 
   try {
-    const res = await fetch('https://cyberguru-ai.onrender.com/chat', {
+    const res  = await fetch(`${API_BASE}/chat`, {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify({ message })
@@ -1259,7 +1276,7 @@ if(file){
     appendMessage('bot', reply);
   } catch(err){
     typer.style.display = 'none';
-    const errMsg = '❌ Could not reach the Flask backend. Make sure it\'s running on `localhost:5000`.';
+    const errMsg = '❌ Could not reach the Flask backend. Make sure it\'s running on localhost:5000.';
     chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
     saveToStorage();
     appendMessage('bot', errMsg);

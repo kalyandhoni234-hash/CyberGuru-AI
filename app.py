@@ -126,7 +126,15 @@ def chat():
         print("Status Code:", response.status_code)
         print("Response:", response.text)
 
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            print("Status:", response.status_code)
+        print("Body:", response.text)
+
+        return {
+        "reply": "⚠️ AI service temporarily unavailable. Please try again."
+    }
 
         response_data = response.json()
 

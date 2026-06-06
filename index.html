@@ -647,6 +647,111 @@ body::before {
   margin-left:auto;
   margin-right:auto;
 }
+/* ============================= */
+/* CYBER BLUE (DEFAULT) */
+/* ============================= */
+
+body.cyber-theme {
+  --bg-void:      #050a14;
+  --bg-deep:      #080f1e;
+  --bg-panel:     #0d1526;
+  --bg-card:      #111d33;
+  --bg-hover:     #162040;
+  --bg-input:     #0d1828;
+
+  --border:       rgba(56,189,248,.12);
+  --border-bright:rgba(56,189,248,.3);
+
+  --cyan:   #38bdf8;
+  --blue:   #3b82f6;
+  --teal:   #06b6d4;
+  --accent: #0ea5e9;
+
+  --text-primary:   #e2eaf8;
+  --text-secondary: #8facc8;
+  --text-muted:     #4a6580;
+}
+
+/* ============================= */
+/* HACKER GREEN */
+/* ============================= */
+
+body.hacker-theme {
+  --bg-void:      #020402;
+  --bg-deep:      #071107;
+  --bg-panel:     #0b160b;
+  --bg-card:      #102010;
+  --bg-hover:     #173117;
+  --bg-input:     #091509;
+
+  --border:       rgba(0,255,136,.12);
+  --border-bright:rgba(0,255,136,.35);
+
+  --cyan:   #00ff88;
+  --blue:   #00ff88;
+  --teal:   #00cc66;
+  --accent: #00ff88;
+
+  --text-primary:   #d8ffe8;
+  --text-secondary: #8de6b1;
+  --text-muted:     #4e8a64;
+}
+
+/* ============================= */
+/* LIGHT MODE */
+/* ============================= */
+
+body.light-theme {
+  --bg-void:      #ffffff;
+  --bg-deep:      #f4f7fb;
+  --bg-panel:     #ffffff;
+  --bg-card:      #f8fafc;
+  --bg-hover:     #eef2f7;
+  --bg-input:     #ffffff;
+
+  --border:       rgba(0,0,0,.08);
+  --border-bright:rgba(0,0,0,.2);
+
+  --cyan:   #2563eb;
+  --blue:   #2563eb;
+  --teal:   #0891b2;
+  --accent: #2563eb;
+
+  --text-primary:   #111827;
+  --text-secondary: #4b5563;
+  --text-muted:     #6b7280;
+}
+
+/* ============================= */
+/* THEME BUTTONS */
+/* ============================= */
+
+.theme-switcher{
+  display:flex;
+  gap:8px;
+}
+
+.theme-switcher button{
+  width:36px;
+  height:36px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:16px;
+
+  background:var(--bg-card);
+  color:var(--text-primary);
+
+  border:1px solid var(--border);
+
+  transition:.25s;
+}
+
+.theme-switcher button:hover{
+  transform:translateY(-2px);
+  border-color:var(--border-bright);
+  box-shadow:0 0 12px rgba(56,189,248,.25);
+}
 
 /* ─── ANIMATIONS ─────────────────────────────────────────────── */
 @keyframes fadeUp {
@@ -681,6 +786,28 @@ body::before {
   .suggest-grid { grid-template-columns:1fr; }
   #topbar { padding:0 16px; }
   #typing-indicator { padding:16px 18px; }
+}
+.typing-cursor{
+    display: inline-block;
+    margin-left: 2px;
+    font-weight: bold;
+    color: var(--cyan);
+
+    text-shadow:
+        0 0 4px var(--cyan),
+        0 0 8px var(--cyan);
+
+    animation: cursorBlink 0.8s infinite;
+}
+
+@keyframes cursorBlink{
+    0%, 50%{
+        opacity: 1;
+    }
+
+    51%, 100%{
+        opacity: 0;
+    }
 }
 
 </style>
@@ -733,6 +860,11 @@ body::before {
       </svg>
     </button>
     <div id="topbar-title">CyberGuru <span>AI</span></div>
+    <div class="theme-switcher">
+  <button onclick="setTheme('cyber')">🌙</button>
+  <button onclick="setTheme('hacker')">💚</button>
+  <button onclick="setTheme('light')">☀️</button>
+</div>
     <div class="topbar-spacer"></div>
     
   </div>
@@ -776,10 +908,10 @@ body::before {
     <div class="typing-inner">
       <div class="typing-avatar">🛡️</div>
       <div class="typing-bubble">
-        <span class="typing-label">CyberGuru is thinking</span>
-        <div class="typing-dots">
-          <span></span><span></span><span></span>
-        </div>
+  <span class="typing-label">
+    CyberGuru is thinking<span class="typing-cursor">█</span>
+  </span>
+        
       </div>
     </div>
   </div>
@@ -813,6 +945,37 @@ body::before {
 </div><!-- /#main -->
 
 <script>
+  
+  function setTheme(theme) {
+
+    document.body.classList.remove(
+        "cyber-theme",
+        "hacker-theme",
+        "light-theme"
+    );
+
+    if(theme === "cyber"){
+        document.body.classList.add("cyber-theme");
+    }
+
+    if(theme === "hacker"){
+        document.body.classList.add("hacker-theme");
+    }
+
+    if(theme === "light"){
+        document.body.classList.add("light-theme");
+    }
+
+    localStorage.setItem("cyberguru_theme", theme);
+}
+
+function loadTheme(){
+
+    const savedTheme =
+        localStorage.getItem("cyberguru_theme") || "cyber";
+
+    setTheme(savedTheme);
+}
 
 /* ─── GLOBALS ──────────────────────────────────────────────── */
 const STORAGE_KEY = 'cybguru_chats_v1';
@@ -824,9 +987,13 @@ let isThinking   = false;
 
 /* ─── INIT ─────────────────────────────────────────────────── */
 (function init(){
+
+  loadTheme();
+
   loadFromStorage();
+
   renderHistoryList();
-  
+
 })();
 
 /* ─── STORAGE ──────────────────────────────────────────────── */
@@ -899,6 +1066,8 @@ function loadChat(id, closeMenu = true){
 
   if(closeMenu && window.innerWidth <= 768) closeSidebar();
 }
+
+
 
 /* ─── APPEND MESSAGE ───────────────────────────────────────── */
 function appendMessage(role, text, scroll = true){
@@ -1014,6 +1183,7 @@ function suggest(text){
   document.getElementById('user-input').value = text;
   sendToBackend();
 }
+
 
 /* ─── SEND ─────────────────────────────────────────────────── */
 async function sendToBackend(){

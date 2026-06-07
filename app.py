@@ -74,13 +74,17 @@ Rules:
 
 from flask import Flask, send_from_directory, jsonify
 
-@app.route('/')
-def index():
-    return send_from_directory('.', 'index.html')
 
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({"status": "ok"}), 200
+
+@app.route("/", methods=["GET"])
+def home():
+    return {
+        "status": "online",
+        "service": "CyberGuru API"
+    }
 
 
 # ==========================

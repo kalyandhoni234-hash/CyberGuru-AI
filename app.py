@@ -79,12 +79,10 @@ from flask import Flask, send_from_directory, jsonify
 def health():
     return jsonify({"status": "ok"}), 200
 
-@app.route("/", methods=["GET"])
-def home():
-    return {
-        "status": "online",
-        "service": "CyberGuru API"
-    }
+
+@app.route("/")
+def index():
+    return send_from_directory(".", "index.html")
 
 
 # ==========================

@@ -1013,7 +1013,7 @@ function loadTheme(){
 /* ─── GLOBALS ──────────────────────────────────────────────── */
 const STORAGE_KEY = 'cybguru_chats_v1';
 const ACTIVE_KEY  = 'cybguru_active_v1';
-const API_BASE = 'https://cyberguru-api.onrender.com';   // ← change to your deployed URL when hosting
+const API_BASE = '';   // ← change to your deployed URL when hosting
 
 let chats        = {};   // { id: { title, msgs:[] } }
 let activeChatId = null;
@@ -1265,7 +1265,7 @@ async function sendToBackend(){
       appendMessage('bot', reply);
     } catch(err){
       typer.style.display = 'none';
-      const errMsg = '❌ Could not reach the Flask backend. Make sure it\'s running on localhost:5000.';
+      const errMsg = '❌ Could not reach the server. Please try again.';
       chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
       saveToStorage();
       appendMessage('bot', errMsg);
@@ -1309,7 +1309,7 @@ async function sendToBackend(){
     appendMessage('bot', reply);
   } catch(err){
     typer.style.display = 'none';
-    const errMsg = '❌ Could not reach the Flask backend. Make sure it\'s running on localhost:5000.';
+    const errMsg = '❌ Could not reach the server. Please try again.';
     chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
     saveToStorage();
     appendMessage('bot', errMsg);

@@ -33,6 +33,7 @@ Rules:
 
 2. For unrelated questions, reply:
 "I am CyberGuru AI and can only assist with cybersecurity topics."
+ but for general questions like hi,how are you you to reply in soft tone
 
 3. Explain concepts in a beginner-friendly way.
 
@@ -71,10 +72,13 @@ Rules:
 # ==========================
 
 
-@app.route("/", methods=["GET"])
-def index():
-    return jsonify({"message": "CyberGuru AI is running 🛡️"}), 200@app.route("/health", methods=["GET"])
+from flask import Flask, send_from_directory, jsonify
 
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
+
+@app.route('/health', methods=['GET'])
 def health():
     return jsonify({"status": "ok"}), 200
 

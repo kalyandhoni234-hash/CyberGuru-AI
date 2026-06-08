@@ -1069,9 +1069,162 @@ body {
   clip:rect(0,0,0,0); white-space:nowrap; border-width:0;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   CYBERSECURITY BACKGROUND SYSTEM
+   Three layered elements — all subtle, none gimmicky:
+   1. Hex-dot grid   — structural depth, reads as "technical"
+   2. Network canvas — animated threat-map nodes (JS-driven)
+   3. Radar sweep    — slow ambient glow on welcome screen only
+   4. Circuit traces — corner decorations in sidebar + main
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Hex-dot grid on body ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* Hexagonal dot grid using radial-gradient tile */
+  background-image:
+    radial-gradient(circle, rgba(59,130,246,.18) 1px, transparent 1px),
+    radial-gradient(circle, rgba(59,130,246,.09) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px;
+  background-position: 0 0, 20px 20px;
+  /* Vignette: visible in center, fade to edges */
+  mask-image: radial-gradient(ellipse 85% 85% at 50% 50%,
+    black 0%, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 85% at 50% 50%,
+    black 0%, black 40%, transparent 100%);
+  opacity: .55;
+}
+
+body.theme-hacker::after {
+  background-image:
+    radial-gradient(circle, rgba(0,230,118,.18) 1px, transparent 1px),
+    radial-gradient(circle, rgba(0,230,118,.09) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px;
+  background-position: 0 0, 20px 20px;
+}
+
+body.theme-light::after {
+  background-image:
+    radial-gradient(circle, rgba(37,99,235,.1) 1px, transparent 1px),
+    radial-gradient(circle, rgba(37,99,235,.05) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px;
+  background-position: 0 0, 20px 20px;
+  opacity: .4;
+}
+
+/* ── 2. Network canvas — full-screen fixed behind everything ── */
+#network-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 1;
+}
+
+/* ── 3. Radar sweep on #main (welcome state ambiance) ── */
+#main::after {
+  content: '';
+  position: absolute;
+  /* Centered on welcome area */
+  top: 50%; left: 50%;
+  width: 520px; height: 520px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  /* Conic gradient = radar wedge */
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(59,130,246,.04) 30deg,
+    rgba(59,130,246,.09) 60deg,
+    rgba(56,189,248,.06) 80deg,
+    transparent 100deg
+  );
+  animation: radar-spin 8s linear infinite;
+  opacity: 0;
+  transition: opacity .6s ease;
+}
+
+/* Only show radar when welcome screen is visible */
+#main.show-radar::after { opacity: 1; }
+
+@keyframes radar-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+body.theme-hacker #main::after {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(0,230,118,.04) 30deg,
+    rgba(0,230,118,.09) 60deg,
+    rgba(0,230,118,.06) 80deg,
+    transparent 100deg
+  );
+}
+
+body.theme-light #main::after { display: none; }
+
+/* ── 4. Circuit-trace corner decoration in #main ── */
+#main::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 280px;
+  background:
+    /* Top-left corner circuit */
+    linear-gradient(90deg, rgba(59,130,246,.12) 1px, transparent 1px) 0 60px / 60px 1px no-repeat,
+    linear-gradient(90deg, rgba(59,130,246,.08) 1px, transparent 1px) 0 90px / 100px 1px no-repeat,
+    linear-gradient(180deg, rgba(59,130,246,.12) 1px, transparent 1px) 60px 0 / 1px 60px no-repeat,
+    linear-gradient(180deg, rgba(59,130,246,.08) 1px, transparent 1px) 90px 0 / 1px 90px no-repeat,
+    /* Top-right corner circuit */
+    linear-gradient(90deg, rgba(59,130,246,.12) 1px, transparent 1px) right 60px top 60px / 60px 1px no-repeat,
+    linear-gradient(90deg, rgba(59,130,246,.08) 1px, transparent 1px) right 0 top 90px / 100px 1px no-repeat,
+    linear-gradient(180deg, rgba(59,130,246,.12) 1px, transparent 1px) right 60px top 0 / 1px 60px no-repeat,
+    linear-gradient(180deg, rgba(59,130,246,.08) 1px, transparent 1px) right 90px top 0 / 1px 90px no-repeat,
+    /* Ambient top glow */
+    radial-gradient(ellipse 70% 100% at 50% -10%, rgba(59,130,246,.08), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.theme-hacker #main::before {
+  background:
+    linear-gradient(90deg, rgba(0,230,118,.12) 1px, transparent 1px) 0 60px / 60px 1px no-repeat,
+    linear-gradient(90deg, rgba(0,230,118,.08) 1px, transparent 1px) 0 90px / 100px 1px no-repeat,
+    linear-gradient(180deg, rgba(0,230,118,.12) 1px, transparent 1px) 60px 0 / 1px 60px no-repeat,
+    linear-gradient(180deg, rgba(0,230,118,.08) 1px, transparent 1px) 90px 0 / 1px 90px no-repeat,
+    linear-gradient(90deg, rgba(0,230,118,.12) 1px, transparent 1px) right 60px top 60px / 60px 1px no-repeat,
+    linear-gradient(90deg, rgba(0,230,118,.08) 1px, transparent 1px) right 0 top 90px / 100px 1px no-repeat,
+    linear-gradient(180deg, rgba(0,230,118,.12) 1px, transparent 1px) right 60px top 0 / 1px 60px no-repeat,
+    linear-gradient(180deg, rgba(0,230,118,.08) 1px, transparent 1px) right 90px top 0 / 1px 90px no-repeat,
+    radial-gradient(ellipse 70% 100% at 50% -10%, rgba(0,230,118,.07), transparent);
+}
+
+body.theme-light #main::before {
+  background: radial-gradient(ellipse 70% 100% at 50% -10%, rgba(37,99,235,.05), transparent);
+}
+
+/* Ensure all content sits above background layers */
+#topbar, #chat-box, #typing-indicator, #input-area {
+  position: relative;
+  z-index: 2;
+}
+
+#sidebar { z-index: 10; }
+
 </style>
 </head>
 <body>
+
+<!-- Background: animated network topology canvas -->
+<canvas id="network-canvas" aria-hidden="true"></canvas>
 
 <!-- Sidebar overlay for mobile -->
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
@@ -1137,7 +1290,7 @@ body {
         </button>
       </div>
     </div>
-    <div class="sidebar-version">v1.0 · Gemini 2.5 Flash</div>
+    <div class="sidebar-version">v1.0 · Gemini 1.5 Flash</div>
   </div>
 
 </aside>
@@ -1161,7 +1314,7 @@ body {
 
     <div class="model-badge">
       <div class="model-dot"></div>
-      Gemini 2.5 Flash
+      Gemini 1.5 Flash
     </div>
   </div>
 
@@ -1402,6 +1555,7 @@ function appendMessage(role, text, scroll = true) {
   if(welcome) {
     const box = document.getElementById('chat-box');
     box.innerHTML = '<div class="chat-content" id="chat-content"></div>';
+    if(typeof syncRadar === 'function') syncRadar();
   }
 
   let content = document.getElementById('chat-content');
@@ -1690,6 +1844,162 @@ function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebar-overlay').classList.remove('show');
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   NETWORK TOPOLOGY BACKGROUND
+   Renders a minimal threat-map style graph:
+   - Nodes pulse gently (heartbeat opacity)
+   - Edges fade in/out to simulate live traffic
+   - One "alert" node flickers red occasionally
+   Performance: requestAnimationFrame, ~30 nodes, lightweight
+   ───────────────────────────────────────────────────────────────── */
+(function initNetwork() {
+  const canvas = document.getElementById('network-canvas');
+  const ctx    = canvas.getContext('2d');
+
+  let W, H, nodes, edges;
+  let frame = 0;
+
+  function getAccentColor() {
+    const b = document.body;
+    if(b.classList.contains('theme-hacker')) return { r:0,   g:230, b:118 };
+    if(b.classList.contains('theme-light'))  return { r:37,  g:99,  b:235 };
+    return { r:59, g:130, b:246 };
+  }
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    build();
+  }
+
+  function build() {
+    const count = Math.min(28, Math.floor(W * H / 28000));
+    const sidebar = document.getElementById('sidebar');
+    const sw = sidebar ? sidebar.offsetWidth : 264;
+
+    nodes = Array.from({length: count}, (_, i) => ({
+      x: sw + Math.random() * (W - sw),
+      y: Math.random() * H,
+      r: Math.random() > .85 ? 3.5 : 2,          // a few bigger "hub" nodes
+      speed: .15 + Math.random() * .25,
+      angle: Math.random() * Math.PI * 2,
+      pulse: Math.random() * Math.PI * 2,          // phase offset
+      alert: i === 0,                              // one red alert node
+      alertTimer: 0,
+    }));
+
+    // Connect nearby nodes
+    edges = [];
+    const DIST = Math.min(W, H) * .22;
+    for(let i = 0; i < nodes.length; i++) {
+      for(let j = i+1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        if(Math.sqrt(dx*dx+dy*dy) < DIST) {
+          edges.push({
+            a: i, b: j,
+            phase: Math.random() * Math.PI * 2,
+            speed: .008 + Math.random() * .012,
+          });
+        }
+      }
+    }
+  }
+
+  function draw() {
+    frame++;
+    ctx.clearRect(0, 0, W, H);
+
+    const ac = getAccentColor();
+    const t  = frame * .008;
+
+    // ── Draw edges ──
+    for(const e of edges) {
+      const a = nodes[e.a], b = nodes[e.b];
+      const alpha = (.05 + .08 * Math.sin(t * e.speed * 60 + e.phase));
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = `rgba(${ac.r},${ac.g},${ac.b},${Math.max(0,alpha)})`;
+      ctx.lineWidth = .6;
+      ctx.stroke();
+    }
+
+    // ── Draw nodes ──
+    for(const n of nodes) {
+      // Drift slowly
+      n.x += Math.cos(n.angle) * n.speed * .4;
+      n.y += Math.sin(n.angle) * n.speed * .4;
+
+      // Softly steer angle to keep nodes on screen
+      const sidebar = document.getElementById('sidebar');
+      const sw = sidebar ? sidebar.offsetWidth : 264;
+      if(n.x < sw + 20)   n.angle = 0;
+      if(n.x > W - 20)    n.angle = Math.PI;
+      if(n.y < 20)         n.angle = Math.PI/2;
+      if(n.y > H - 20)     n.angle = -Math.PI/2;
+
+      n.pulse += .025;
+      const pulseAlpha = .25 + .2 * Math.sin(n.pulse);
+
+      // Alert node flickers ~every 6 seconds
+      n.alertTimer++;
+      const isAlerting = n.alert && ((n.alertTimer % 360) < 40);
+
+      let r, g, b;
+      if(isAlerting) {
+        r = 248; g = 113; b = 113; // red
+        // Outer ring on alert
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r + 5 + 3 * Math.sin(n.pulse * 4), 0, Math.PI*2);
+        ctx.strokeStyle = `rgba(248,113,113,${.15 * Math.sin(n.pulse*4 + 1)})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      } else {
+        r = ac.r; g = ac.g; b = ac.b;
+      }
+
+      // Glow halo
+      const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 4);
+      grd.addColorStop(0,   `rgba(${r},${g},${b},${pulseAlpha * .5})`);
+      grd.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r * 4, 0, Math.PI*2);
+      ctx.fillStyle = grd;
+      ctx.fill();
+
+      // Core dot
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${r},${g},${b},${pulseAlpha})`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  draw();
+})();
+
+/* ─── RADAR: show on welcome, hide during chat ────────────────── */
+function syncRadar() {
+  const main = document.getElementById('main');
+  const welcome = document.getElementById('welcome');
+  if(welcome) main.classList.add('show-radar');
+  else main.classList.remove('show-radar');
+}
+
+// Patch showWelcome and newChat to sync radar
+const _origShowWelcome = showWelcome;
+showWelcome = function() { _origShowWelcome(); syncRadar(); };
+
+// Check on load
+document.addEventListener('DOMContentLoaded', syncRadar);
+setTimeout(syncRadar, 100);
+
 </script>
 </body>
 </html>

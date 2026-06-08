@@ -1218,6 +1218,31 @@ body.theme-light #main::before {
 }
 
 #sidebar { z-index: 10; }
+/* ── Delete Chat Button ── */
+.delete-chat-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: all .15s ease;
+  margin-left: auto; /* Pushes the button to the far right */
+  opacity: 0;        /* Hidden by default */
+}
+
+/* Show the button when hovering over the history item */
+.history-item:hover .delete-chat-btn {
+  opacity: 1;
+}
+
+.delete-chat-btn:hover {
+  color: var(--red);
+  background: rgba(248, 113, 113, 0.1);
+}
 
 </style>
 </head>
@@ -1707,14 +1732,48 @@ function renderHistoryList() {
     <path stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
   </svg>`;
 
+const deleteIcon = `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>`;
+
   ids.forEach(id => {
     const chat = chats[id];
     const div  = document.createElement('div');
     div.className = 'history-item' + (id === activeChatId ? ' active' : '');
-    div.innerHTML = `${chatIcon}<span class="hi-title">${escapeHtml(chat.title)}</span>`;
+    
+    // Inject the chat icon, title, and the new delete button
+    div.innerHTML = `
+      ${chatIcon}
+      <span class="hi-title">${escapeHtml(chat.title)}</span>
+      <button class="delete-chat-btn" aria-label="Delete chat" onclick="deleteChat('${id}', event)" title="Delete conversation">
+        ${deleteIcon}
+      </button>
+    `;
+    
+    // The main div click loads the chat
     div.onclick = () => loadChat(id);
     list.appendChild(div);
   });
+}
+/* ─── DELETE CHAT ────────────────────────────────────────────── */
+function deleteChat(id, event) {
+  // Stop the click event from bubbling up and triggering the div.onclick (which loads the chat)
+  event.stopPropagation(); 
+
+  // Optional: Confirm deletion
+  if (!confirm("Are you sure you want to delete this conversation?")) return;
+
+  // Remove the chat from the global object
+  delete chats[id];
+  
+  // Save the updated state to localStorage
+  saveToStorage();
+  
+  // Re-render the sidebar list
+  renderHistoryList();
+
+  // If the user deleted the chat they are currently viewing, reset to the New Chat screen
+  if (activeChatId === id) {
+    newChat();
+  }
 }
 
 /* ─── SUGGEST ────────────────────────────────────────────────── */

@@ -1243,6 +1243,46 @@ body.theme-light #main::before {
   color: var(--red);
   background: rgba(248, 113, 113, 0.1);
 }
+.msg-row.user {
+    display: flex;
+    justify-content: flex-end;
+    margin: 20px 0;
+}
+
+.msg-row.bot {
+    display: flex;
+    justify-content: flex-start;
+    margin: 20px 0;
+}
+.msg-row.user .msg-inner {
+    flex-direction: row-reverse;
+}
+.msg-row.user .msg-body {
+    text-align: right;
+}
+
+.msg-row.user .msg-meta {
+    justify-content: flex-end;
+}
+.msg-row.user .msg-content {
+    display: inline-block;
+    margin-left: auto;
+    background: rgba(0, 191, 255, 0.105);
+    border: 1px solid rgba(0,255,150,.25);
+    border-radius: 18px;
+    padding: 14px 18px;
+}
+.msg-row.user .msg-content {
+    margin-right: 16px;
+}
+.msg-content {
+    transition: all .2s ease;
+}
+
+.msg-content:hover {
+    transform: translateY(-1px);
+}
+
 
 </style>
 </head>

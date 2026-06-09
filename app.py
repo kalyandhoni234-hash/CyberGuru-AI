@@ -209,6 +209,38 @@ def build_contents(history, new_message):
 
     return contents
 
+def build_quiz_prompt(topic):
+    return f"""
+Generate a professional cybersecurity quiz.
+
+Topic: {topic}
+
+Rules:
+- Create exactly 5 multiple-choice questions.
+- Each question must have 4 options (A, B, C, D).
+- Show the correct answer.
+- Give a short explanation.
+- Use markdown formatting.
+
+Format:
+
+# {topic.title()} Quiz
+
+## Question 1
+
+Question text
+
+A) Option A
+B) Option B
+C) Option C
+D) Option D
+
+**Answer:** B
+
+**Explanation:** Short explanation.
+
+Repeat for 5 questions.
+"""
 
 # ==========================
 # HEALTH CHECK
@@ -234,10 +266,24 @@ def chat():
         data = request.get_json()
         user_message = data.get("message", "").strip()
         history      = data.get("history", [])
+        quiz_mode = False
+        quiz_topic = ""
+
+        if user_message.lower().startswith("/quiz"):
+            quiz_mode = True
+            quiz_topic = user_message[5:].strip()
 
         if not user_message:
             return jsonify({"reply": "Please enter a message."}), 400
 
+        if quiz_mode:
+
+            if not quiz_topic:
+                return jsonify({
+                "reply": "⚠️ Please provide a topic.\n\nExample:\n/quiz sql injection"
+        })
+
+        user_message = build_quiz_prompt(quiz_topic)
         payload = {
             "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
             "contents": build_contents(history, user_message),
@@ -533,6 +579,39 @@ def analyze_file():
         def general_err():
             yield ("data: " + jdump({"error": f"⚠️ Server error: {str(e)}"}) + "\n\n").encode("utf-8")
         return Response(stream_with_context(general_err()), content_type="text/event-stream; charset=utf-8")
+
+
+# ==========================
+# GENERATE TITLE ROUTE
+# ==========================
+
+@app.route("/generate-title", methods=["POST"])
+def generate_title():
+    """Generate a short smart title for a conversation from its first user message."""
+    try:
+        data = request.get_json()
+        first_message = data.get("message", "").strip()
+        if not first_message:
+            return jsonify({"title": "New conversation"})
+
+        payload = {
+            "contents": [{
+                "role": "user",
+                "parts": [{"text": (
+                    f"Generate a very short title (4-6 words max) for a chat conversation "
+                    f"that starts with this message. Reply with ONLY the title, no quotes, no punctuation at the end:\n\n{first_message[:300]}"
+                )}]
+            }],
+            "generationConfig": {"maxOutputTokens": 20, "temperature": 0.4}
+        }
+
+        resp = gemini_post(API_URL, payload, timeout=15)
+        title = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        title = title.strip('"\'').strip()
+        return jsonify({"title": title[:60] if title else "New conversation"})
+
+    except Exception:
+        return jsonify({"title": first_message[:42] + ("…" if len(first_message) > 42 else "")})
 
 
 # ==========================

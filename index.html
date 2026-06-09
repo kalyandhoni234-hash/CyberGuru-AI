@@ -1452,6 +1452,30 @@ body.theme-light #main::before {
 .msg-row.user .msg-content {
     margin-right: 16px;
 }
+.msg-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.msg-row.bot:hover .msg-actions { opacity: 1; }
+.msg-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-xs);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all .15s;
+}
+.msg-action-btn:hover { border-color: var(--border-strong); color: var(--blue-soft); background: rgba(59,130,246,.06); }
 .msg-content {
     transition: all .2s ease;
 }
@@ -1459,7 +1483,234 @@ body.theme-light #main::before {
 .msg-content:hover {
     transform: translateY(-1px);
 }
+.quiz-modal{
+  display:none;
+  position:fixed;
+  inset:0;
 
+  background:rgba(0,0,0,.65);
+  backdrop-filter:blur(6px);
+
+  z-index:9999;
+
+  justify-content:center;
+  align-items:center;
+}
+
+.quiz-modal.show{
+  display:flex;
+}
+
+.quiz-modal-content{
+
+  width:min(92vw,420px);
+
+  background:var(--bg-panel);
+
+  border:1px solid var(--border-default);
+
+  border-radius:18px;
+
+  padding:24px;
+
+  box-shadow:0 20px 60px rgba(0,0,0,.35);
+}
+
+.quiz-modal-content h2{
+  margin-bottom:18px;
+  color:var(--cyan);
+}
+
+.quiz-options{
+    margin-top:20px;
+    gap:16px;
+}
+
+.quiz-options label{
+  cursor:pointer;
+  font-size:15px;
+}
+
+.quiz-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:28px;
+}
+
+.start-btn{
+  background:linear-gradient(
+      135deg,
+      #2563eb,
+      #0891b2
+  );
+
+  color:white;
+  border:none;
+
+  padding:10px 18px;
+
+  border-radius:10px;
+
+  cursor:pointer;
+}
+.quiz-banner-inner{
+    display:flex;
+    align-items:center;
+    gap:22px;
+}
+.quiz-banner{
+    position: relative;
+    max-width: 620px;
+    margin: 28px auto;
+
+    padding: 26px 28px;
+
+    border-radius: 22px;
+
+    border: 1px solid rgba(59,130,246,.25);
+
+    background:
+      linear-gradient(
+        135deg,
+        rgba(59,130,246,.12),
+        rgba(14,165,233,.05)
+      );
+
+    backdrop-filter: blur(14px);
+
+    box-shadow:
+      0 10px 40px rgba(0,0,0,.25),
+      0 0 35px rgba(59,130,246,.08);
+
+    overflow: hidden;
+
+    transition: .25s ease;
+}
+
+.quiz-banner:hover{
+    transform: translateY(-3px);
+
+    box-shadow:
+      0 14px 50px rgba(0,0,0,.35),
+      0 0 45px rgba(59,130,246,.18);
+}
+
+.quiz-banner{
+    max-width: 520px;
+    margin: 24px auto;
+    text-align: center;
+    padding: 20px;
+}
+
+.quiz-banner-icon{
+
+    width:52px;
+    height:52px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:34px;
+
+    border-radius:18px;
+
+    background:
+      linear-gradient(
+        135deg,
+        rgba(37,99,235,.25),
+        rgba(8,145,178,.25)
+      );
+
+    box-shadow:
+      inset 0 0 20px rgba(255,255,255,.05),
+      0 0 25px rgba(59,130,246,.15);
+}
+
+.quiz-banner-title{
+
+    font-size:24px;
+
+    font-weight:700;
+
+    line-height:1.1;
+
+    color:var(--cyan);
+
+    margin-bottom:8px;
+}
+
+.quiz-banner-desc{
+
+    color:var(--text-secondary);
+
+    font-size:15px;
+
+    line-height:1.7;
+
+    margin-bottom:18px;
+}
+
+.quiz-btn{
+
+    border:none;
+
+    border-radius:12px;
+
+    padding:12px 22px;
+
+    font-size:15px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    color:white;
+
+    background:
+      linear-gradient(
+        135deg,
+        #2563eb,
+        #0891b2
+      );
+
+    transition:.2s;
+}
+
+.quiz-btn:hover{
+    transform:translateY(-2px);
+    box-shadow:0 0 25px rgba(14,165,233,.35);
+}
+.quiz-cancel{
+
+    background:transparent;
+
+    color:var(--text-secondary);
+
+    border:1px solid var(--border-default);
+
+    border-radius:10px;
+
+    padding:10px 16px;
+}
+.quiz-cancel:hover{
+
+    background:rgba(255,255,255,.05);
+
+    color:white;
+}
+.quiz-badge{
+    display:inline-block;
+    margin-bottom:10px;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.8px;
+    color:var(--cyan);
+    background:rgba(59,130,246,.12);
+}
 
 </style>
 </head>
@@ -1552,11 +1803,20 @@ body.theme-light #main::before {
       <div id="topbar-title">New Conversation</div>
     </div>
 
+    <button id="export-btn" onclick="exportChat()" title="Export conversation" style="display:none;background:none;border:1px solid var(--border-default);border-radius:var(--r-sm);padding:5px 10px;color:var(--text-secondary);font-size:11px;font-family:var(--font-mono);cursor:pointer;display:none;align-items:center;gap:5px;transition:all .15s;" onmouseover="this.style.borderColor='var(--border-strong)';this.style.color='var(--blue-soft)'" onmouseout="this.style.borderColor='var(--border-default)';this.style.color='var(--text-secondary)'">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+      Export
+    </button>
+
     <div class="topbar-divider"></div>
 
     <div class="model-badge">
       <div class="model-dot"></div>
       Gemini 2.5 Flash
+    </div>
+    <div class="model-badge" id="tps-badge" style="display:none;">
+      <div class="model-dot" style="background:var(--green);"></div>
+      <span id="tps-value">0</span> t/s
     </div>
   </div>
 
@@ -1579,6 +1839,32 @@ body.theme-light #main::before {
         <span class="cap-pill">OWASP Top 10</span>
         <span class="cap-pill">Malware & Exploits</span>
       </div>
+  <div class="quiz-banner">
+      <div class="quiz-banner-icon">
+      🎯
+      </div>
+
+    <div class="quiz-banner-content">
+
+      <div class="quiz-banner-title">
+      Cybersecurity Quiz Mode
+      </div>
+
+    <div class="quiz-banner-desc">
+      Test your skills with AI-generated security challenges.
+    </div>
+
+    <button
+      class="quiz-btn"
+      onclick="openQuizModal()">
+
+      Start Quiz
+
+    </button>
+
+  </div>
+
+</div>
       <div class="suggest-grid">
         <div class="suggest-card" onclick="suggest('What is SQL Injection and how does it work?')">
           <span class="sc-label">Attack Vector</span>
@@ -1653,6 +1939,9 @@ body.theme-light #main::before {
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
         </svg>
       </button>
+      <button id="stop-btn" onclick="stopGeneration()" title="Stop generating" style="display:none;width:36px;height:36px;flex-shrink:0;background:var(--bg-card);border:1px solid var(--border-default);border-radius:var(--r-md);color:var(--red);cursor:pointer;display:none;align-items:center;justify-content:center;transition:all .18s ease;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+      </button>
       <button id="send-btn" onclick="sendToBackend()" title="Send (Enter)">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/>
@@ -1661,6 +1950,60 @@ body.theme-light #main::before {
     </div>
     <div class="input-hint">Enter to send &nbsp;·&nbsp; Shift+Enter for new line &nbsp;·&nbsp; Attach .txt .log .pdf &nbsp;·&nbsp; 🎤 Voice</div>
   </div>
+<div id="quiz-modal" class="quiz-modal">
+
+  <div class="quiz-modal-content">
+
+    <h2>🎯 Choose a Quiz Topic</h2>
+
+    <div class="quiz-options">
+
+      <label>
+        <input type="radio" name="quiz-topic" value="sql injection" checked>
+        SQL Injection
+      </label>
+
+      <label>
+        <input type="radio" name="quiz-topic" value="xss">
+        XSS
+      </label>
+
+      <label>
+        <input type="radio" name="quiz-topic" value="malware">
+        Malware
+      </label>
+
+      <label>
+        <input type="radio" name="quiz-topic" value="phishing">
+        Phishing
+      </label>
+
+      <label>
+        <input type="radio" name="quiz-topic" value="network security">
+        Network Security
+      </label>
+
+    </div>
+
+    <div class="quiz-actions">
+
+     <button
+      class="quiz-cancel"
+        onclick="closeQuizModal()">
+
+        ✕ Cancel
+
+    </button>
+
+      <button class="start-btn" onclick="startQuiz()">
+        Start Quiz
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
 
 </main>
 
@@ -1689,6 +2032,115 @@ const API_BASE    = '';  // ← change to deployed URL
 let chats        = {};
 let activeChatId = null;
 let isThinking   = false;
+
+// ── Stop generation ──
+let activeReader  = null;   // holds current stream reader so we can cancel it
+let abortCtrl     = null;   // AbortController for fetch
+
+function stopGeneration() {
+  if(abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
+  if(activeReader) { try { activeReader.cancel(); } catch(e){} activeReader = null; }
+  setThinkingUI(false);
+}
+
+function setThinkingUI(on) {
+  const sendBtn = document.getElementById('send-btn');
+  const stopBtn = document.getElementById('stop-btn');
+  const typer   = document.getElementById('typing-indicator');
+  if(on) {
+    sendBtn.style.display = 'none';
+    stopBtn.style.display = 'flex';
+    typer.style.display   = 'block';
+  } else {
+    sendBtn.style.display = 'flex';
+    stopBtn.style.display = 'none';
+    typer.style.display   = 'none';
+    hideTPS();
+  }
+  document.getElementById('chat-box').scrollTop = 99999;
+}
+
+// ── Tokens/sec counter ──
+let tpsStartTime  = 0;
+let tpsTokenCount = 0;
+
+function startTPS() {
+  tpsStartTime  = Date.now();
+  tpsTokenCount = 0;
+  document.getElementById('tps-badge').style.display = 'flex';
+}
+
+function tickTPS(tokens) {
+  tpsTokenCount += tokens;
+  const secs = (Date.now() - tpsStartTime) / 1000 || 0.001;
+  document.getElementById('tps-value').textContent = Math.round(tpsTokenCount / secs);
+}
+
+function hideTPS() {
+  setTimeout(() => { document.getElementById('tps-badge').style.display = 'none'; }, 2000);
+}
+
+// ── Copy message ──
+function copyMessage(msgId) {
+  const el = document.getElementById(msgId);
+  if(!el) return;
+  const text = el.innerText || el.textContent || '';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = el.closest('.msg-body')?.querySelector('.msg-action-btn');
+    if(!btn) return;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg> Copied';
+    btn.style.borderColor = 'var(--green)';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.borderColor = ''; btn.style.color = ''; }, 2000);
+  }).catch(() => {});
+}
+
+// ── Thumbs up / down ──
+function thumbs(msgId, dir) {
+  const upBtn = document.getElementById(msgId + '-up');
+  const dnBtn = document.getElementById(msgId + '-dn');
+  if(!upBtn || !dnBtn) return;
+  upBtn.classList.toggle('active-up', dir === 'up');
+  dnBtn.classList.toggle('active-dn', dir === 'down');
+  upBtn.classList.toggle('active-dn', false);
+  dnBtn.classList.toggle('active-up', false);
+  // Could POST feedback to backend here in future
+}
+
+// ── Smart AI-generated chat titles ──
+async function generateSmartTitle(message) {
+  try {
+    const res = await fetch(`${API_BASE}/generate-title`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    if(!res.ok) throw new Error();
+    const data = await res.json();
+    return data.title || null;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ── Export chat ──
+function exportChat() {
+  if(!activeChatId || !chats[activeChatId]) return;
+  const chat = chats[activeChatId];
+  const lines = [`# ${chat.title}\n`, `*Exported from CyberGuru AI — ${new Date().toLocaleString()}*\n`, '---\n'];
+  chat.msgs.forEach(m => {
+    const who = m.role === 'user' ? '**You**' : '**CyberGuru**';
+    lines.push(`${who}\n\n${m.text}\n\n---\n`);
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = (chat.title || 'conversation').replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.md';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 /* ─── INIT ───────────────────────────────────────────────────── */
 (function init() {
@@ -1738,6 +2190,8 @@ function newChat() {
   showWelcome();
   renderHistoryList();
   document.getElementById('topbar-title').textContent = 'New Conversation';
+  const exportBtn = document.getElementById('export-btn');
+  if(exportBtn) exportBtn.style.display = 'none';
   document.getElementById('user-input').focus();
   if(window.innerWidth <= 768) closeSidebar();
 }
@@ -1794,6 +2248,8 @@ function loadChat(id, closeMenu = true) {
   document.getElementById('topbar-title').textContent = chat.title;
   chat.msgs.forEach(m => appendMessage(m.role, m.text, false));
   box.scrollTop = box.scrollHeight;
+  const exportBtn = document.getElementById('export-btn');
+  if(exportBtn && chat.msgs.length) exportBtn.style.display = 'flex';
   if(closeMenu && window.innerWidth <= 768) closeSidebar();
 }
 
@@ -1827,6 +2283,21 @@ function appendMessage(role, text, scroll = true) {
     <path d="M9 12l2 2 4-4" stroke="rgba(255,255,255,.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 
+  const msgId = 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  const botActions = role === 'bot' ? `
+    <div class="msg-actions">
+      <button class="msg-action-btn" onclick="copyMessage('${msgId}')" title="Copy response">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+      <button class="msg-action-btn" id="${msgId}-up" onclick="thumbs('${msgId}','up')" title="Good response">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
+      </button>
+      <button class="msg-action-btn" id="${msgId}-dn" onclick="thumbs('${msgId}','down')" title="Bad response">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10zM17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/></svg>
+      </button>
+    </div>` : '';
+
   const row = document.createElement('div');
   row.className = `msg-row ${role}`;
   row.innerHTML = `
@@ -1837,15 +2308,44 @@ function appendMessage(role, text, scroll = true) {
           <span class="msg-name">${name}</span>
           <span class="msg-time">${time}</span>
         </div>
-        <div class="msg-content">${rendered}</div>
+        <div class="msg-content" id="${msgId}">${rendered}</div>
+        ${botActions}
       </div>
     </div>`;
 
   content.appendChild(row);
 
+  // Show export button once there are messages
+  const exportBtn = document.getElementById('export-btn');
+  if(exportBtn) exportBtn.style.display = 'flex';
+
   if(scroll) {
     requestAnimationFrame(() => { document.getElementById('chat-box').scrollTop = 99999; });
   }
+}
+
+function openQuizModal(){
+  document
+    .getElementById('quiz-modal')
+    .classList.add('show');
+}
+
+function closeQuizModal(){
+  document
+    .getElementById('quiz-modal')
+    .classList.remove('show');
+}
+
+function startQuiz(){
+
+  const topic =
+    document.querySelector(
+      'input[name="quiz-topic"]:checked'
+    ).value;
+
+  closeQuizModal();
+
+  suggest(`/quiz ${topic}`);
 }
 
 /* ─── MARKDOWN RENDERER ──────────────────────────────────────── */
@@ -2051,16 +2551,14 @@ async function sendToBackend() {
     renderHistoryList();
     appendMessage('user', userLabel);
 
-    const typer = document.getElementById('typing-indicator');
-    typer.style.display = 'block';
-    document.getElementById('chat-box').scrollTop = 99999;
+    setThinkingUI(true);
 
     try {
       const formData = new FormData();
       formData.append('file', file);
       const res = await fetch(`${API_BASE}/analyze-file`, { method:'POST', body:formData });
 
-      typer.style.display = 'none';
+      setThinkingUI(false);
 
       if(!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
 
@@ -2103,7 +2601,7 @@ async function sendToBackend() {
       }
 
     } catch(err) {
-      typer.style.display = 'none';
+      setThinkingUI(false);
       const errMsg = '⚠️ Could not reach the server. Please check your connection and try again.';
       chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
       saveToStorage();
@@ -2122,6 +2620,15 @@ async function sendToBackend() {
     chats[activeChatId] = { title, msgs:[] };
     localStorage.setItem(ACTIVE_KEY, activeChatId);
     document.getElementById('topbar-title').textContent = title;
+    // Generate smart AI title in background
+    generateSmartTitle(message).then(smart => {
+      if(smart && activeChatId && chats[activeChatId]) {
+        chats[activeChatId].title = smart;
+        document.getElementById('topbar-title').textContent = smart;
+        saveToStorage();
+        renderHistoryList();
+      }
+    });
   }
 
   // Build history array from stored messages (exclude current message)
@@ -2132,18 +2639,19 @@ async function sendToBackend() {
   renderHistoryList();
   appendMessage('user', message);
 
-  const typer = document.getElementById('typing-indicator');
-  typer.style.display = 'block';
-  document.getElementById('chat-box').scrollTop = 99999;
+  setThinkingUI(true);
+  startTPS();
 
   try {
+    abortCtrl = new AbortController();
     const res = await fetch(`${API_BASE}/chat-stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, history })
+      body: JSON.stringify({ message, history }),
+      signal: abortCtrl.signal
     });
 
-    typer.style.display = 'none';
+    setThinkingUI(false);
 
     if(!res.ok || !res.body) {
       throw new Error(`HTTP ${res.status}`);
@@ -2153,13 +2661,13 @@ async function sendToBackend() {
     const streamId = 'stream-' + Date.now();
     appendStreamingMessage(streamId);
 
-    const reader  = res.body.getReader();
+    activeReader  = res.body.getReader();
     const decoder = new TextDecoder();
     let   fullText = '';
     let   buffer   = '';
 
     while(true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await activeReader.read();
       if(done) break;
 
       buffer += decoder.decode(value, { stream: true });
@@ -2182,6 +2690,7 @@ async function sendToBackend() {
 
           if(payload.token) {
             fullText += payload.token;
+            tickTPS(payload.token.length);
             updateStreamingMessage(streamId, fullText, false);
           }
 
@@ -2198,7 +2707,6 @@ async function sendToBackend() {
       chats[activeChatId].msgs.push({ role:'bot', text:fullText });
       saveToStorage();
     } else if(!fullText) {
-      // Stream ended with no content — surface an error
       const errMsg = '⚠️ The response stream ended unexpectedly. Please try again.';
       updateStreamingMessage(streamId, errMsg, true);
       chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
@@ -2206,13 +2714,20 @@ async function sendToBackend() {
     }
 
   } catch(err) {
-    typer.style.display = 'none';
-    const errMsg = '⚠️ Could not reach the server. Please check your connection and try again.';
-    chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
-    saveToStorage();
-    appendMessage('bot', errMsg);
+    if(err.name === 'AbortError') {
+      // User hit stop — clean up silently
+    } else {
+      setThinkingUI(false);
+      const errMsg = '⚠️ Could not reach the server. Please check your connection and try again.';
+      chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
+      saveToStorage();
+      appendMessage('bot', errMsg);
+    }
   }
 
+  activeReader = null;
+  abortCtrl    = null;
+  setThinkingUI(false);
   isThinking = false;
 }
 

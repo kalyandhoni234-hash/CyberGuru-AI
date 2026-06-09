@@ -7,11 +7,26 @@ import time
 import requests
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 print("RUNNING FILE:", __file__)
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False   # preserve emojis in jsonify() responses
 CORS(app)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["300 per day", "60 per hour"],
+    storage_uri="memory://",   # swap to "redis://..." in production
+)
+
+@app.errorhandler(429)
+def rate_limit_handler(e):
+    return jsonify({
+        "reply": f"⚠️ Too many requests — {e.description}. Please slow down and try again shortly."
+    }), 429
 
 # Always serialize JSON with Unicode intact (fixes emoji encoding in SSE streams)
 def jdump(obj):
@@ -115,6 +130,32 @@ GENERATION_CONFIG = {
     "maxOutputTokens": 8192,
     "temperature": 0.7,
 }
+
+# ==========================
+# GROUNDING CONFIG
+# ==========================
+
+# Keywords that suggest real-time info is needed — triggers Google Search grounding
+GROUNDING_KEYWORDS = [
+    # CVE / vulnerability
+    "cve", "vulnerability", "vulnerabilities", "exploit", "zero-day", "0-day",
+    "patch", "advisory", "nvd", "nist",
+    # News & recent events
+    "latest", "recent", "new", "news", "today", "this week", "this month",
+    "current", "just released", "announced", "update", "breach", "attack",
+    # Specific threat actors / campaigns
+    "ransomware", "apt ", "threat actor", "campaign", "incident",
+    # Tools / releases
+    "version", "release", "changelog",
+]
+
+GOOGLE_SEARCH_TOOL = {"google_search": {}}
+
+def needs_grounding(message: str) -> bool:
+    """Return True if the message likely needs real-time information."""
+    lower = message.lower()
+    return any(kw in lower for kw in GROUNDING_KEYWORDS)
+
 
 # ==========================
 # RETRY HELPER
@@ -261,6 +302,7 @@ def index():
 # ==========================
 
 @app.route("/chat", methods=["POST"])
+@limiter.limit("30 per minute; 200 per day")
 def chat():
     try:
         data = request.get_json()
@@ -277,18 +319,21 @@ def chat():
             return jsonify({"reply": "Please enter a message."}), 400
 
         if quiz_mode:
-
             if not quiz_topic:
                 return jsonify({
-                "reply": "⚠️ Please provide a topic.\n\nExample:\n/quiz sql injection"
-        })
+                    "reply": "⚠️ Please provide a topic.\n\nExample:\n/quiz sql injection"
+                })
+            user_message = build_quiz_prompt(quiz_topic)
 
-        user_message = build_quiz_prompt(quiz_topic)
         payload = {
             "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
             "contents": build_contents(history, user_message),
             "generationConfig": GENERATION_CONFIG
         }
+
+        # Add Google Search grounding for real-time queries
+        if needs_grounding(user_message):
+            payload["tools"] = [GOOGLE_SEARCH_TOOL]
 
         response = gemini_post(API_URL, payload, timeout=30)
         response_data = response.json()
@@ -315,6 +360,7 @@ def chat():
 # ==========================
 
 @app.route("/chat-stream", methods=["POST"])
+@limiter.limit("30 per minute; 200 per day")
 def chat_stream():
     try:
         data = request.get_json()
@@ -330,10 +376,17 @@ def chat_stream():
             "generationConfig": GENERATION_CONFIG
         }
 
+        # Add Google Search grounding for real-time queries
+        use_grounding = needs_grounding(user_message)
+        if use_grounding:
+            payload["tools"] = [GOOGLE_SEARCH_TOOL]
+
         # Open a streaming request to Gemini (with retry on 429/503)
         gemini_resp = gemini_post(API_URL_STREAM, payload, stream=True, timeout=60)
 
         def generate():
+            grounding_meta = None  # collects groundingMetadata from last chunk
+
             for raw_line_bytes in gemini_resp.iter_lines():
                 raw_line = raw_line_bytes.decode("utf-8") if isinstance(raw_line_bytes, bytes) else raw_line_bytes
                 if not raw_line:
@@ -344,16 +397,43 @@ def chat_stream():
                         break
                     try:
                         chunk = json.loads(json_str)
+                        candidate = chunk.get("candidates", [{}])[0]
+
                         text_piece = (
-                            chunk.get("candidates", [{}])[0]
-                                 .get("content", {})
-                                 .get("parts", [{}])[0]
-                                 .get("text", "")
+                            candidate.get("content", {})
+                                     .get("parts", [{}])[0]
+                                     .get("text", "")
                         )
                         if text_piece:
                             yield ("data: " + jdump({"token": text_piece}) + "\n\n").encode("utf-8")
+
+                        # Capture grounding metadata whenever present
+                        if "groundingMetadata" in candidate:
+                            grounding_meta = candidate["groundingMetadata"]
+
                     except (json.JSONDecodeError, IndexError, KeyError):
                         continue
+
+            # After stream ends, send grounding sources as a separate event
+            if grounding_meta:
+                sources = []
+                for chunk in grounding_meta.get("groundingChunks", []):
+                    web = chunk.get("web", {})
+                    if web.get("uri") and web.get("title"):
+                        sources.append({
+                            "title": web["title"],
+                            "uri":   web["uri"],
+                        })
+                queries = grounding_meta.get("webSearchQueries", [])
+                rendered = grounding_meta.get("searchEntryPoint", {}).get("renderedContent", "")
+                if sources or rendered:
+                    yield ("data: " + jdump({
+                        "grounding": {
+                            "sources":  sources,
+                            "queries":  queries,
+                            "rendered": rendered,
+                        }
+                    }) + "\n\n").encode("utf-8")
 
             yield ("data: " + jdump({"done": True}) + "\n\n").encode("utf-8")
 
@@ -385,7 +465,6 @@ def chat_stream():
         def general_err():
             yield ("data: " + jdump({"error": f"⚠️ Server error: {str(e)}"}) + "\n\n").encode("utf-8")
         return Response(stream_with_context(general_err()), content_type="text/event-stream; charset=utf-8")
-
 
 # ==========================
 # ANALYZE FILE ROUTE
@@ -470,6 +549,7 @@ def build_analysis_prompt(filename, content_summary, file_type):
 
 
 @app.route("/analyze-file", methods=["POST"])
+@limiter.limit("10 per minute; 50 per day")
 def analyze_file():
     uploaded_file = request.files.get("file")
     if not uploaded_file:
@@ -586,6 +666,7 @@ def analyze_file():
 # ==========================
 
 @app.route("/generate-title", methods=["POST"])
+@limiter.limit("30 per minute")
 def generate_title():
     """Generate a short smart title for a conversation from its first user message."""
     try:

@@ -3,6 +3,7 @@ import os
 import re
 import json
 import base64
+import time
 import requests
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
@@ -28,12 +29,18 @@ if not API_KEY:
 
 API_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{MODEL}:generateContent?key={API_KEY}"
+    f"{MODEL}:generateContent"
 )
 API_URL_STREAM = (
     f"https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{MODEL}:streamGenerateContent?alt=sse&key={API_KEY}"
+    f"{MODEL}:streamGenerateContent?alt=sse"
 )
+
+# Common headers — keeps the API key out of URLs (and therefore out of logs)
+GEMINI_HEADERS = {
+    "Content-Type": "application/json",
+    "x-goog-api-key": API_KEY,
+}
 
 SYSTEM_INSTRUCTION = """
 You are CyberGuru AI, an expert cybersecurity mentor.
@@ -96,6 +103,8 @@ unless the user explicitly requests detail.
 13. add this line after every response
 "──────
 🛡️ CyberGuru AI"
+14. use chatgpt response style like for headings with points,bullete points, more understandable for 
+use number pointers instead of "* "
 """
 
 # Max messages to send as history (keeps token usage reasonable)
@@ -106,6 +115,66 @@ GENERATION_CONFIG = {
     "maxOutputTokens": 8192,
     "temperature": 0.7,
 }
+
+# ==========================
+# RETRY HELPER
+# ==========================
+
+MAX_RETRIES = 3          # number of retry attempts on 429 / 503
+BASE_BACKOFF = 5         # seconds to wait before first retry (doubles each time)
+
+def gemini_post(url, payload, stream=False, timeout=60):
+    """
+    POST to Gemini with exponential backoff on 429 (rate limit) and 503 (unavailable).
+    Returns the requests.Response object on success, or raises on final failure.
+    Raises GeminiRateLimitError or GeminiServiceError for callers to handle cleanly.
+    """
+    last_status = None
+    for attempt in range(MAX_RETRIES):
+        resp = requests.post(
+            url,
+            json=payload,
+            headers=GEMINI_HEADERS,
+            timeout=timeout,
+            stream=stream,
+        )
+        last_status = resp.status_code
+
+        if resp.status_code == 200:
+            return resp
+
+        if resp.status_code == 429:
+            # Check if Gemini sent a retry-after header
+            retry_after = int(resp.headers.get("Retry-After", 0))
+            wait = retry_after if retry_after > 0 else BASE_BACKOFF * (2 ** attempt)
+            print(f"[Retry {attempt+1}/{MAX_RETRIES}] 429 rate limit — waiting {wait}s")
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(wait)
+            else:
+                raise GeminiRateLimitError()
+
+        elif resp.status_code == 503:
+            wait = BASE_BACKOFF * (2 ** attempt)
+            print(f"[Retry {attempt+1}/{MAX_RETRIES}] 503 unavailable — waiting {wait}s")
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(wait)
+            else:
+                raise GeminiServiceError(last_status)
+
+        else:
+            # 4xx other than 429 — don't retry
+            raise GeminiServiceError(last_status)
+
+    raise GeminiServiceError(last_status)
+
+
+class GeminiRateLimitError(Exception):
+    pass
+
+class GeminiServiceError(Exception):
+    def __init__(self, status_code=None):
+        self.status_code = status_code
+        super().__init__(f"Gemini API error {status_code}")
 
 
 def build_contents(history, new_message):
@@ -122,10 +191,14 @@ def build_contents(history, new_message):
     trimmed = history[-max_msgs:] if len(history) > max_msgs else history
 
     for msg in trimmed:
-        role = "model" if msg.get("role") == "bot" else "user"
+        role = msg.get("role", "")
+        text = msg.get("text", "")
+        if not role or not isinstance(text, str):
+            continue  # skip malformed history entries
+        gemini_role = "model" if role == "bot" else "user"
         contents.append({
-            "role": role,
-            "parts": [{"text": msg.get("text", "")}]
+            "role": gemini_role,
+            "parts": [{"text": text}]
         })
 
     # Append the new user message
@@ -171,21 +244,15 @@ def chat():
             "generationConfig": GENERATION_CONFIG
         }
 
-        response = requests.post(API_URL, json=payload, timeout=30)
-
-        try:
-            response.raise_for_status()
-        except requests.exceptions.HTTPError:
-            if response.status_code == 429:
-                return jsonify({"reply": "⚠️ Gemini rate limit reached. Please wait a minute and try again."})
-            elif response.status_code >= 500:
-                return jsonify({"reply": "⚠️ Gemini service is currently unavailable."})
-            return jsonify({"reply": "⚠️ An unexpected API error occurred."})
-
+        response = gemini_post(API_URL, payload, timeout=30)
         response_data = response.json()
         bot_reply = response_data["candidates"][0]["content"]["parts"][0]["text"]
         return jsonify({"reply": bot_reply})
 
+    except GeminiRateLimitError:
+        return jsonify({"reply": "⚠️ Gemini rate limit reached. Please wait a moment and try again."}), 429
+    except GeminiServiceError as e:
+        return jsonify({"reply": f"⚠️ Gemini service error ({e.status_code}). Please try again shortly."}), 503
     except requests.exceptions.Timeout:
         return jsonify({"reply": "⚠️ Request timed out."}), 500
     except requests.exceptions.RequestException:
@@ -193,6 +260,7 @@ def chat():
     except KeyError:
         return jsonify({"reply": "⚠️ Unexpected response format from Gemini API."}), 500
     except Exception as e:
+        print("GEMINI ERROR:", e)
         return jsonify({"reply": f"⚠️ Server Error: {str(e)}"}), 500
 
 
@@ -216,31 +284,14 @@ def chat_stream():
             "generationConfig": GENERATION_CONFIG
         }
 
-        # Open a streaming request to Gemini
-        gemini_resp = requests.post(
-            API_URL_STREAM,
-            json=payload,
-            timeout=60,
-            stream=True
-        )
-
-        if gemini_resp.status_code == 429:
-            def rate_err():
-                yield ("data: " + jdump({"error": "⚠️ Gemini rate limit reached. Please wait a minute and try again."}) + "\n\n").encode("utf-8")
-            return Response(stream_with_context(rate_err()), content_type="text/event-stream; charset=utf-8")
-
-        if gemini_resp.status_code >= 400:
-            def api_err():
-                yield ("data: " + jdump({"error": "⚠️ Gemini API error. Please try again."}) + "\n\n").encode("utf-8")
-            return Response(stream_with_context(api_err()), content_type="text/event-stream; charset=utf-8")
+        # Open a streaming request to Gemini (with retry on 429/503)
+        gemini_resp = gemini_post(API_URL_STREAM, payload, stream=True, timeout=60)
 
         def generate():
-            buffer = ""
             for raw_line_bytes in gemini_resp.iter_lines():
                 raw_line = raw_line_bytes.decode("utf-8") if isinstance(raw_line_bytes, bytes) else raw_line_bytes
                 if not raw_line:
                     continue
-                # SSE lines from Gemini start with "data: "
                 if raw_line.startswith("data:"):
                     json_str = raw_line[5:].strip()
                     if json_str == "[DONE]":
@@ -254,12 +305,10 @@ def chat_stream():
                                  .get("text", "")
                         )
                         if text_piece:
-                            # Forward each token to the client
                             yield ("data: " + jdump({"token": text_piece}) + "\n\n").encode("utf-8")
                     except (json.JSONDecodeError, IndexError, KeyError):
                         continue
 
-            # Signal stream end
             yield ("data: " + jdump({"done": True}) + "\n\n").encode("utf-8")
 
         return Response(
@@ -267,9 +316,19 @@ def chat_stream():
             content_type="text/event-stream; charset=utf-8",
             headers={
                 "Cache-Control": "no-cache",
-                "X-Accel-Buffering": "no"   # prevents nginx from buffering SSE
+                "X-Accel-Buffering": "no"
             }
         )
+
+    except GeminiRateLimitError:
+        def rate_err():
+            yield ("data: " + jdump({"error": "⚠️ Gemini rate limit reached after retries. Please wait a minute and try again."}) + "\n\n").encode("utf-8")
+        return Response(stream_with_context(rate_err()), content_type="text/event-stream; charset=utf-8")
+
+    except GeminiServiceError as e:
+        def svc_err():
+            yield ("data: " + jdump({"error": f"⚠️ Gemini service error ({e.status_code}). Please try again shortly."}) + "\n\n").encode("utf-8")
+        return Response(stream_with_context(svc_err()), content_type="text/event-stream; charset=utf-8")
 
     except requests.exceptions.Timeout:
         def timeout_err():
@@ -381,6 +440,11 @@ def analyze_file():
 
     try:
         file_bytes = uploaded_file.read()
+        MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+        if len(file_bytes) > MAX_FILE_SIZE:
+            def size_err():
+                yield ("data: " + jdump({"error": "⚠️ File too large. Maximum allowed size is 5 MB."}) + "\n\n").encode("utf-8")
+            return Response(stream_with_context(size_err()), content_type="text/event-stream; charset=utf-8")
         print(f"FILE: {filename} | EXT: {ext} | SIZE: {len(file_bytes)} bytes")
 
         # ── Extract content based on type ──
@@ -418,23 +482,8 @@ def analyze_file():
             "generationConfig": GENERATION_CONFIG
         }
 
-        # ── Stream the Gemini response ──
-        gemini_resp = requests.post(
-            API_URL_STREAM,
-            json=payload,
-            timeout=90,
-            stream=True
-        )
-
-        if gemini_resp.status_code == 429:
-            def rate_err():
-                yield ("data: " + jdump({"error": "⚠️ Gemini rate limit reached. Please wait a minute and try again."}) + "\n\n").encode("utf-8")
-            return Response(stream_with_context(rate_err()), content_type="text/event-stream; charset=utf-8")
-
-        if gemini_resp.status_code >= 400:
-            def api_err():
-                yield ("data: " + jdump({"error": f"⚠️ Gemini API error ({gemini_resp.status_code}). Please try again."}) + "\n\n").encode("utf-8")
-            return Response(stream_with_context(api_err()), content_type="text/event-stream; charset=utf-8")
+        # ── Stream the Gemini response (with retry on 429/503) ──
+        gemini_resp = gemini_post(API_URL_STREAM, payload, stream=True, timeout=90)
 
         def generate():
             for raw_line_bytes in gemini_resp.iter_lines():
@@ -463,6 +512,16 @@ def analyze_file():
             content_type="text/event-stream; charset=utf-8",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
         )
+
+    except GeminiRateLimitError:
+        def rate_err():
+            yield ("data: " + jdump({"error": "⚠️ Gemini rate limit reached after retries. Please wait a minute and try again."}) + "\n\n").encode("utf-8")
+        return Response(stream_with_context(rate_err()), content_type="text/event-stream; charset=utf-8")
+
+    except GeminiServiceError as e:
+        def svc_err():
+            yield ("data: " + jdump({"error": f"⚠️ Gemini service error ({e.status_code}). Please try again shortly."}) + "\n\n").encode("utf-8")
+        return Response(stream_with_context(svc_err()), content_type="text/event-stream; charset=utf-8")
 
     except requests.exceptions.Timeout:
         def timeout_err():

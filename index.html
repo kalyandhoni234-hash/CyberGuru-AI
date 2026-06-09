@@ -2095,6 +2095,11 @@ async function sendToBackend() {
         updateStreamingMessage(streamId, fullText, true);
         chats[activeChatId].msgs.push({ role:'bot', text:fullText });
         saveToStorage();
+      } else {
+        const errMsg = '⚠️ The response stream ended unexpectedly. Please try again.';
+        updateStreamingMessage(streamId, errMsg, true);
+        chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
+        saveToStorage();
       }
 
     } catch(err) {
@@ -2191,6 +2196,12 @@ async function sendToBackend() {
     if(fullText) {
       updateStreamingMessage(streamId, fullText, true);
       chats[activeChatId].msgs.push({ role:'bot', text:fullText });
+      saveToStorage();
+    } else if(!fullText) {
+      // Stream ended with no content — surface an error
+      const errMsg = '⚠️ The response stream ended unexpectedly. Please try again.';
+      updateStreamingMessage(streamId, errMsg, true);
+      chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
       saveToStorage();
     }
 
@@ -2315,16 +2326,19 @@ function updateStreamingMessage(streamId, fullText, isFinal) {
 
   recognition.onresult = (e) => {
     let interim = '';
-    finalTranscript = '';
+    // Only reset finalTranscript from index 0 to avoid losing earlier final results
+    let newFinal = '';
 
     for(let i = e.resultIndex; i < e.results.length; i++) {
       const t = e.results[i][0].transcript;
       if(e.results[i].isFinal) {
-        finalTranscript += t;
+        newFinal += t;
       } else {
         interim += t;
       }
     }
+
+    if(newFinal) finalTranscript += newFinal;
 
     // Show live transcript in input box
     const inputEl = document.getElementById('user-input');
@@ -2407,6 +2421,12 @@ function closeSidebar() {
 
   let W, H, nodes, edges;
   let frame = 0;
+  let cachedSidebarW = 264; // cached to avoid per-frame layout reflow
+
+  function getSidebarWidth() {
+    const sidebar = document.getElementById('sidebar');
+    return sidebar ? sidebar.offsetWidth : 264;
+  }
 
   function getAccentColor() {
     const b = document.body;
@@ -2416,6 +2436,7 @@ function closeSidebar() {
   }
 
   function resize() {
+    cachedSidebarW = getSidebarWidth();
     W = canvas.width  = window.innerWidth;
     H = canvas.height = window.innerHeight;
     build();
@@ -2423,8 +2444,7 @@ function closeSidebar() {
 
   function build() {
     const count = Math.min(28, Math.floor(W * H / 28000));
-    const sidebar = document.getElementById('sidebar');
-    const sw = sidebar ? sidebar.offsetWidth : 264;
+    const sw = cachedSidebarW;
 
     nodes = Array.from({length: count}, (_, i) => ({
       x: sw + Math.random() * (W - sw),
@@ -2481,8 +2501,7 @@ function closeSidebar() {
       n.y += Math.sin(n.angle) * n.speed * .4;
 
       // Softly steer angle to keep nodes on screen
-      const sidebar = document.getElementById('sidebar');
-      const sw = sidebar ? sidebar.offsetWidth : 264;
+      const sw = cachedSidebarW;
       if(n.x < sw + 20)   n.angle = 0;
       if(n.x > W - 20)    n.angle = Math.PI;
       if(n.y < 20)         n.angle = Math.PI/2;
@@ -2541,11 +2560,16 @@ function syncRadar() {
 }
 
 // Patch showWelcome and newChat to sync radar
-const _origShowWelcome = showWelcome;
-showWelcome = function() { _origShowWelcome(); syncRadar(); };
+// Guard: only patch after DOMContentLoaded so showWelcome is guaranteed defined
+document.addEventListener('DOMContentLoaded', function() {
+  if(typeof showWelcome === 'function') {
+    const _origShowWelcome = showWelcome;
+    showWelcome = function() { _origShowWelcome(); syncRadar(); };
+  }
+  syncRadar();
+});
 
-// Check on load
-document.addEventListener('DOMContentLoaded', syncRadar);
+// Check on load (fallback for scripts already executed)
 setTimeout(syncRadar, 100);
 
 </script>

@@ -18,14 +18,16 @@ CORS(app)
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["300 per day", "60 per hour"],
+    default_limits=["1000 per day", "200 per hour"],
     storage_uri="memory://",   # swap to "redis://..." in production
 )
 
 @app.errorhandler(429)
 def rate_limit_handler(e):
     return jsonify({
-        "reply": f"⚠️ Too many requests — {e.description}. Please slow down and try again shortly."
+        "reply": f"⚠️ Too many requests — {e.description}. Please slow down and try again shortly.",
+        "rate_limited": True,
+        "retry_after": 60
     }), 429
 
 # Always serialize JSON with Unicode intact (fixes emoji encoding in SSE streams)
@@ -58,68 +60,41 @@ GEMINI_HEADERS = {
 }
 
 SYSTEM_INSTRUCTION = """
-You are CyberGuru AI, an expert cybersecurity mentor.
+You are CyberGuru AI, an expert cybersecurity mentor and educator.
 
-Rules:
+## SCOPE
+- Answer cybersecurity and computer networking -related questions only.
+- For clearly unrelated questions, reply: "I am CyberGuru AI and can only assist with cybersecurity topics."
+- For casual greetings (hi, how are you, etc.), respond warmly and briefly, then invite a cybersecurity question.
 
-1. Answer only cybersecurity-related questions.
+## ETHICS
+- Never encourage illegal hacking, unauthorized access, malware deployment, credential theft, or any harmful activity.
+- When covering offensive security techniques, frame everything around education, defense, detection, and ethical/authorized use.
 
-2. For unrelated questions, reply:
-"I am CyberGuru AI and can only assist with cybersecurity topics."
- but for general questions like hi,how are you you to reply in soft tone
+## RESPONSE STYLE
+- Be concise by default. Match answer length to the complexity of the question — a simple question gets a short answer, a deep question gets a thorough one.
+- If an answer would exceed ~500 words and the user did not ask for detail, first ask: "Would you like a detailed explanation?"
+- Do NOT write textbook-style walls of text. Prefer practical, actionable explanations.
+- Use numbered lists (1. 2. 3.) rather than bullet asterisks (*) for multi-point answers.
+- Use headings (## or ###) only when the response has multiple distinct sections that benefit from separation.
+- Use sparingly: 🛡️ ⚠️ 🔍 ✅ — one or two per response max, never decoratively on every line.
 
-3. Explain concepts in a beginner-friendly way.
+## ANSWER STRUCTURE (for technical topics)
+When explaining a cybersecurity concept, use this flow naturally (not as rigid headers):
+1. What it is (definition)
+2. How it works / real example
+3. Why it matters
+4. How to defend against it / mitigate it
 
-4. Structure answers using:
-   - Definition
-   - Example
-   - Why it matters
-   - Prevention/Mitigation
+## CODE & COMMANDS
+- Explain what each part does.
+- Note risks or misuse potential where relevant.
+- Always wrap commands/code in code blocks.
 
-5. Use bullet points when possible.
-
-6. For tools, commands, or code:
-   - Explain what each part does.
-   - Mention risks if applicable.
-
-7. Never encourage illegal hacking,
-   unauthorized access,
-   malware deployment,
-   credential theft,
-   or harmful activities.
-
-8. When discussing offensive security,
-   focus on education,
-   defense,
-   detection,
-   and ethical use.
-
-9. Keep responses concise unless the user asks for details.
-
-10. Use emojis occasionally:
-🛡️ 🔍 ⚠️ ✅
-11. Do not write textbook-style responses.
-
-Avoid excessive headings, emojis, and repetitive structures.
-
-Prioritize concise, practical explanations.
-
-Adapt answer length to the user's question.
-
-For beginner questions:
-- Explain simply.
-- Give actionable next steps.
-- Avoid turning every answer into a complete guide.
-
-Use headings only when they improve readability.
-12.If the answer exceeds 500 words, first ask:
-"Would you like a detailed explanation?"
-unless the user explicitly requests detail.
-13. add this line after every response
-"──────
-🛡️ CyberGuru AI"
-14. use chatgpt response style like for headings with points,bullete points, more understandable for 
-use number pointers instead of "* "
+## SIGN-OFF
+End every response with exactly this line, on its own line:
+──────
+🛡️ CyberGuru AI
 """
 
 # Max messages to send as history (keeps token usage reasonable)
@@ -130,6 +105,26 @@ GENERATION_CONFIG = {
     "maxOutputTokens": 8192,
     "temperature": 0.7,
 }
+
+# ==========================
+# INPUT SANITIZATION
+# ==========================
+
+MAX_INPUT_CHARS = 4000   # mirrors frontend char counter
+
+def sanitize_input(text: str) -> str:
+    """
+    Strip null bytes and other non-printable control characters,
+    then hard-cap length to MAX_INPUT_CHARS.
+    This runs server-side regardless of what the frontend enforces.
+    """
+    # Remove null bytes and most C0/C1 control chars (keep \t \n \r)
+    cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+    # Hard length cap
+    if len(cleaned) > MAX_INPUT_CHARS:
+        cleaned = cleaned[:MAX_INPUT_CHARS]
+    return cleaned.strip()
+
 
 # ==========================
 # GROUNDING CONFIG
@@ -218,6 +213,42 @@ class GeminiServiceError(Exception):
         super().__init__(f"Gemini API error {status_code}")
 
 
+ALLOWED_HISTORY_ROLES = {"user", "bot"}
+MAX_HISTORY_MSG_CHARS = 8000   # per-message cap; prevents one giant history entry
+
+def validate_history(raw_history) -> list:
+    """
+    Sanitize client-supplied history before it reaches Gemini.
+    - Rejects non-list input entirely.
+    - Drops entries with invalid/missing roles (only 'user' and 'bot' allowed).
+    - Drops entries with non-string or empty text.
+    - Truncates each entry's text to MAX_HISTORY_MSG_CHARS.
+    - Runs sanitize_input on every entry so control chars and
+      length limits are enforced consistently with new messages.
+    Returns a clean list safe to pass to build_contents().
+    """
+    if not isinstance(raw_history, list):
+        return []
+
+    clean = []
+    for entry in raw_history:
+        if not isinstance(entry, dict):
+            continue
+        role = entry.get("role", "")
+        text = entry.get("text", "")
+        # Reject unknown roles — prevents injecting 'model' or 'system' turns
+        if role not in ALLOWED_HISTORY_ROLES:
+            continue
+        if not isinstance(text, str) or not text.strip():
+            continue
+        clean.append({
+            "role": role,
+            "text": sanitize_input(text[:MAX_HISTORY_MSG_CHARS]),
+        })
+
+    return clean
+
+
 def build_contents(history, new_message):
     """
     Convert frontend history format to Gemini contents array.
@@ -231,11 +262,22 @@ def build_contents(history, new_message):
     max_msgs = MAX_HISTORY_TURNS * 2
     trimmed = history[-max_msgs:] if len(history) > max_msgs else history
 
+    # Hard cap: if the accumulated history text exceeds ~60 KB, drop oldest
+    # entries until it fits. Prevents prompt-stuffing via large histories.
+    MAX_HISTORY_BYTES = 60_000
+    while trimmed:
+        total = sum(len(m.get("text", "")) for m in trimmed)
+        if total <= MAX_HISTORY_BYTES:
+            break
+        trimmed = trimmed[2:]  # drop oldest turn (user + bot pair)
+
     for msg in trimmed:
         role = msg.get("role", "")
         text = msg.get("text", "")
         if not role or not isinstance(text, str):
             continue  # skip malformed history entries
+        # Sanitize each history entry too — the client can't be trusted
+        text = sanitize_input(text)
         gemini_role = "model" if role == "bot" else "user"
         contents.append({
             "role": gemini_role,
@@ -249,6 +291,43 @@ def build_contents(history, new_message):
     })
 
     return contents
+
+# Allowlist of quiz topics — prevents prompt injection via /quiz <payload>
+QUIZ_TOPIC_ALLOWLIST = {
+    "sql injection", "xss", "cross-site scripting", "malware", "phishing",
+    "network security", "cryptography", "encryption", "ransomware", "firewall",
+    "penetration testing", "owasp", "owasp top 10", "buffer overflow",
+    "social engineering", "zero-day", "zero day", "ddos", "man in the middle",
+    "mitm", "authentication", "authorization", "csrf", "cross-site request forgery",
+    "idor", "ssrf", "xxe", "command injection", "path traversal", "jwt",
+    "vpn", "ids", "ips", "siem", "threat modelling", "threat modeling",
+    "incident response", "forensics", "reverse engineering", "web security",
+    "cloud security", "iot security", "mobile security", "apt", "rootkit",
+    "keylogger", "botnet", "spyware", "trojan", "worm", "virus",
+}
+
+MAX_QUIZ_TOPIC_LEN = 60   # characters
+
+def sanitize_quiz_topic(raw_topic: str) -> str | None:
+    """
+    Validate and normalize a quiz topic against the allowlist.
+    Returns the cleaned topic string on success, or None if the topic
+    is not recognized — indicating a likely injection attempt.
+    """
+    topic = raw_topic.strip()[:MAX_QUIZ_TOPIC_LEN]
+    # Strip any characters that don't belong in a topic name
+    topic = re.sub(r'[^\w\s\-]', '', topic).strip()
+    if not topic:
+        return None
+    # Case-insensitive allowlist check — exact match or substring of an allowed topic
+    lower = topic.lower()
+    if lower in QUIZ_TOPIC_ALLOWLIST:
+        return topic
+    # Allow partial matches so "sql" matches "sql injection", etc.
+    if any(lower in allowed or allowed in lower for allowed in QUIZ_TOPIC_ALLOWLIST):
+        return topic
+    return None   # not recognized — reject
+
 
 def build_quiz_prompt(topic):
     return f"""
@@ -288,6 +367,7 @@ Repeat for 5 questions.
 # ==========================
 
 @app.route('/health', methods=['GET'])
+@limiter.exempt
 def health():
     return jsonify({"status": "ok"}), 200
 
@@ -306,9 +386,8 @@ def index():
 def chat():
     try:
         data = request.get_json()
-        user_message = data.get("message", "").strip()
-        history      = data.get("history", [])
-        quiz_mode = False
+        user_message = sanitize_input(data.get("message", ""))
+        history      = validate_history(data.get("history", []))
         quiz_topic = ""
 
         if user_message.lower().startswith("/quiz"):
@@ -323,7 +402,17 @@ def chat():
                 return jsonify({
                     "reply": "⚠️ Please provide a topic.\n\nExample:\n/quiz sql injection"
                 })
-            user_message = build_quiz_prompt(quiz_topic)
+            safe_topic = sanitize_quiz_topic(quiz_topic)
+            if not safe_topic:
+                return jsonify({
+                    "reply": (
+                        "⚠️ That topic isn't in the quiz library.\n\n"
+                        "Try one of: SQL Injection, XSS, Malware, Phishing, "
+                        "Network Security, Cryptography, Ransomware, OWASP Top 10, "
+                        "Buffer Overflow, Social Engineering, or another cybersecurity topic."
+                    )
+                })
+            user_message = build_quiz_prompt(safe_topic)
 
         payload = {
             "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
@@ -364,11 +453,33 @@ def chat():
 def chat_stream():
     try:
         data = request.get_json()
-        user_message = data.get("message", "").strip()
-        history      = data.get("history", [])
+        user_message = sanitize_input(data.get("message", ""))
+        history      = validate_history(data.get("history", []))
 
         if not user_message:
             return jsonify({"reply": "Please enter a message."}), 400
+
+        # ── Quiz mode (mirrors /chat handling) ──
+        if user_message.lower().startswith("/quiz"):
+            quiz_topic = user_message[5:].strip()
+            if not quiz_topic:
+                def no_topic():
+                    yield ("data: " + jdump({"token": "⚠️ Please provide a topic.\n\nExample:\n`/quiz sql injection`"}) + "\n\n").encode("utf-8")
+                    yield ("data: " + jdump({"done": True}) + "\n\n").encode("utf-8")
+                return Response(stream_with_context(no_topic()), content_type="text/event-stream; charset=utf-8")
+            safe_topic = sanitize_quiz_topic(quiz_topic)
+            if not safe_topic:
+                def bad_topic():
+                    msg = (
+                        "⚠️ That topic isn't in the quiz library.\n\n"
+                        "Try one of: SQL Injection, XSS, Malware, Phishing, "
+                        "Network Security, Cryptography, Ransomware, OWASP Top 10, "
+                        "Buffer Overflow, Social Engineering, or another cybersecurity topic."
+                    )
+                    yield ("data: " + jdump({"token": msg}) + "\n\n").encode("utf-8")
+                    yield ("data: " + jdump({"done": True}) + "\n\n").encode("utf-8")
+                return Response(stream_with_context(bad_topic()), content_type="text/event-stream; charset=utf-8")
+            user_message = build_quiz_prompt(safe_topic)
 
         payload = {
             "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
@@ -386,6 +497,10 @@ def chat_stream():
 
         def generate():
             grounding_meta = None  # collects groundingMetadata from last chunk
+
+            # Tell the frontend we're hitting Google Search before any token arrives
+            if use_grounding:
+                yield ("data: " + jdump({"status": "searching"}) + "\n\n").encode("utf-8")
 
             for raw_line_bytes in gemini_resp.iter_lines():
                 raw_line = raw_line_bytes.decode("utf-8") if isinstance(raw_line_bytes, bytes) else raw_line_bytes
@@ -448,7 +563,7 @@ def chat_stream():
 
     except GeminiRateLimitError:
         def rate_err():
-            yield ("data: " + jdump({"error": "⚠️ Gemini rate limit reached after retries. Please wait a minute and try again."}) + "\n\n").encode("utf-8")
+            yield ("data: " + jdump({"rate_limited": True, "retry_after": 60, "error": "⚠️ Gemini rate limit reached after retries. Please wait a minute and try again."}) + "\n\n").encode("utf-8")
         return Response(stream_with_context(rate_err()), content_type="text/event-stream; charset=utf-8")
 
     except GeminiServiceError as e:
@@ -608,6 +723,11 @@ def analyze_file():
             "generationConfig": GENERATION_CONFIG
         }
 
+        # Add Google Search grounding when the file content suggests real-time
+        # info would help (CVE IDs, malware names, known threat actors, etc.)
+        if needs_grounding(prompt):
+            payload["tools"] = [GOOGLE_SEARCH_TOOL]
+
         # ── Stream the Gemini response (with retry on 429/503) ──
         gemini_resp = gemini_post(API_URL_STREAM, payload, stream=True, timeout=90)
 
@@ -666,12 +786,13 @@ def analyze_file():
 # ==========================
 
 @app.route("/generate-title", methods=["POST"])
-@limiter.limit("30 per minute")
+@limiter.limit("30 per minute", override_defaults=True)
 def generate_title():
     """Generate a short smart title for a conversation from its first user message."""
+    first_message = ""  # default before try so the except block can always reference it
     try:
         data = request.get_json()
-        first_message = data.get("message", "").strip()
+        first_message = (data.get("message", "") if data else "").strip()
         if not first_message:
             return jsonify({"title": "New conversation"})
 
@@ -694,7 +815,63 @@ def generate_title():
     except Exception:
         return jsonify({"title": first_message[:42] + ("…" if len(first_message) > 42 else "")})
 
+@app.route("/suggest", methods=["POST"])
+@limiter.limit("30 per minute", override_defaults=True)
+def suggest():
 
+    try:
+        data = request.get_json()
+        query = sanitize_input(data.get("query", ""))
+
+        if len(query) < 2:
+            return jsonify({"suggestions": []})
+
+        prompt = f"""
+Generate 5 short cybersecurity questions based on:
+
+"{query}"
+
+Rules:
+- Return JSON only
+- Maximum 5 suggestions
+- One line each
+- Cybersecurity topics only
+
+Example:
+[
+  "What is SQL Injection?",
+  "How SQL Injection works?",
+  "SQL Injection prevention",
+  "Blind SQL Injection explained",
+  "OWASP SQL Injection"
+]
+"""
+
+        payload = {
+            "contents": [{
+                "role": "user",
+                "parts": [{"text": prompt}]
+            }],
+            "generationConfig": {
+                "temperature": 0.4,
+                "maxOutputTokens": 200
+            }
+        }
+
+        response = gemini_post(API_URL, payload)
+
+        text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+        suggestions = json.loads(text)
+
+        return jsonify({
+            "suggestions": suggestions
+        })
+
+    except Exception:
+        return jsonify({
+            "suggestions": []
+        })
 # ==========================
 # START SERVER
 # ==========================

@@ -15,6 +15,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" integrity="sha512-jB0TkTBeQC9ZSkBqDhdmfTv1qdfbWpPougH0lDjKDkqtSyBiEHca32FDRFnx+lSd+bSRSRobLwmJnEbIXkEAw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <link rel="icon" type="image/png" href="favicon.png">
 <style>
 
@@ -658,8 +661,11 @@ body {
 .msg-inner{
   max-width: var(--chat-max);
   width:100%;
-  margin-left:24px;
-  margin-right:auto;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 /* Avatar */
@@ -713,6 +719,7 @@ body {
   font-size: 14px;
   line-height: 1.8;
   color: var(--text-primary);
+  min-height: 1.4em; /* prevents collapse while only the cursor is present */
 }
 
 .msg-content p { margin-bottom: 10px; }
@@ -838,6 +845,52 @@ body {
   line-height: 1.65;
 }
 
+/* ─── HIGHLIGHT.JS THEME OVERRIDES ───────────────────────────── */
+/* Force hljs to use our bg-code variable instead of github-dark's
+   own background so the code panel stays consistent across themes. */
+.hljs {
+  background: transparent !important;
+  color: #93c5fd;
+  font-size: 13px;
+  line-height: 1.65;
+  padding: 0 !important;
+}
+/* Keyword, built_in */
+.hljs-keyword, .hljs-built_in { color: #c084fc; }
+/* Strings */
+.hljs-string, .hljs-template-string { color: #86efac; }
+/* Numbers */
+.hljs-number, .hljs-literal { color: #fb923c; }
+/* Comments */
+.hljs-comment { color: #4b6a9b; font-style: italic; }
+/* Function / title */
+.hljs-title, .hljs-function { color: #60a5fa; }
+/* Attributes / params */
+.hljs-attr, .hljs-params { color: #93c5fd; }
+/* Type / class */
+.hljs-type, .hljs-class .hljs-title { color: #67e8f9; }
+/* Operators / punctuation */
+.hljs-operator, .hljs-punctuation { color: #94a3b8; }
+/* Variable */
+.hljs-variable { color: #fda4af; }
+/* Meta (e.g. shebang, decorators) */
+.hljs-meta { color: #a78bfa; }
+/* Hacker theme — shift palette to green */
+body.theme-hacker .hljs { color: #86efac; }
+body.theme-hacker .hljs-keyword  { color: #4ade80; }
+body.theme-hacker .hljs-string   { color: #d9f99d; }
+body.theme-hacker .hljs-comment  { color: #166534; }
+body.theme-hacker .hljs-number   { color: #a3e635; }
+body.theme-hacker .hljs-title    { color: #86efac; }
+/* Light theme — keep github-dark readable on white by inverting key colors */
+body.theme-light .hljs { color: #1e40af; }
+body.theme-light .hljs-keyword  { color: #7c3aed; }
+body.theme-light .hljs-string   { color: #15803d; }
+body.theme-light .hljs-comment  { color: #6b7280; font-style: italic; }
+body.theme-light .hljs-number   { color: #c2410c; }
+body.theme-light .hljs-title    { color: #1d4ed8; }
+body.theme-light .hljs-variable { color: #be123c; }
+
 .msg-content blockquote {
   border-left: 2px solid var(--border-strong);
   padding: 8px 16px;
@@ -873,19 +926,71 @@ body {
   justify-content: center;
   flex-shrink: 0;
   box-shadow: 0 0 10px rgba(14,116,144,.2);
+  transition: box-shadow .3s ease;
 }
+
+/* Avatar glow shifts per state */
+#typing-indicator[data-state="searching"]    .typing-avatar { box-shadow: 0 0 14px rgba(251,191,36,.35); }
+#typing-indicator[data-state="analyzing"]    .typing-avatar { box-shadow: 0 0 14px rgba(34,211,238,.35); }
+#typing-indicator[data-state="generating"]   .typing-avatar { box-shadow: 0 0 14px rgba(52,211,153,.35); }
+#typing-indicator[data-state="reconnecting"] .typing-avatar { box-shadow: 0 0 14px rgba(248,113,113,.35); }
 
 .typing-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
+
+/* State label row: icon + text */
+.typing-state-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.typing-state-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: color .3s ease;
+}
+
+/* Per-state icon colours */
+#typing-indicator[data-state="thinking"]    .typing-state-icon { color: var(--blue-soft); }
+#typing-indicator[data-state="analyzing"]   .typing-state-icon { color: var(--cyan); }
+#typing-indicator[data-state="searching"]   .typing-state-icon { color: var(--amber); }
+#typing-indicator[data-state="generating"]  .typing-state-icon { color: var(--green); }
+#typing-indicator[data-state="reconnecting"].typing-state-icon { color: var(--red); }
 
 .typing-label {
   font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text-muted);
   letter-spacing: .3px;
+  transition: color .3s ease;
+}
+
+#typing-indicator[data-state="thinking"]    .typing-label { color: var(--blue-soft); }
+#typing-indicator[data-state="analyzing"]   .typing-label { color: var(--cyan); }
+#typing-indicator[data-state="searching"]   .typing-label { color: var(--amber); }
+#typing-indicator[data-state="generating"]  .typing-label { color: var(--green); }
+#typing-indicator[data-state="reconnecting"].typing-label { color: var(--red); }
+
+/* Animated ellipsis "..." via pseudo-element — no layout shift */
+.typing-label::after {
+  content: '';
+  display: inline-block;
+  width: 1.5ch;
+  animation: ellipsis-cycle 1.5s steps(4, end) infinite;
+  text-align: left;
+}
+
+@keyframes ellipsis-cycle {
+  0%   { content: '';    }
+  25%  { content: '.';   }
+  50%  { content: '..';  }
+  75%  { content: '...'; }
 }
 
 .typing-dots {
@@ -900,14 +1005,39 @@ body {
   border-radius: 50%;
   background: var(--blue-soft);
   animation: bounce-dot .8s ease-in-out infinite;
+  transition: background .3s ease;
 }
-.typing-dots span:nth-child(2) { animation-delay: .13s; background: var(--cyan); }
-.typing-dots span:nth-child(3) { animation-delay: .26s; background: var(--blue-vivid); }
+.typing-dots span:nth-child(2) { animation-delay: .13s; }
+.typing-dots span:nth-child(3) { animation-delay: .26s; }
+
+/* Per-state dot colours */
+#typing-indicator[data-state="thinking"]    .typing-dots span { background: var(--blue-soft); }
+#typing-indicator[data-state="analyzing"]   .typing-dots span { background: var(--cyan); }
+#typing-indicator[data-state="searching"]   .typing-dots span { background: var(--amber); }
+#typing-indicator[data-state="generating"]  .typing-dots span { background: var(--green); }
+#typing-indicator[data-state="reconnecting"].typing-dots span { background: var(--red); }
 
 @keyframes bounce-dot {
   0%,80%,100% { transform:translateY(0); opacity:.35; }
   40% { transform:translateY(-4px); opacity:1; }
 }
+
+/* Searching state: rotate icon to suggest scanning */
+#typing-indicator[data-state="searching"] .typing-state-icon {
+  animation: icon-spin 1.8s linear infinite;
+}
+/* Reconnecting: pulsing opacity */
+#typing-indicator[data-state="reconnecting"] .typing-state-icon {
+  animation: icon-pulse .9s ease-in-out infinite;
+}
+/* Generating: gentle vertical bob */
+#typing-indicator[data-state="generating"] .typing-state-icon {
+  animation: icon-bob 1s ease-in-out infinite;
+}
+
+@keyframes icon-spin  { to { transform: rotate(360deg); } }
+@keyframes icon-pulse { 0%,100% { opacity:.4; } 50% { opacity:1; } }
+@keyframes icon-bob   { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
 
 /* ─── INPUT AREA ──────────────────────────────────────────────── */
 #input-area {
@@ -916,6 +1046,26 @@ body {
   position: relative;
   z-index: 2;
   background: linear-gradient(0deg, var(--bg-panel) 60%, transparent);
+}
+#suggestions-box{
+  max-width: var(--chat-max);
+  margin: 0 auto 8px auto;
+  display:none;
+  background: var(--bg-card);
+  border:1px solid var(--border-default);
+  border-radius:12px;
+  overflow:hidden;
+}
+
+.suggestion-item{
+  padding:12px 16px;
+  cursor:pointer;
+  transition:.15s;
+  font-size:13px;
+}
+
+.suggestion-item:hover{
+  background:var(--bg-hover);
 }
 
 .input-wrapper {
@@ -1575,6 +1725,7 @@ body.theme-light #main::before {
   gap: 5px;
   transition: all .15s;
 }
+.export-btn-el.visible { display: flex; }
 .export-btn-el:hover { border-color: var(--border-strong); color: var(--blue-soft); }
 
 /* ── Char count ── */
@@ -1678,6 +1829,137 @@ body.theme-light #main::before {
 .grounding-queries { margin-top:7px; color:var(--text-muted); font-size:10.5px; }
 .grounding-widget  { margin-top:8px; border-radius:var(--r-sm); overflow:hidden; }
 
+/* ── Confirm modal ── */
+#confirm-modal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+#confirm-modal.show { display: flex; }
+.confirm-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-lg);
+  padding: 24px 28px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.confirm-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.confirm-msg {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.confirm-cancel-btn {
+  padding: 7px 16px;
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.confirm-cancel-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.confirm-ok-btn {
+  padding: 7px 16px;
+  background: rgba(248,113,113,.12);
+  border: 1px solid rgba(248,113,113,.35);
+  border-radius: var(--r-sm);
+  color: var(--red);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.confirm-ok-btn:hover { background: rgba(248,113,113,.22); }
+
+/* ── Rate-limit banner ── */
+#rate-limit-banner {
+  display: none;
+  /* In-flow — sits above the topbar inside #main so it pushes content
+     down rather than overlapping it. No position:fixed needed. */
+  width: 100%;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, rgba(251,191,36,.12), rgba(251,191,36,.08));
+  border-bottom: 1px solid rgba(251,191,36,.35);
+  padding: 9px 20px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 12.5px;
+  font-family: var(--font-ui);
+  color: var(--amber);
+  letter-spacing: .1px;
+  z-index: 5;
+  animation: slideDown .25s ease;
+}
+#rate-limit-banner.show { display: flex; }
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+#rate-limit-countdown {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 28px;
+  text-align: center;
+}
+#rate-limit-dismiss {
+  background: none;
+  border: 1px solid rgba(251,191,36,.4);
+  border-radius: var(--r-sm);
+  color: var(--amber);
+  font-size: 11px;
+  padding: 3px 9px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  transition: background .15s;
+  margin-left: 6px;
+}
+#rate-limit-dismiss:hover { background: rgba(251,191,36,.12); }
+
+/* ── Stream reconnect state ── */
+.reconnect-notice {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  color: var(--amber);
+  margin-top: 6px;
+  padding: 5px 0;
+  opacity: .8;
+}
+.reconnect-spinner {
+  width: 11px; height: 11px;
+  border: 1.5px solid rgba(251,191,36,.3);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 </style>
 </head>
 <body>
@@ -1687,6 +1969,18 @@ body.theme-light #main::before {
 
 <!-- Sidebar overlay for mobile -->
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- Custom confirm dialog (replaces browser confirm()) -->
+<div id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title-text">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title-text">Delete conversation?</div>
+    <div class="confirm-msg">This conversation will be permanently deleted and cannot be recovered.</div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel-btn" onclick="resolveConfirm(false)">Cancel</button>
+      <button class="confirm-ok-btn" onclick="resolveConfirm(true)">Delete</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ SIDEBAR ═══════════════════════════════════════════════════ -->
 <aside id="sidebar" role="navigation" aria-label="Sidebar">
@@ -1757,6 +2051,16 @@ body.theme-light #main::before {
 <!-- ═══ MAIN ═══════════════════════════════════════════════════════ -->
 <main id="main">
 
+  <!-- Rate-limit banner — in-flow so it pushes topbar down, not over it -->
+  <div id="rate-limit-banner" role="alert" aria-live="polite">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    </svg>
+    <span>Rate limit reached — next request available in</span>
+    <span id="rate-limit-countdown">60</span>s
+    <button id="rate-limit-dismiss" onclick="dismissRateBanner()">Dismiss</button>
+  </div>
+
   <!-- Topbar -->
   <div id="topbar">
     <button id="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
@@ -1803,19 +2107,19 @@ body.theme-light #main::before {
         <button class="cap-pill quiz-pill" onclick="openQuizModal()">🎯 Quiz Mode</button>
       </div>
       <div class="suggest-grid">
-        <div class="suggest-card" onclick="suggest('What is SQL Injection and how does it work?')">
+        <div class="suggest-card" onclick="fillAndSend('What is SQL Injection and how does it work?')">
           <span class="sc-label">Attack Vector</span>
           What is SQL Injection?
         </div>
-        <div class="suggest-card" onclick="suggest('Explain Cross-Site Scripting (XSS) attacks')">
+        <div class="suggest-card" onclick="fillAndSend('Explain Cross-Site Scripting (XSS) attacks')">
           <span class="sc-label">Client-side Exploit</span>
           Explain XSS Attacks
         </div>
-        <div class="suggest-card" onclick="suggest('What are the different types of malware?')">
+        <div class="suggest-card" onclick="fillAndSend('What are the different types of malware?')">
           <span class="sc-label">Threat Intel</span>
           Types of Malware
         </div>
-        <div class="suggest-card" onclick="suggest('What is OWASP Top 10 and why does it matter?')">
+        <div class="suggest-card" onclick="fillAndSend('What is OWASP Top 10 and why does it matter?')">
           <span class="sc-label">Framework</span>
           OWASP Top 10 Guide
         </div>
@@ -1832,7 +2136,7 @@ body.theme-light #main::before {
   </button>
 
   <!-- Typing indicator -->
-  <div id="typing-indicator">
+  <div id="typing-indicator" data-state="thinking">
     <div class="typing-inner">
       <div class="typing-avatar">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -1841,7 +2145,15 @@ body.theme-light #main::before {
         </svg>
       </div>
       <div class="typing-body">
-        <div class="typing-label">CyberGuru is analyzing<span class="typing-cursor"></span></div>
+        <div class="typing-state-row">
+          <!-- Icon swaps per state via JS -->
+          <svg class="typing-state-icon" id="typing-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- default: thinking brain / cpu chip -->
+            <rect x="7" y="7" width="10" height="10" rx="1" stroke-linecap="round"/>
+            <path stroke-linecap="round" d="M7 9H5M7 12H4M7 15H5M17 9h2M17 12h3M17 15h2M9 7V5M12 7V4M15 7V5M9 17v2M12 17v3M15 17v2"/>
+          </svg>
+          <span class="typing-label" id="typing-label">Thinking</span>
+        </div>
         <div class="typing-dots">
           <span></span><span></span><span></span>
         </div>
@@ -1851,6 +2163,7 @@ body.theme-light #main::before {
 
   <!-- Input area -->
   <div id="input-area">
+    <div id="suggestions-box"></div>
     <div class="input-wrapper">
       <label for="fileInput" class="upload-btn" id="upload-label" title="Attach file (.txt, .log, .pdf)">
         <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -1983,6 +2296,42 @@ let isThinking   = false;
 let activeReader  = null;   // holds current stream reader so we can cancel it
 let abortCtrl     = null;   // AbortController for fetch
 
+// ── Stream retry ──
+const MAX_STREAM_RETRIES = 2;   // attempts after first failure
+
+// ── Rate limit banner ──
+let _rateBannerTimer = null;
+
+function showRateBanner(retryAfterSecs) {
+  const banner    = document.getElementById('rate-limit-banner');
+  const countdown = document.getElementById('rate-limit-countdown');
+  if(!banner || !countdown) return;
+
+  let remaining = retryAfterSecs || 60;
+  countdown.textContent = remaining;
+  banner.classList.add('show');
+
+  // disable send while throttled
+  document.getElementById('send-btn').disabled = true;
+
+  clearInterval(_rateBannerTimer);
+  _rateBannerTimer = setInterval(() => {
+    remaining--;
+    countdown.textContent = Math.max(0, remaining);
+    if(remaining <= 0) {
+      dismissRateBanner();
+    }
+  }, 1000);
+}
+
+function dismissRateBanner() {
+  clearInterval(_rateBannerTimer);
+  const banner = document.getElementById('rate-limit-banner');
+  if(banner) banner.classList.remove('show');
+  const sendBtn = document.getElementById('send-btn');
+  if(sendBtn) sendBtn.disabled = false;
+}
+
 function stopGeneration() {
   if(abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
   if(activeReader) { try { activeReader.cancel(); } catch(e){} activeReader = null; }
@@ -1997,6 +2346,7 @@ function setThinkingUI(on) {
     sendBtn.style.display = 'none';
     stopBtn.style.display = 'flex';
     typer.style.display   = 'block';
+    setTypingState('thinking');   // always reset to base state on show
   } else {
     sendBtn.style.display = 'flex';
     stopBtn.style.display = 'none';
@@ -2004,6 +2354,51 @@ function setThinkingUI(on) {
     hideTPS();
   }
   document.getElementById('chat-box').scrollTo({ top: 99999, behavior: 'auto' });
+}
+
+// ── Typing state machine ──────────────────────────────────────────
+// States: 'thinking' | 'searching' | 'generating' | 'reconnecting'
+const TYPING_STATES = {
+  thinking: {
+    label: 'Thinking',
+    // CPU/chip icon
+    icon: `<rect x="7" y="7" width="10" height="10" rx="1" stroke-linecap="round"/>
+           <path stroke-linecap="round" d="M7 9H5M7 12H4M7 15H5M17 9h2M17 12h3M17 15h2M9 7V5M12 7V4M15 7V5M9 17v2M12 17v3M15 17v2"/>`,
+  },
+  analyzing: {
+    label: 'Analyzing file',
+    // Document + magnifying glass
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>`,
+  },
+  searching: {
+    label: 'Searching',
+    // Magnifying glass
+    icon: `<circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M21 21l-4.35-4.35"/>`,
+  },
+  generating: {
+    label: 'Generating',
+    // Zap / lightning bolt
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>`,
+  },
+  reconnecting: {
+    label: 'Reconnecting',
+    // Refresh / rotate arrows
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5"/>
+           <path stroke-linecap="round" stroke-linejoin="round" d="M20 20v-5h-5"/>
+           <path stroke-linecap="round" stroke-linejoin="round" d="M20.49 9A9 9 0 005.64 5.64L4 9M3.51 15a9 9 0 0014.85 3.36L20 15"/>`,
+  },
+};
+
+function setTypingState(state) {
+  const typer    = document.getElementById('typing-indicator');
+  const labelEl  = document.getElementById('typing-label');
+  const iconEl   = document.getElementById('typing-state-icon');
+  if(!typer || !labelEl || !iconEl) return;
+
+  const cfg = TYPING_STATES[state] || TYPING_STATES.thinking;
+  typer.setAttribute('data-state', state);
+  labelEl.textContent = cfg.label;
+  iconEl.innerHTML = cfg.icon;
 }
 
 // ── Tokens/sec counter ──
@@ -2054,20 +2449,30 @@ function thumbs(msgId, dir) {
   // Could POST feedback to backend here in future
 }
 
-// ── Smart AI-generated chat titles ──
-async function generateSmartTitle(message) {
-  try {
-    const res = await fetch(`${API_BASE}/generate-title`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message })
-    });
-    if(!res.ok) throw new Error();
-    const data = await res.json();
-    return data.title || null;
-  } catch(e) {
-    return null;
-  }
+// ── Smart title — local, no API call ──
+// Strips common filler words, takes the first 5 meaningful words,
+// title-cases them. Fast, free, zero Gemini requests.
+const TITLE_STOPWORDS = new Set([
+  'a','an','the','is','are','was','were','be','been','being',
+  'i','me','my','we','our','you','your','it','its',
+  'what','how','why','when','where','who','which','can','could',
+  'do','does','did','will','would','should','please','tell','explain',
+  'give','show','help','about','and','or','but','for','with',
+  'in','on','at','to','of','from','by','up','if','so',
+]);
+
+function generateSmartTitle(message) {
+  const words = message
+    .replace(/[^\w\s]/g, ' ')   // strip punctuation
+    .split(/\s+/)
+    .filter(w => w.length > 1 && !TITLE_STOPWORDS.has(w.toLowerCase()));
+
+  const titleWords = words.slice(0, 5);
+  if(!titleWords.length) return message.slice(0, 42);
+
+  return titleWords
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
 }
 
 // ── Export chat ──
@@ -2119,8 +2524,48 @@ function clearFile() {
 }
 
 /* ─── STORAGE ────────────────────────────────────────────────── */
+const STORAGE_WARN_BYTES = 4 * 1024 * 1024; // warn at 4 MB (limit ~5 MB)
+
 function saveToStorage() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chats)); } catch(e) {}
+  try {
+    const serialised = JSON.stringify(chats);
+    if(serialised.length > STORAGE_WARN_BYTES) {
+      // Trim oldest chats until we're under the threshold
+      const ids = Object.keys(chats).sort((a, b) => {
+        return parseInt(a.replace('chat_',''),10) - parseInt(b.replace('chat_',''),10);
+      });
+      while(ids.length > 1 && JSON.stringify(chats).length > STORAGE_WARN_BYTES) {
+        const oldest = ids.shift();
+        if(oldest !== activeChatId) delete chats[oldest];
+      }
+      console.warn('[CyberGuru] Storage near limit — oldest chats pruned.');
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+  } catch(e) {
+    if(e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+      // Surface a non-blocking toast instead of silently dropping data
+      showStorageWarning();
+    }
+  }
+}
+
+function showStorageWarning() {
+  let toast = document.getElementById('storage-toast');
+  if(!toast) {
+    toast = document.createElement('div');
+    toast.id = 'storage-toast';
+    toast.style.cssText = [
+      'position:fixed','bottom:80px','left:50%','transform:translateX(-50%)',
+      'background:var(--bg-card)','border:1px solid var(--red)',
+      'color:var(--red)','font-size:12px','font-family:var(--font-ui)',
+      'padding:8px 16px','border-radius:var(--r-md)','z-index:9998',
+      'box-shadow:var(--shadow-md)','pointer-events:none'
+    ].join(';');
+    document.body.appendChild(toast);
+  }
+  toast.textContent = '⚠️ Storage full — oldest chats may not be saved. Export important conversations.';
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 5000);
 }
 
 function loadFromStorage() {
@@ -2138,11 +2583,126 @@ function newChat() {
   renderHistoryList();
   document.getElementById('topbar-title').textContent = 'New Conversation';
   const exportBtn = document.getElementById('export-btn');
-  if(exportBtn) exportBtn.style.display = 'none';
+  if(exportBtn) exportBtn.classList.remove('visible');
   document.getElementById('user-input').focus();
   if(window.innerWidth <= 768) closeSidebar();
+  let suggestionTimer;
+}
+// ── Local suggestion bank — no API call, no rate limit impact ──
+const SUGGESTION_BANK = [
+  // Attacks & exploits
+  "What is SQL Injection and how does it work?",
+  "Explain Cross-Site Scripting (XSS) attacks",
+  "What is a buffer overflow attack?",
+  "How does a man-in-the-middle attack work?",
+  "What is Cross-Site Request Forgery (CSRF)?",
+  "Explain command injection vulnerabilities",
+  "What is an XML External Entity (XXE) attack?",
+  "How does Server-Side Request Forgery (SSRF) work?",
+  "What is a race condition vulnerability?",
+  "Explain path traversal attacks",
+  // Malware & threats
+  "What are the different types of malware?",
+  "How does ransomware work?",
+  "What is a rootkit and how does it hide?",
+  "Explain how keyloggers capture data",
+  "What is a trojan horse in cybersecurity?",
+  "How do botnets work?",
+  "What is a zero-day vulnerability?",
+  "Explain Advanced Persistent Threats (APT)",
+  "What is spyware and how to detect it?",
+  "How does a worm spread through networks?",
+  // Network security
+  "What is a firewall and how does it work?",
+  "Explain the difference between IDS and IPS",
+  "What is a VPN and how does it protect privacy?",
+  "How does a DDoS attack work?",
+  "What is DNS spoofing?",
+  "Explain ARP poisoning attacks",
+  "What is port scanning and why is it used?",
+  "How does SSL/TLS encryption work?",
+  "What is network segmentation?",
+  "Explain the OSI model in security context",
+  // Web security
+  "What is OWASP Top 10 and why does it matter?",
+  "How does Content Security Policy (CSP) work?",
+  "What is clickjacking and how to prevent it?",
+  "Explain HTTP security headers",
+  "What is CORS and how can it be misconfigured?",
+  "How does OAuth 2.0 work securely?",
+  "What is JWT and what are its security risks?",
+  "Explain insecure direct object references (IDOR)",
+  // Cryptography
+  "What is the difference between symmetric and asymmetric encryption?",
+  "How does public key infrastructure (PKI) work?",
+  "What is hashing and why is it used in security?",
+  "Explain salting passwords",
+  "What is certificate pinning?",
+  "How does end-to-end encryption work?",
+  // Defence & tools
+  "What is penetration testing?",
+  "How does multi-factor authentication work?",
+  "What is the principle of least privilege?",
+  "Explain threat modelling",
+  "What is a security audit?",
+  "How does SIEM work?",
+  "What is vulnerability scanning?",
+  "Explain the kill chain framework",
+  "What is MITRE ATT&CK?",
+  "How to implement a secure SDLC?",
+  // Social engineering
+  "What is phishing and how to spot it?",
+  "Explain spear phishing vs regular phishing",
+  "What is social engineering in cybersecurity?",
+  "How does vishing work?",
+  "What is pretexting?",
+];
+
+function getLocalSuggestions(query) {
+  if(!query || query.length < 2) return [];
+  const q = query.toLowerCase();
+  // Score: starts-with scores higher than contains
+  return SUGGESTION_BANK
+    .map(s => ({ s, score: s.toLowerCase().startsWith(q) ? 2 : s.toLowerCase().includes(q) ? 1 : 0 }))
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(x => x.s);
 }
 
+userInput.addEventListener("input", () => {
+  clearTimeout(suggestionTimer);
+  const text = userInput.value.trim();
+  if(text.length < 2) {
+    document.getElementById("suggestions-box").style.display = "none";
+    return;
+  }
+  // Debounce purely for render performance — no network call
+  suggestionTimer = setTimeout(() => {
+    renderSuggestions(getLocalSuggestions(text));
+  }, 120);
+});
+
+function renderSuggestions(suggestions) {
+  const box = document.getElementById("suggestions-box");
+  if(!suggestions || suggestions.length === 0) {
+    box.style.display = "none";
+    return;
+  }
+  box.innerHTML = "";
+  suggestions.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "suggestion-item";
+    div.textContent = item;
+    div.onclick = () => {
+      userInput.value = item;
+      box.style.display = "none";
+      userInput.focus();
+    };
+    box.appendChild(div);
+  });
+  box.style.display = "block";
+}
 function showWelcome() {
   const box = document.getElementById('chat-box');
   box.innerHTML = `
@@ -2164,21 +2724,22 @@ function showWelcome() {
         <span class="cap-pill">Malware &amp; Exploits</span>
       </div>
       <div class="suggest-grid">
-        <div class="suggest-card" onclick="suggest('What is SQL Injection and how does it work?')">
+        <div class="suggest-card" onclick="fillAndSend('What is SQL Injection and how does it work?')">
           <span class="sc-label">Attack Vector</span>What is SQL Injection?
         </div>
-        <div class="suggest-card" onclick="suggest('Explain Cross-Site Scripting (XSS) attacks')">
+        <div class="suggest-card" onclick="fillAndSend('Explain Cross-Site Scripting (XSS) attacks')">
           <span class="sc-label">Client-side Exploit</span>Explain XSS Attacks
         </div>
-        <div class="suggest-card" onclick="suggest('What are the different types of malware?')">
+        <div class="suggest-card" onclick="fillAndSend('What are the different types of malware?')">
           <span class="sc-label">Threat Intel</span>Types of Malware
         </div>
-        <div class="suggest-card" onclick="suggest('What is OWASP Top 10 and why does it matter?')">
+        <div class="suggest-card" onclick="fillAndSend('What is OWASP Top 10 and why does it matter?')">
           <span class="sc-label">Framework</span>OWASP Top 10 Guide
         </div>
       </div>
     </div>`;
 }
+
 
 /* ─── LOAD EXISTING CHAT ─────────────────────────────────────── */
 function loadChat(id, closeMenu = true) {
@@ -2196,7 +2757,7 @@ function loadChat(id, closeMenu = true) {
   chat.msgs.forEach(m => appendMessage(m.role, m.text, false));
   scrollToBottom(false);
   const exportBtn = document.getElementById('export-btn');
-  if(exportBtn && chat.msgs.length) exportBtn.style.display = 'flex';
+  if(exportBtn && chat.msgs.length) exportBtn.classList.add('visible');
   if(closeMenu && window.innerWidth <= 768) closeSidebar();
 }
 
@@ -2220,7 +2781,9 @@ function appendMessage(role, text, scroll = true) {
 
   const time    = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   const name    = role === 'user' ? 'You' : 'CyberGuru';
-  const rendered = role === 'bot' ? renderMarkdown(text) : `<p>${escapeHtml(text)}</p>`;
+  const rendered = role === 'bot'
+    ? (typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(renderMarkdown(text)) : renderMarkdown(text))
+    : `<p>${escapeHtml(text)}</p>`;
 
   const userAvatar = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2">
     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -2264,7 +2827,7 @@ function appendMessage(role, text, scroll = true) {
 
   // Show export button once there are messages
   const exportBtn = document.getElementById('export-btn');
-  if(exportBtn) exportBtn.style.display = 'flex';
+  if(exportBtn) exportBtn.classList.add('visible');
 
   if(scroll) {
     requestAnimationFrame(() => { autoScrollIfNeeded(); });
@@ -2292,7 +2855,7 @@ function startQuiz(){
 
   closeQuizModal();
 
-  suggest(`/quiz ${topic}`);
+  fillAndSend(`/quiz ${topic}`);
 }
 
 /* ─── MARKDOWN RENDERER ──────────────────────────────────────── */
@@ -2303,8 +2866,25 @@ function renderMarkdown(text) {
   let s = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
     const id = 'code-' + Math.random().toString(36).slice(2,8);
     const display = lang || 'text';
-    const escaped = code.trim()
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const trimmed = code.trim();
+    // Use hljs to highlight if available and language is known
+    let highlighted;
+    if(typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) {
+      try {
+        highlighted = hljs.highlight(trimmed, { language: lang, ignoreIllegals: true }).value;
+      } catch(e) {
+        highlighted = trimmed.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+    } else if(typeof hljs !== 'undefined' && !lang) {
+      // Auto-detect language
+      try {
+        highlighted = hljs.highlightAuto(trimmed).value;
+      } catch(e) {
+        highlighted = trimmed.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+    } else {
+      highlighted = trimmed.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
     const html = `<div class="code-block-wrap">
       <div class="code-block-header">
         <span class="code-lang">${display}</span>
@@ -2316,7 +2896,7 @@ function renderMarkdown(text) {
           Copy
         </button>
       </div>
-      <pre><code class="lang-${display}">${escaped}</code></pre>
+      <pre><code class="hljs lang-${display}">${highlighted}</code></pre>
     </div>`;
     const placeholder = `\x00CODE${codeBlocks.length}\x00`;
     codeBlocks.push(html);
@@ -2468,17 +3048,32 @@ function renderHistoryList() {
 }
 
 /* ─── DELETE CHAT ────────────────────────────────────────────── */
-function deleteChat(id, event) {
+let _confirmResolve = null;
+
+function showConfirm() {
+  document.getElementById('confirm-modal').classList.add('show');
+  return new Promise(resolve => { _confirmResolve = resolve; });
+}
+
+function resolveConfirm(result) {
+  document.getElementById('confirm-modal').classList.remove('show');
+  if(_confirmResolve) { _confirmResolve(result); _confirmResolve = null; }
+}
+
+async function deleteChat(id, event) {
   event.stopPropagation();
-  if(!confirm('Are you sure you want to delete this conversation?')) return;
+  const ok = await showConfirm();
+  if(!ok) return;
   delete chats[id];
   saveToStorage();
   renderHistoryList();
   if(activeChatId === id) newChat();
 }
 
-/* ─── SUGGEST ────────────────────────────────────────────────── */
-function suggest(text) {
+/* ─── FILL AND SEND ──────────────────────────────────────────── */
+// Named fillAndSend() to avoid collision with the /suggest autocomplete route.
+// All suggest-card onclick handlers and quiz mode call this.
+function fillAndSend(text) {
   document.getElementById('user-input').value = text;
   sendToBackend();
 }
@@ -2513,23 +3108,28 @@ async function sendToBackend() {
     appendMessage('user', userLabel);
 
     setThinkingUI(true);
+    setTypingState('analyzing');
 
     try {
       const formData = new FormData();
       formData.append('file', file);
       const res = await fetch(`${API_BASE}/analyze-file`, { method:'POST', body:formData });
 
-      setThinkingUI(false);
-
-      if(!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      // Keep the indicator up — hide it only once the streaming row is in the DOM
+      if(!res.ok || !res.body) {
+        setThinkingUI(false);
+        throw new Error(`HTTP ${res.status}`);
+      }
 
       const streamId = 'stream-' + Date.now();
       appendStreamingMessage(streamId);
+      setThinkingUI(false);   // now safe to hide — message row already exists
 
       const reader  = res.body.getReader();
       const decoder = new TextDecoder();
       let   fullText = '';
       let   buffer   = '';
+      let   firstToken = true;
 
       while(true) {
         const { done, value } = await reader.read();
@@ -2544,7 +3144,10 @@ async function sendToBackend() {
           try {
             const payload = JSON.parse(jsonStr);
             if(payload.error) { fullText = payload.error; updateStreamingMessage(streamId, fullText, true); break; }
-            if(payload.token) { fullText += payload.token; updateStreamingMessage(streamId, fullText, false); }
+            if(payload.token) {
+              if(firstToken) { firstToken = false; }
+              fullText += payload.token; updateStreamingMessage(streamId, fullText, false);
+            }
             if(payload.done)  { updateStreamingMessage(streamId, fullText, true); }
           } catch(e) {}
         }
@@ -2577,19 +3180,12 @@ async function sendToBackend() {
   /* ── TEXT CHAT PATH — STREAMING + HISTORY ── */
   if(!activeChatId) {
     activeChatId = 'chat_' + Date.now();
-    const title  = message.length > 42 ? message.slice(0,42) + '…' : message;
+    // Generate title locally — no API call, no rate limit impact
+    const title = generateSmartTitle(message) || message.slice(0, 42);
     chats[activeChatId] = { title, msgs:[] };
     localStorage.setItem(ACTIVE_KEY, activeChatId);
     document.getElementById('topbar-title').textContent = title;
-    // Generate smart AI title in background
-    generateSmartTitle(message).then(smart => {
-      if(smart && activeChatId && chats[activeChatId]) {
-        chats[activeChatId].title = smart;
-        document.getElementById('topbar-title').textContent = smart;
-        saveToStorage();
-        renderHistoryList();
-      }
-    });
+    renderHistoryList();
   }
 
   // Build history array from stored messages (exclude current message)
@@ -2603,94 +3199,168 @@ async function sendToBackend() {
   setThinkingUI(true);
   startTPS();
 
-  try {
-    abortCtrl = new AbortController();
-    let pendingGrounding = null;
-    const res = await fetch(`${API_BASE}/chat-stream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, history }),
-      signal: abortCtrl.signal
-    });
+  // ── Retry-aware stream reader ──
+  // Attempts the fetch up to MAX_STREAM_RETRIES+1 times when the stream
+  // drops unexpectedly (network hiccup, server restart, etc.).
+  // Each retry resumes from the already-accumulated fullText so the user
+  // sees a "Reconnecting…" notice rather than a blank error.
 
-    setThinkingUI(false);
+  const streamId = 'stream-' + Date.now();
+  let   streamCreated   = false;
+  let   fullText        = '';
+  let   pendingGrounding = null;
+  let   streamDone      = false;   // set when server sends {"done":true}
+  let   wasRateLimited  = false;
 
-    if(!res.ok || !res.body) {
-      throw new Error(`HTTP ${res.status}`);
+  for(let attempt = 0; attempt <= MAX_STREAM_RETRIES; attempt++) {
+    // Show reconnect notice on retry attempts (not the first)
+    if(attempt > 0 && streamCreated) {
+      setTypingState('reconnecting');
+      showReconnectNotice(streamId, attempt);
+      // Brief back-off before retry (1s, then 2s)
+      await new Promise(r => setTimeout(r, attempt * 1000));
     }
 
-    // Create a bot message row that we'll stream tokens into
-    const streamId = 'stream-' + Date.now();
-    appendStreamingMessage(streamId);
+    try {
+      abortCtrl = new AbortController();
 
-    activeReader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    let   fullText = '';
-    let   buffer   = '';
+      const res = await fetch(`${API_BASE}/chat-stream`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ message, history }),
+        signal:  abortCtrl.signal
+      });
 
-    while(true) {
-      const { done, value } = await activeReader.read();
-      if(done) break;
+      setThinkingUI(false);
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep incomplete line in buffer
-
-      for(const line of lines) {
-        if(!line.startsWith('data:')) continue;
-        const jsonStr = line.slice(5).trim();
-        if(!jsonStr) continue;
-
-        try {
-          const payload = JSON.parse(jsonStr);
-
-          if(payload.error) {
-            updateStreamingMessage(streamId, payload.error, true);
-            fullText = payload.error;
-            break;
-          }
-
-          if(payload.token) {
-            fullText += payload.token;
-            tickTPS(payload.token.length);
-            updateStreamingMessage(streamId, fullText, false);
-          }
-
-          if(payload.grounding) {
-            pendingGrounding = payload.grounding;
-          }
-
-          if(payload.done) {
-            updateStreamingMessage(streamId, fullText, true);
-          }
-        } catch(e) { /* malformed chunk, skip */ }
+      // ── HTTP-level 429 (Flask limiter fired before SSE started) ──
+      if(res.status === 429) {
+        let retryAfter = 60;
+        try { const j = await res.json(); retryAfter = j.retry_after || 60; } catch(e){}
+        showRateBanner(retryAfter);
+        wasRateLimited = true;
+        break;
       }
-    }
 
-    // Finalize — render full markdown once, save to history
-    if(fullText) {
-      updateStreamingMessage(streamId, fullText, true);
-      chats[activeChatId].msgs.push({ role:'bot', text:fullText });
-      saveToStorage();
-      if(pendingGrounding) appendGroundingBlock(streamId, pendingGrounding);
-    } else if(!fullText) {
-      const errMsg = '⚠️ The response stream ended unexpectedly. Please try again.';
-      updateStreamingMessage(streamId, errMsg, true);
-      chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
-      saveToStorage();
-    }
+      if(!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
 
-  } catch(err) {
-    if(err.name === 'AbortError') {
-      // User hit stop — clean up silently
-    } else {
+      // Create the streaming message row on first successful connect only
+      if(!streamCreated) {
+        appendStreamingMessage(streamId);
+        streamCreated = true;
+      } else {
+        clearReconnectNotice(streamId);
+      }
+
+      activeReader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let gotDoneEvent = false;
+
+      while(true) {
+        const { done, value } = await activeReader.read();
+        if(done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for(const line of lines) {
+          if(!line.startsWith('data:')) continue;
+          const jsonStr = line.slice(5).trim();
+          if(!jsonStr) continue;
+
+          try {
+            const payload = JSON.parse(jsonStr);
+
+            // ── SSE-level rate limit event ──
+            if(payload.rate_limited) {
+              showRateBanner(payload.retry_after || 60);
+              wasRateLimited = true;
+              if(fullText) updateStreamingMessage(streamId, fullText, true);
+              gotDoneEvent = true;
+              break;
+            }
+
+            // ── Model state transitions ──
+            if(payload.status === 'searching') {
+              setTypingState('searching');
+            }
+
+            if(payload.error) {
+              updateStreamingMessage(streamId, payload.error, true);
+              fullText = payload.error;
+              gotDoneEvent = true;
+              break;
+            }
+
+            if(payload.token) {
+              if(fullText === '') setTypingState('generating'); // first token → switch state
+              fullText += payload.token;
+              tickTPS(payload.token.length);
+              updateStreamingMessage(streamId, fullText, false);
+            }
+
+            if(payload.grounding) {
+              pendingGrounding = payload.grounding;
+            }
+
+            if(payload.done) {
+              updateStreamingMessage(streamId, fullText, true);
+              gotDoneEvent = true;
+              streamDone = true;
+            }
+          } catch(e) { /* malformed chunk, skip */ }
+        }
+
+        if(gotDoneEvent) break;
+      }
+
+      // Clean exit — no retry needed
+      if(streamDone || wasRateLimited || fullText.startsWith('⚠️')) break;
+
+      // Stream ended without a done event — retry if we have attempts left
+      if(attempt < MAX_STREAM_RETRIES) continue;
+
+      // Exhausted retries — treat as complete with whatever we got
+      if(fullText) {
+        updateStreamingMessage(streamId, fullText + '\n\n*[Response may be incomplete — stream dropped]*', true);
+      } else {
+        const errMsg = '⚠️ The response stream dropped and could not be recovered. Please try again.';
+        if(streamCreated) updateStreamingMessage(streamId, errMsg, true);
+        else appendMessage('bot', errMsg);
+        fullText = errMsg;
+      }
+
+    } catch(err) {
+      if(err.name === 'AbortError') {
+        // User hit stop — exit cleanly, no retry
+        break;
+      }
+
+      // Network error — retry if attempts remain
+      if(attempt < MAX_STREAM_RETRIES) {
+        setThinkingUI(true); // re-show thinking while we retry (resets to 'thinking' state)
+        continue;
+      }
+
+      // Final failure
       setThinkingUI(false);
       const errMsg = '⚠️ Could not reach the server. Please check your connection and try again.';
-      chats[activeChatId].msgs.push({ role:'bot', text:errMsg });
-      saveToStorage();
-      appendMessage('bot', errMsg);
+      if(streamCreated) updateStreamingMessage(streamId, errMsg, true);
+      else appendMessage('bot', errMsg);
+      fullText = errMsg;
     }
+
+    break; // success path exits here
   }
+
+  // Finalize storage
+  if(fullText && !chats[activeChatId]?.msgs.find(m => m.role === 'bot' && m.text === fullText)) {
+    chats[activeChatId].msgs.push({ role:'bot', text:fullText });
+    saveToStorage();
+  }
+  if(pendingGrounding && streamCreated) appendGroundingBlock(streamId, pendingGrounding);
 
   activeReader = null;
   abortCtrl    = null;
@@ -2758,6 +3428,28 @@ function updateStreamingMessage(streamId, fullText, isFinal) {
   }
 
   requestAnimationFrame(() => { autoScrollIfNeeded(); });
+}
+
+function showReconnectNotice(streamId, attempt) {
+  // Remove any existing notice first
+  clearReconnectNotice(streamId);
+  const row = document.getElementById(streamId);
+  if(!row) return;
+  const body = row.querySelector('.msg-body');
+  if(!body) return;
+  const notice = document.createElement('div');
+  notice.className = 'reconnect-notice';
+  notice.id = `${streamId}-reconnect`;
+  notice.innerHTML = `
+    <div class="reconnect-spinner"></div>
+    Reconnecting… (attempt ${attempt} of ${MAX_STREAM_RETRIES})`;
+  body.appendChild(notice);
+  requestAnimationFrame(() => { autoScrollIfNeeded(); });
+}
+
+function clearReconnectNotice(streamId) {
+  const el = document.getElementById(`${streamId}-reconnect`);
+  if(el) el.remove();
 }
 
 /* ─── GROUNDING SOURCES RENDERER ────────────────────────────── */

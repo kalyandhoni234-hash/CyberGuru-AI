@@ -1348,136 +1348,15 @@ body.theme-light .hljs-variable { color: #be123c; }
    ════════════════════════════════════════════════════════════════ */
 
 /* ── 1. Hex-dot grid on body ── */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  /* Hexagonal dot grid using radial-gradient tile */
-  background-image:
-    radial-gradient(circle, rgba(59,130,246,.12) 1px, transparent 1px),
-    radial-gradient(circle, rgba(59,130,246,.06) 1px, transparent 1px);
-  background-size: 40px 40px, 40px 40px;
-  background-position: 0 0, 20px 20px;
-  /* Vignette: visible in center, fade to edges */
-  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%,
-    black 0%, black 30%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%,
-    black 0%, black 30%, transparent 100%);
-  opacity: .35;
-}
 
-body.theme-hacker::after {
-  background-image:
-    radial-gradient(circle, rgba(0,230,118,.18) 1px, transparent 1px),
-    radial-gradient(circle, rgba(0,230,118,.09) 1px, transparent 1px);
-  background-size: 40px 40px, 40px 40px;
-  background-position: 0 0, 20px 20px;
-}
 
-body.theme-light::after {
-  background-image:
-    radial-gradient(circle, rgba(37,99,235,.1) 1px, transparent 1px),
-    radial-gradient(circle, rgba(37,99,235,.05) 1px, transparent 1px);
-  background-size: 40px 40px, 40px 40px;
-  background-position: 0 0, 20px 20px;
-  opacity: .4;
-}
-
-/* ── 2. Network canvas — full-screen fixed behind everything ── */
+/* ── Network canvas — full-screen fixed behind everything ── */
 #network-canvas {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.5;
-}
-
-/* ── 3. Radar sweep on #main (welcome state ambiance) ── */
-#main::after {
-  content: '';
-  position: absolute;
-  /* Centered on welcome area */
-  top: 50%; left: 50%;
-  width: 520px; height: 520px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
-  /* Conic gradient = radar wedge */
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgba(59,130,246,.04) 30deg,
-    rgba(59,130,246,.09) 60deg,
-    rgba(56,189,248,.06) 80deg,
-    transparent 100deg
-  );
-  animation: radar-spin 8s linear infinite;
-  opacity: 0;
-  transition: opacity .6s ease;
-}
-
-/* Only show radar when welcome screen is visible */
-#main.show-radar::after { opacity: 1; }
-
-@keyframes radar-spin {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to   { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-body.theme-hacker #main::after {
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgba(0,230,118,.04) 30deg,
-    rgba(0,230,118,.09) 60deg,
-    rgba(0,230,118,.06) 80deg,
-    transparent 100deg
-  );
-}
-
-body.theme-light #main::after { display: none; }
-
-/* ── 4. Circuit-trace corner decoration in #main ── */
-#main::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 280px;
-  background:
-    /* Top-left corner circuit */
-    linear-gradient(90deg, rgba(59,130,246,.12) 1px, transparent 1px) 0 60px / 60px 1px no-repeat,
-    linear-gradient(90deg, rgba(59,130,246,.08) 1px, transparent 1px) 0 90px / 100px 1px no-repeat,
-    linear-gradient(180deg, rgba(59,130,246,.12) 1px, transparent 1px) 60px 0 / 1px 60px no-repeat,
-    linear-gradient(180deg, rgba(59,130,246,.08) 1px, transparent 1px) 90px 0 / 1px 90px no-repeat,
-    /* Top-right corner circuit */
-    linear-gradient(90deg, rgba(59,130,246,.12) 1px, transparent 1px) right 60px top 60px / 60px 1px no-repeat,
-    linear-gradient(90deg, rgba(59,130,246,.08) 1px, transparent 1px) right 0 top 90px / 100px 1px no-repeat,
-    linear-gradient(180deg, rgba(59,130,246,.12) 1px, transparent 1px) right 60px top 0 / 1px 60px no-repeat,
-    linear-gradient(180deg, rgba(59,130,246,.08) 1px, transparent 1px) right 90px top 0 / 1px 90px no-repeat,
-    /* Ambient top glow */
-    radial-gradient(ellipse 70% 100% at 50% -10%, rgba(59,130,246,.08), transparent);
-  pointer-events: none;
-  z-index: 0;
-}
-
-body.theme-hacker #main::before {
-  background:
-    linear-gradient(90deg, rgba(0,230,118,.12) 1px, transparent 1px) 0 60px / 60px 1px no-repeat,
-    linear-gradient(90deg, rgba(0,230,118,.08) 1px, transparent 1px) 0 90px / 100px 1px no-repeat,
-    linear-gradient(180deg, rgba(0,230,118,.12) 1px, transparent 1px) 60px 0 / 1px 60px no-repeat,
-    linear-gradient(180deg, rgba(0,230,118,.08) 1px, transparent 1px) 90px 0 / 1px 90px no-repeat,
-    linear-gradient(90deg, rgba(0,230,118,.12) 1px, transparent 1px) right 60px top 60px / 60px 1px no-repeat,
-    linear-gradient(90deg, rgba(0,230,118,.08) 1px, transparent 1px) right 0 top 90px / 100px 1px no-repeat,
-    linear-gradient(180deg, rgba(0,230,118,.12) 1px, transparent 1px) right 60px top 0 / 1px 60px no-repeat,
-    linear-gradient(180deg, rgba(0,230,118,.08) 1px, transparent 1px) right 90px top 0 / 1px 90px no-repeat,
-    radial-gradient(ellipse 70% 100% at 50% -10%, rgba(0,230,118,.07), transparent);
-}
-
-body.theme-light #main::before {
-  background: radial-gradient(ellipse 70% 100% at 50% -10%, rgba(37,99,235,.05), transparent);
+  opacity: 1;
 }
 
 /* Ensure all content sits above background layers */
@@ -3487,7 +3366,7 @@ function appendGroundingBlock(streamId, grounding) {
   if(grounding.rendered) {
     const w = document.createElement('div');
     w.className = 'grounding-widget';
-    w.innerHTML = grounding.rendered;
+    w.innerHTML = DOMPurify.sanitize(grounding.rendered);
     block.appendChild(w);
   }
 
@@ -3679,128 +3558,181 @@ function closeSidebar() {
   const canvas = document.getElementById('network-canvas');
   const ctx    = canvas.getContext('2d');
 
-  let W, H, nodes, edges;
+  let W, H, nodes, edges, packets;
   let frame = 0;
-  let cachedSidebarW = 264; // cached to avoid per-frame layout reflow
+  let swCache = 264;
 
-  function getSidebarWidth() {
-    const sidebar = document.getElementById('sidebar');
-    return sidebar ? sidebar.offsetWidth : 264;
-  }
-
-  function getAccentColor() {
+  // ── Accent colour per theme ──
+  function accent() {
     const b = document.body;
-    if(b.classList.contains('theme-hacker')) return { r:0,   g:230, b:118 };
-    if(b.classList.contains('theme-light'))  return { r:37,  g:99,  b:235 };
-    return { r:59, g:130, b:246 };
+    if (b.classList.contains('theme-hacker')) return [0, 230, 118];
+    if (b.classList.contains('theme-light'))  return [37, 99, 235];
+    return [59, 130, 246];
   }
 
   function resize() {
-    cachedSidebarW = getSidebarWidth();
+    swCache = document.getElementById('sidebar')?.offsetWidth || 264;
     W = canvas.width  = window.innerWidth;
     H = canvas.height = window.innerHeight;
     build();
   }
 
   function build() {
-    const count = Math.min(28, Math.floor(W * H / 28000));
-    const sw = cachedSidebarW;
+    // More nodes than before — denser graph, covers the full screen
+    const count = Math.min(55, Math.max(30, Math.floor(W * H / 16000)));
 
-    nodes = Array.from({length: count}, (_, i) => ({
-      x: sw + Math.random() * (W - sw),
-      y: Math.random() * H,
-      r: Math.random() > .85 ? 3.5 : 2,          // a few bigger "hub" nodes
-      speed: .15 + Math.random() * .25,
-      angle: Math.random() * Math.PI * 2,
-      pulse: Math.random() * Math.PI * 2,          // phase offset
-      alert: i === 0,                              // one red alert node
-      alertTimer: 0,
+    // Scatter nodes across full screen including sidebar area for depth
+    nodes = Array.from({ length: count }, (_, i) => ({
+      x:     Math.random() * W,
+      y:     Math.random() * H,
+      // Three tiers: hub (large), relay (medium), leaf (small)
+      tier:  i < 4 ? 'hub' : i < count * 0.3 ? 'relay' : 'leaf',
+      vx:    (Math.random() - 0.5) * 0.18,
+      vy:    (Math.random() - 0.5) * 0.18,
+      // alert node — one per session, flickers red periodically
+      alert: i === 1,
+      alertTimer: Math.floor(Math.random() * 400),
     }));
 
-    // Connect nearby nodes
+    rebuildEdges();
+    spawnPackets();
+  }
+
+  function rebuildEdges() {
     edges = [];
-    const DIST = Math.min(W, H) * .22;
-    for(let i = 0; i < nodes.length; i++) {
-      for(let j = i+1; j < nodes.length; j++) {
-        const dx = nodes[i].x - nodes[j].x;
-        const dy = nodes[i].y - nodes[j].y;
-        if(Math.sqrt(dx*dx+dy*dy) < DIST) {
-          edges.push({
-            a: i, b: j,
-            phase: Math.random() * Math.PI * 2,
-            speed: .008 + Math.random() * .012,
-          });
+    // Connection distance: hubs connect farther, leaves connect closer
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const maxDist =
+          (a.tier === 'hub' || b.tier === 'hub')   ? W * 0.28 :
+          (a.tier === 'relay' || b.tier === 'relay') ? W * 0.18 :
+                                                        W * 0.12;
+        if (dist < maxDist) {
+          edges.push({ a: i, b: j, dist });
         }
       }
     }
+  }
+
+  // ── Data packets travelling along edges ──
+  function spawnPackets() {
+    packets = [];
+    // Seed some initial packets
+    for (let k = 0; k < 12; k++) spawnPacket();
+  }
+
+  function spawnPacket() {
+    if (!edges.length) return;
+    const e = edges[Math.floor(Math.random() * edges.length)];
+    // Randomly pick direction along the edge
+    const forward = Math.random() > 0.5;
+    packets.push({
+      edgeIdx: edges.indexOf(e),
+      t:       0,                          // 0 → 1 travel progress
+      speed:   0.004 + Math.random() * 0.006,
+      forward,
+    });
   }
 
   function draw() {
     frame++;
     ctx.clearRect(0, 0, W, H);
 
-    const ac = getAccentColor();
-    const t  = frame * .008;
+    const [r, g, b] = accent();
 
-    // ── Draw edges ──
-    for(const e of edges) {
+    // ── Move nodes (slow drift, bounce off walls) ──
+    for (const n of nodes) {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > W) { n.vx *= -1; n.x = Math.max(0, Math.min(W, n.x)); }
+      if (n.y < 0 || n.y > H) { n.vy *= -1; n.y = Math.max(0, Math.min(H, n.y)); }
+    }
+
+    // Rebuild edges every 90 frames so new connections form as nodes drift
+    if (frame % 90 === 0) rebuildEdges();
+
+    // ── Draw edges — sharp, minimal ──
+    for (const e of edges) {
       const a = nodes[e.a], b = nodes[e.b];
-      const alpha = (.05 + .08 * Math.sin(t * e.speed * 60 + e.phase));
+      // Closer edges are slightly more visible
+      const proximity = 1 - e.dist / (W * 0.3);
+      const alpha = proximity * 0.13;
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
-      ctx.strokeStyle = `rgba(${ac.r},${ac.g},${ac.b},${Math.max(0,alpha)})`;
-      ctx.lineWidth = .6;
+      ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+      ctx.lineWidth = 0.5;
       ctx.stroke();
     }
 
-    // ── Draw nodes ──
-    for(const n of nodes) {
-      // Drift slowly
-      n.x += Math.cos(n.angle) * n.speed * .4;
-      n.y += Math.sin(n.angle) * n.speed * .4;
+    // ── Draw packets ──
+    for (let i = packets.length - 1; i >= 0; i--) {
+      const p = packets[i];
+      const e = edges[p.edgeIdx];
+      if (!e) { packets.splice(i, 1); continue; }
 
-      // Softly steer angle to keep nodes on screen
-      const sw = cachedSidebarW;
-      if(n.x < sw + 20)   n.angle = 0;
-      if(n.x > W - 20)    n.angle = Math.PI;
-      if(n.y < 20)         n.angle = Math.PI/2;
-      if(n.y > H - 20)     n.angle = -Math.PI/2;
-
-      n.pulse += .025;
-      const pulseAlpha = .25 + .2 * Math.sin(n.pulse);
-
-      // Alert node flickers ~every 6 seconds
-      n.alertTimer++;
-      const isAlerting = n.alert && ((n.alertTimer % 360) < 40);
-
-      let r, g, b;
-      if(isAlerting) {
-        r = 248; g = 113; b = 113; // red
-        // Outer ring on alert
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r + 5 + 3 * Math.sin(n.pulse * 4), 0, Math.PI*2);
-        ctx.strokeStyle = `rgba(248,113,113,${.15 * Math.sin(n.pulse*4 + 1)})`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      } else {
-        r = ac.r; g = ac.g; b = ac.b;
+      p.t += p.speed;
+      if (p.t >= 1) {
+        packets.splice(i, 1);
+        // Spawn a new one to keep density constant
+        if (Math.random() > 0.3) spawnPacket();
+        continue;
       }
 
-      // Glow halo
-      const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 4);
-      grd.addColorStop(0,   `rgba(${r},${g},${b},${pulseAlpha * .5})`);
-      grd.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+      const na = nodes[e.a], nb = nodes[e.b];
+      const t  = p.forward ? p.t : 1 - p.t;
+      const px = na.x + (nb.x - na.x) * t;
+      const py = na.y + (nb.y - na.y) * t;
+
+      // Packet: small sharp square dot
+      ctx.fillStyle = `rgba(${r},${g},${b},0.7)`;
+      ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+    }
+
+    // ── Draw nodes — clean dots, no glow halos ──
+    for (const n of nodes) {
+      n.alertTimer++;
+      const isAlerting = n.alert && (n.alertTimer % 320) < 30;
+
+      let nr = r, ng = g, nb2 = b;
+      if (isAlerting) { nr = 248; ng = 113; nb2 = 113; }
+
+      const dotR =
+        n.tier === 'hub'   ? 3.5 :
+        n.tier === 'relay' ? 2.2 :
+                              1.4;
+
+      const alpha =
+        n.tier === 'hub'   ? 0.7 :
+        n.tier === 'relay' ? 0.5 :
+                              0.35;
+
+      // Sharp filled circle — no glow, no radial gradient
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r * 4, 0, Math.PI*2);
-      ctx.fillStyle = grd;
+      ctx.arc(n.x, n.y, dotR, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${nr},${ng},${nb2},${alpha})`;
       ctx.fill();
 
-      // Core dot
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(${r},${g},${b},${pulseAlpha})`;
-      ctx.fill();
+      // Hub nodes get a crisp ring instead of glow
+      if (n.tier === 'hub') {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, dotR + 3, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${nr},${ng},${nb2},0.18)`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+
+      // Alert: sharp blinking ring only
+      if (isAlerting) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, dotR + 6, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(248,113,113,0.35)`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
     }
 
     requestAnimationFrame(draw);
@@ -3810,27 +3742,6 @@ function closeSidebar() {
   resize();
   draw();
 })();
-
-/* ─── RADAR: show on welcome, hide during chat ────────────────── */
-function syncRadar() {
-  const main = document.getElementById('main');
-  const welcome = document.getElementById('welcome');
-  if(welcome) main.classList.add('show-radar');
-  else main.classList.remove('show-radar');
-}
-
-// Patch showWelcome and newChat to sync radar
-// Guard: only patch after DOMContentLoaded so showWelcome is guaranteed defined
-document.addEventListener('DOMContentLoaded', function() {
-  if(typeof showWelcome === 'function') {
-    const _origShowWelcome = showWelcome;
-    showWelcome = function() { _origShowWelcome(); syncRadar(); };
-  }
-  syncRadar();
-});
-
-// Check on load (fallback for scripts already executed)
-setTimeout(syncRadar, 100);
 
 </script>
 </body>

@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 import os
 import re
 import json
-import base64
 import time
 import requests
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
@@ -387,15 +386,16 @@ def chat():
     try:
         data = request.get_json()
         user_message = sanitize_input(data.get("message", ""))
-        history      = validate_history(data.get("history", []))
-        quiz_topic = ""
+        history       = validate_history(data.get("history", []))
 
+        if not user_message:                          # ← check FIRST
+            return jsonify({"reply": "Please enter a message."}), 400
+
+        quiz_mode = False
+        quiz_topic = ""
         if user_message.lower().startswith("/quiz"):
             quiz_mode = True
             quiz_topic = user_message[5:].strip()
-
-        if not user_message:
-            return jsonify({"reply": "Please enter a message."}), 400
 
         if quiz_mode:
             if not quiz_topic:
@@ -861,7 +861,7 @@ Example:
         response = gemini_post(API_URL, payload)
 
         text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
-
+        text = re.sub(r'^```(?:json)?\s*|\s*```$', '', text.strip())
         suggestions = json.loads(text)
 
         return jsonify({

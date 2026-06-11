@@ -578,6 +578,7 @@ def chat():
 
 @app.route("/chat-stream", methods=["POST"])
 @limiter.limit("30 per minute; 200 per day")
+@login_required
 def chat_stream():
     try:
         data = request.get_json()

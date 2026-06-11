@@ -17,7 +17,14 @@ from functools import wraps
 print("RUNNING FILE:", __file__)
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False   # preserve emojis in jsonify() responses
-app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))  # set FLASK_SECRET_KEY in production!
+
+_secret_key = os.getenv("FLASK_SECRET_KEY")
+if not _secret_key:
+    raise ValueError(
+        "FLASK_SECRET_KEY environment variable is not set. "
+        "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
+app.secret_key = _secret_key
 
 # ── Session cookie config ──────────────────────────────────────
 # SameSite=Lax allows the cookie to be sent after Google's redirect
@@ -29,13 +36,21 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY = True,
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 30,  # 30 days
 )
-CORS(app, supports_credentials=True)
 
+# ── CORS: only allow requests from our own frontend origin ──────
+_ALLOWED_ORIGINS = [o.strip() for o in os.getenv(
+    "ALLOWED_ORIGINS",
+    "https://cyber-guru-ai.vercel.app"
+).split(",") if o.strip()]
+CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=True)
+
+# ── Rate limiter: Redis in production, memory for local dev ─────
+_REDIS_URL = os.getenv("REDIS_URL")
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["1000 per day", "200 per hour"],
-    storage_uri="memory://",   # swap to "redis://..." in production
+    storage_uri=_REDIS_URL if _REDIS_URL else "memory://",
 )
 
 @app.errorhandler(429)
@@ -45,6 +60,17 @@ def rate_limit_handler(e):
         "rate_limited": True,
         "retry_after": 60
     }), 429
+
+# -- Security response headers -------------------------------------------
+@app.after_request
+def set_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    if not response.content_type.startswith("text/html"):
+        response.headers["Content-Security-Policy"] = "default-src 'none'"
+    return response
 
 # ==========================
 # GOOGLE OAUTH + POSTGRES AUTH
@@ -109,6 +135,13 @@ def login_required(f):
             return jsonify({"error": "Authentication required", "auth_required": True}), 401
         return f(*args, **kwargs)
     return decorated
+
+def get_user_id():
+    """Key function for per-user rate limiting on authenticated routes."""
+    user = session.get("user")
+    if user:
+        return f"user:{user['id']}"
+    return get_remote_address()
 
 
 
@@ -508,7 +541,7 @@ def index():
 # ==========================
 
 @app.route("/chat", methods=["POST"])
-@limiter.limit("30 per minute; 200 per day")
+@limiter.limit("30 per minute; 200 per day", key_func=get_user_id)
 @login_required
 def chat():
     try:
@@ -569,7 +602,8 @@ def chat():
         return jsonify({"reply": "⚠️ Unexpected response format from Gemini API."}), 500
     except Exception as e:
         print("GEMINI ERROR:", e)
-        return jsonify({"reply": f"⚠️ Server Error: {str(e)}"}), 500
+        print(f"UNHANDLED ERROR [/chat]: {e}")
+        return jsonify({"reply": "⚠️ An internal server error occurred. Please try again."}), 500
 
 
 # ==========================
@@ -577,7 +611,7 @@ def chat():
 # ==========================
 
 @app.route("/chat-stream", methods=["POST"])
-@limiter.limit("30 per minute; 200 per day")
+@limiter.limit("30 per minute; 200 per day", key_func=get_user_id)
 @login_required
 def chat_stream():
     try:
@@ -707,7 +741,8 @@ def chat_stream():
 
     except Exception as e:
         def general_err():
-            yield ("data: " + jdump({"error": f"⚠️ Server error: {str(e)}"}) + "\n\n").encode("utf-8")
+            print(f"UNHANDLED ERROR [stream]: {e}")
+            yield ("data: " + jdump({"error": "⚠️ An internal server error occurred. Please try again."}) + "\n\n").encode("utf-8")
         return Response(stream_with_context(general_err()), content_type="text/event-stream; charset=utf-8")
 
 # ==========================
@@ -766,7 +801,16 @@ def parse_log_file(content, filename):
     return summary
 
 
+def sanitize_filename(filename: str) -> str:
+    """Strip path separators and special chars from a filename before prompt inclusion."""
+    # Keep only safe characters: letters, digits, dots, dashes, underscores, spaces
+    name = os.path.basename(filename)          # strip any path traversal
+    name = re.sub(r'[^\w.\-\s]', '_', name)   # replace unsafe chars
+    return name[:120].strip()                  # hard length cap
+
+
 def build_analysis_prompt(filename, content_summary, file_type):
+    filename = sanitize_filename(filename)     # prevent prompt injection via filename
     ext = file_type.lower()
     if ext == "pdf":
         context = (
@@ -793,7 +837,7 @@ def build_analysis_prompt(filename, content_summary, file_type):
 
 
 @app.route("/analyze-file", methods=["POST"])
-@limiter.limit("10 per minute; 50 per day")
+@limiter.limit("10 per minute; 50 per day", key_func=get_user_id)
 @login_required
 def analyze_file():
     uploaded_file = request.files.get("file")
@@ -907,7 +951,8 @@ def analyze_file():
     except Exception as e:
         print(f"analyze_file error: {e}")
         def general_err():
-            yield ("data: " + jdump({"error": f"⚠️ Server error: {str(e)}"}) + "\n\n").encode("utf-8")
+            print(f"UNHANDLED ERROR [stream]: {e}")
+            yield ("data: " + jdump({"error": "⚠️ An internal server error occurred. Please try again."}) + "\n\n").encode("utf-8")
         return Response(stream_with_context(general_err()), content_type="text/event-stream; charset=utf-8")
 
 
@@ -916,7 +961,7 @@ def analyze_file():
 # ==========================
 
 @app.route("/generate-title", methods=["POST"])
-@limiter.limit("30 per minute", override_defaults=True)
+@limiter.limit("30 per minute", override_defaults=True, key_func=get_user_id)
 @login_required
 def generate_title():
     """Generate a short smart title for a conversation from its first user message."""
@@ -947,7 +992,7 @@ def generate_title():
         return jsonify({"title": first_message[:42] + ("…" if len(first_message) > 42 else "")})
 
 @app.route("/suggest", methods=["POST"])
-@limiter.limit("30 per minute", override_defaults=True)
+@limiter.limit("30 per minute", override_defaults=True, key_func=get_user_id)
 @login_required
 def suggest():
 

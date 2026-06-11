@@ -40,7 +40,7 @@ app.config.update(
 # ── CORS: only allow requests from our own frontend origin ──────
 _ALLOWED_ORIGINS = [o.strip() for o in os.getenv(
     "ALLOWED_ORIGINS",
-    "https://cyber-guru-ai.vercel.app"
+    "https://cyberguru-ai.onrender.com"
 ).split(",") if o.strip()]
 CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=True)
 

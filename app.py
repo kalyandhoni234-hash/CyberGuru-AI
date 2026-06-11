@@ -1,18 +1,35 @@
 from dotenv import load_dotenv
+load_dotenv()  # load .env before ANY os.getenv() call
 import os
 import re
 import json
 import time
+import psycopg2
+import psycopg2.extras
 import requests
-from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
+from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context, session, redirect, url_for
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from authlib.integrations.flask_client import OAuth
+from functools import wraps
 
 print("RUNNING FILE:", __file__)
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False   # preserve emojis in jsonify() responses
-CORS(app)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))  # set FLASK_SECRET_KEY in production!
+
+# ── Session cookie config ──────────────────────────────────────
+# SameSite=Lax allows the cookie to be sent after Google's redirect
+# Secure=False for local dev (http); set to True on Render (https)
+IS_PRODUCTION = os.getenv("RENDER", False)  # Render sets this automatically
+app.config.update(
+    SESSION_COOKIE_SAMESITE = "Lax",
+    SESSION_COOKIE_SECURE   = bool(IS_PRODUCTION),
+    SESSION_COOKIE_HTTPONLY = True,
+    PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 30,  # 30 days
+)
+CORS(app, supports_credentials=True)
 
 limiter = Limiter(
     get_remote_address,
@@ -29,6 +46,72 @@ def rate_limit_handler(e):
         "retry_after": 60
     }), 429
 
+# ==========================
+# GOOGLE OAUTH + POSTGRES AUTH
+# ==========================
+
+oauth = OAuth(app)
+google = oauth.register(
+    name="google",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
+
+DATABASE_URL = os.getenv("DATABASE_URL")  # Neon connection string
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable not found")
+
+def get_db():
+    """Open a new Postgres connection. Use as a context manager."""
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    return conn
+
+def init_db():
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id         SERIAL PRIMARY KEY,
+                    google_id  TEXT UNIQUE NOT NULL,
+                    email      TEXT NOT NULL,
+                    name       TEXT,
+                    avatar     TEXT,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+        conn.commit()
+
+init_db()
+
+def upsert_user(google_id, email, name, avatar):
+    """Insert or update a user row, return the row as a dict."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (google_id, email, name, avatar)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (google_id) DO UPDATE SET
+                    email  = EXCLUDED.email,
+                    name   = EXCLUDED.name,
+                    avatar = EXCLUDED.avatar
+                RETURNING *
+            """, (google_id, email, name, avatar))
+            conn.commit()
+            return cur.fetchone()
+
+def login_required(f):
+    """Decorator: reject unauthenticated API calls with 401."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("user"):
+            return jsonify({"error": "Authentication required", "auth_required": True}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+
 # Always serialize JSON with Unicode intact (fixes emoji encoding in SSE streams)
 def jdump(obj):
     return json.dumps(obj, ensure_ascii=False)
@@ -37,7 +120,6 @@ def jdump(obj):
 # CONFIGURATION
 # ==========================
 
-load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL = "gemini-2.5-flash"
 if not API_KEY:
@@ -362,6 +444,51 @@ Repeat for 5 questions.
 """
 
 # ==========================
+# AUTH ROUTES
+# ==========================
+
+@app.route("/auth/login")
+def auth_login():
+    """Redirect the browser to Google's OAuth consent screen."""
+    redirect_uri = url_for("auth_callback", _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route("/auth/callback")
+def auth_callback():
+    """Google redirects here after user approves. Exchange code → tokens → user info."""
+    token = google.authorize_access_token()
+    userinfo = token.get("userinfo") or google.userinfo()
+    google_id = userinfo["sub"]
+    email     = userinfo.get("email", "")
+    name      = userinfo.get("name", email)
+    avatar    = userinfo.get("picture", "")
+
+    user = upsert_user(google_id, email, name, avatar)
+
+    session.permanent = True
+    session["user"] = {
+        "id":     user["id"],
+        "google_id": google_id,
+        "email":  email,
+        "name":   name,
+        "avatar": avatar,
+    }
+    return redirect("/")
+
+@app.route("/auth/logout", methods=["POST"])
+def auth_logout():
+    session.clear()
+    return jsonify({"ok": True})
+
+@app.route("/auth/me")
+def auth_me():
+    """Returns current session user, or 401 if not logged in."""
+    user = session.get("user")
+    if not user:
+        return jsonify({"user": None}), 401
+    return jsonify({"user": user})
+
+# ==========================
 # HEALTH CHECK
 # ==========================
 
@@ -382,6 +509,7 @@ def index():
 
 @app.route("/chat", methods=["POST"])
 @limiter.limit("30 per minute; 200 per day")
+@login_required
 def chat():
     try:
         data = request.get_json()
@@ -665,6 +793,7 @@ def build_analysis_prompt(filename, content_summary, file_type):
 
 @app.route("/analyze-file", methods=["POST"])
 @limiter.limit("10 per minute; 50 per day")
+@login_required
 def analyze_file():
     uploaded_file = request.files.get("file")
     if not uploaded_file:
@@ -787,6 +916,7 @@ def analyze_file():
 
 @app.route("/generate-title", methods=["POST"])
 @limiter.limit("30 per minute", override_defaults=True)
+@login_required
 def generate_title():
     """Generate a short smart title for a conversation from its first user message."""
     first_message = ""  # default before try so the except block can always reference it
@@ -817,6 +947,7 @@ def generate_title():
 
 @app.route("/suggest", methods=["POST"])
 @limiter.limit("30 per minute", override_defaults=True)
+@login_required
 def suggest():
 
     try:

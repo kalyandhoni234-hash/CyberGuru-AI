@@ -1937,6 +1937,15 @@ body.theme-oled .hljs-variable  { color: #fda4af; }
   </div>
 
   <div class="sidebar-footer">
+    <!-- User profile row -->
+    <div id="user-profile-row" style="display:none; align-items:center; gap:10px; padding:10px 14px 0; margin-bottom:8px; border-top:1px solid var(--border-subtle); padding-top:12px;">
+      <img id="user-avatar" src="" alt="" width="30" height="30" style="border-radius:50%; border:1px solid var(--border-default); flex-shrink:0;">
+      <div style="flex:1; min-width:0;">
+        <div id="user-name" style="font-size:12px; font-weight:500; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+        <div id="user-email" style="font-size:10px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+      </div>
+      <button onclick="logout()" title="Sign out" style="background:none; border:1px solid var(--border-subtle); border-radius:var(--r-sm); padding:4px 7px; cursor:pointer; color:var(--text-muted); font-size:10px; white-space:nowrap; transition:all .2s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-muted)'">Sign out</button>
+    </div>
     <div class="sidebar-footer-top">
       <div class="status-row">
         <div class="status-dot"></div>
@@ -1958,12 +1967,6 @@ body.theme-oled .hljs-variable  { color: #fda4af; }
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
             <path stroke-linecap="round" d="M7 8l5 4-5 4M13 16h4"/>
-          </svg>
-        </button>
-        <button class="theme-btn" id="btn-light" onclick="setTheme('light')" title="Light Mode">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <circle cx="12" cy="12" r="4"/>
-            <path stroke-linecap="round" d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
           </svg>
         </button>
       </div>
@@ -2206,12 +2209,13 @@ function setTheme(theme) {
 
 function loadTheme() {
   const saved = localStorage.getItem('cyberguru_theme') || 'cyber';
-  setTheme(saved);
+  // light theme removed — fall back to cyber
+  setTheme(saved === 'light' ? 'cyber' : saved);
 }
 
 /* ─── GLOBALS ────────────────────────────────────────────────── */
-const STORAGE_KEY = 'cybguru_chats_v1';
-const ACTIVE_KEY  = 'cybguru_active_v1';
+let STORAGE_KEY = 'cybguru_chats_v1';     // re-namespaced after login
+let ACTIVE_KEY  = 'cybguru_active_v1';
 const API_BASE    = '';  // ← change to deployed URL
 
 let chats        = {};
@@ -2422,8 +2426,8 @@ function exportChat() {
 /* ─── INIT ───────────────────────────────────────────────────── */
 (function init() {
   loadTheme();
-  loadFromStorage();
-  renderHistoryList();
+  // NOTE: loadFromStorage() and renderHistoryList() are called in
+  // showUserProfile() after Google login, so history is always user-scoped.
   initScrollTracking();
 
   // File input: show indicator when file chosen
@@ -2598,6 +2602,8 @@ function getLocalSuggestions(query) {
     .map(x => x.s);
 }
 
+const userInput = document.getElementById('user-input');
+
 userInput.addEventListener("input", () => {
   clearTimeout(suggestionTimer);
   const text = userInput.value.trim();
@@ -2646,6 +2652,9 @@ function showWelcome() {
         <div class="welcome-sub">Your AI-powered cybersecurity learning assistant. Ask about threats, attacks, defenses, and security best practices.</div>
       </div>
       <div class="welcome-caps">
+        <button class="cap-pill quiz-pill" onclick="openQuizModal()">🎯 Quiz Mode</button>
+      </div>
+      <div class="welcome-caps" style="margin-top:8px;">
         <span class="cap-pill">Threat Analysis</span>
         <span class="cap-pill">Vulnerability Research</span>
         <span class="cap-pill">OWASP Top 10</span>
@@ -3549,7 +3558,9 @@ ta.addEventListener('input', function() {
 ta.addEventListener('keydown', function(e) {
   if(e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
-    sendToBackend();
+    if(ta.value.trim().length > 0 || document.getElementById('fileInput').files.length > 0) {
+      sendToBackend();
+    }
   }
 });
 
@@ -3806,5 +3817,141 @@ function closeSidebar() {
 })();
 
 </script>
+
+<!-- ─── LOGIN OVERLAY ──────────────────────────────────────────── -->
+<div id="login-overlay" style="
+  display:none; position:fixed; inset:0; z-index:9999;
+  background:var(--bg-base); align-items:center; justify-content:center;
+">
+  <div style="
+    background:var(--bg-card); border:1px solid var(--border-default);
+    border-radius:var(--r-xl); padding:48px 40px; max-width:400px; width:90%;
+    text-align:center; box-shadow:var(--shadow-md);
+  ">
+    <!-- Logo -->
+    <div style="margin-bottom:28px;">
+      <div style="display:inline-flex; align-items:center; justify-content:center;
+        width:56px; height:56px; border-radius:var(--r-lg);
+        background:linear-gradient(135deg,#1e40af,#0891b2);
+        margin-bottom:16px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <h1 style="font-size:22px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">CyberGuru AI</h1>
+      <p style="font-size:14px; color:var(--text-secondary);">Your cybersecurity learning assistant</p>
+    </div>
+
+    <!-- Sign in button -->
+    <button onclick="window.location.href='/auth/login'" style="
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      width:100%; padding:12px 20px; cursor:pointer;
+      background:var(--bg-surface); border:1px solid var(--border-default);
+      border-radius:var(--r-md); color:var(--text-primary);
+      font-size:14px; font-weight:500; font-family:var(--font-ui);
+      transition:all .2s; margin-bottom:16px;
+    " onmouseover="this.style.borderColor='var(--border-strong)';this.style.background='var(--bg-hover)'"
+       onmouseout="this.style.borderColor='var(--border-default)';this.style.background='var(--bg-surface)'">
+      <!-- Google G icon -->
+      <svg width="18" height="18" viewBox="0 0 24 24">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <p style="font-size:11px; color:var(--text-muted); line-height:1.6;">
+      By signing in you agree to use this tool responsibly.<br>
+      Only cybersecurity-related topics are supported.
+    </p>
+  </div>
+</div>
+
+<!-- ─── AUTH JS ────────────────────────────────────────────────── -->
+<script>
+(async function initAuth() {
+  try {
+    const res = await fetch('/auth/me', { credentials: 'include' });
+    if (res.status === 401) {
+      showLoginOverlay();
+      return;
+    }
+    const data = await res.json();
+    if (!data.user) { showLoginOverlay(); return; }
+    // Defer to next tick so all JS is fully initialised
+    setTimeout(() => showUserProfile(data.user), 0);
+  } catch (e) {
+    console.error('initAuth error:', e);
+    showLoginOverlay();
+  }
+})();
+
+function showLoginOverlay() {
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+
+function hideLoginOverlay() {
+  document.getElementById('login-overlay').style.display = 'none';
+}
+
+function showUserProfile(user) {
+  try {
+    hideLoginOverlay();
+
+    // ── Namespace localStorage by user ID so accounts don't share history ──
+    STORAGE_KEY = `cybguru_chats_v1_${user.id}`;
+    ACTIVE_KEY  = `cybguru_active_v1_${user.id}`;
+
+    // Load history for sidebar, but always open fresh new chat
+    chats = {};
+    activeChatId = null;
+    loadFromStorage();
+    renderHistoryList();
+    newChat();
+
+    const row = document.getElementById('user-profile-row');
+    if (row) {
+      document.getElementById('user-avatar').src = user.avatar || '';
+      document.getElementById('user-avatar').style.display = user.avatar ? '' : 'none';
+      document.getElementById('user-name').textContent = user.name || user.email;
+      document.getElementById('user-email').textContent = user.email;
+      row.style.display = 'flex';
+    }
+
+    if (typeof updateSendBtn === 'function') updateSendBtn();
+    const inputEl = document.getElementById('user-input');
+    if (inputEl) inputEl.focus();
+
+  } catch(err) {
+    console.error('showUserProfile error:', err);
+    // Still hide the overlay even if something minor fails
+    hideLoginOverlay();
+  }
+}
+
+async function logout() {
+  await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+  showLoginOverlay();
+  document.getElementById('user-profile-row').style.display = 'none';
+}
+
+// Intercept 401 from any fetch in the app (chat/analyze/etc.)
+const _origFetch = window.fetch;
+window.fetch = async function(...args) {
+  const res = await _origFetch(...args);
+  if (res.status === 401) {
+    // Clone so the original caller can still read the body
+    const clone = res.clone();
+    clone.json().then(d => {
+      if (d.auth_required) showLoginOverlay();
+    }).catch(() => {});
+  }
+  return res;
+};
+</script>
 </body>
+
 </html>

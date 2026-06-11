@@ -7,7 +7,7 @@ import time
 import psycopg2
 import psycopg2.extras
 import requests
-from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context, session, redirect, url_for
+from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context, session, redirect, url_for, abort
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -40,7 +40,7 @@ app.config.update(
 # ── CORS: only allow requests from our own frontend origin ──────
 _ALLOWED_ORIGINS = [o.strip() for o in os.getenv(
     "ALLOWED_ORIGINS",
-    "https://cyberguru-ai.onrender.com"
+    "https://cyber-guru-ai.vercel.app"
 ).split(",") if o.strip()]
 CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=True)
 
@@ -71,6 +71,45 @@ def set_security_headers(response):
     if not response.content_type.startswith("text/html"):
         response.headers["Content-Security-Policy"] = "default-src 'none'"
     return response
+
+# ==========================
+# CSRF PROTECTION
+# ==========================
+# We use the Double-Submit Cookie pattern:
+#   1. On GET /auth/csrf-token  — server mints a random token, stores it in
+#      the session AND returns it in the JSON body.
+#   2. Every state-changing request (POST) must send that token in the
+#      X-CSRF-Token header.
+#   3. The decorator below compares header value against session value.
+#
+# This is safe because:
+#   - Cross-origin scripts cannot read our session cookie (SameSite + HttpOnly).
+#   - Cross-origin pages cannot set custom headers on credentialed requests
+#     (blocked by CORS unless the origin is in _ALLOWED_ORIGINS).
+
+import secrets as _secrets
+
+def _get_csrf_token() -> str:
+    """Return the current session CSRF token, minting one if absent."""
+    if "csrf_token" not in session:
+        session["csrf_token"] = _secrets.token_hex(32)
+    return session["csrf_token"]
+
+def csrf_protect(f):
+    """Decorator: verify X-CSRF-Token header matches the session token."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = session.get("csrf_token")
+        header = request.headers.get("X-CSRF-Token", "")
+        if not token or not header or not _secrets.compare_digest(token, header):
+            return jsonify({"error": "CSRF validation failed", "csrf_error": True}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route("/auth/csrf-token", methods=["GET"])
+def get_csrf_token():
+    """Frontend calls this once on load to obtain a CSRF token."""
+    return jsonify({"csrf_token": _get_csrf_token()})
 
 # ==========================
 # GOOGLE OAUTH + POSTGRES AUTH
@@ -509,6 +548,7 @@ def auth_callback():
     return redirect("/")
 
 @app.route("/auth/logout", methods=["POST"])
+@csrf_protect
 def auth_logout():
     session.clear()
     return jsonify({"ok": True})
@@ -542,6 +582,7 @@ def index():
 
 @app.route("/chat", methods=["POST"])
 @limiter.limit("30 per minute; 200 per day", key_func=get_user_id)
+@csrf_protect
 @login_required
 def chat():
     try:
@@ -612,6 +653,7 @@ def chat():
 
 @app.route("/chat-stream", methods=["POST"])
 @limiter.limit("30 per minute; 200 per day", key_func=get_user_id)
+@csrf_protect
 @login_required
 def chat_stream():
     try:
@@ -838,6 +880,7 @@ def build_analysis_prompt(filename, content_summary, file_type):
 
 @app.route("/analyze-file", methods=["POST"])
 @limiter.limit("10 per minute; 50 per day", key_func=get_user_id)
+@csrf_protect
 @login_required
 def analyze_file():
     uploaded_file = request.files.get("file")
@@ -962,6 +1005,7 @@ def analyze_file():
 
 @app.route("/generate-title", methods=["POST"])
 @limiter.limit("30 per minute", override_defaults=True, key_func=get_user_id)
+@csrf_protect
 @login_required
 def generate_title():
     """Generate a short smart title for a conversation from its first user message."""
@@ -993,6 +1037,7 @@ def generate_title():
 
 @app.route("/suggest", methods=["POST"])
 @limiter.limit("30 per minute", override_defaults=True, key_func=get_user_id)
+@csrf_protect
 @login_required
 def suggest():
 

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CyberGuru AI | Cybersecurity Learning Assistant</title>
+<meta name="description" content="CyberGuru AI helps students learn cybersecurity, ethical hacking, malware analysis, SQL injection, XSS, OWASP Top 10 and cyber defense concepts.">
+<meta name="keywords" content="cybersecurity, ethical hacking, malware, SQL injection, XSS, OWASP, cybersecurity learning, cyber security chatbot">
+<meta name="author" content="Guru Sharan Kalyan">
+<meta name="robots" content="index, follow">
+<meta property="og:title" content="CyberGuru AI">
+<meta property="og:description" content="Learn cybersecurity concepts with an AI-powered cybersecurity assistant.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://cyber-guru-ai.vercel.app/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" integrity="sha512-jB0TkTBeQC9ZSkBqDhdmfTv1qdfbWpPougH0lDjKDkqtSyBiEHca32FDRFnx+lSd+bSRSRobLwmJnEbIXkEAw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+
+<!-- Background: animated network topology canvas -->
+<canvas id="network-canvas" aria-hidden="true"></canvas>
+
+<!-- Sidebar overlay for mobile -->
+<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- Custom confirm dialog (replaces browser confirm()) -->
+<div id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title-text">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title-text">Delete conversation?</div>
+    <div class="confirm-msg">This conversation will be permanently deleted and cannot be recovered.</div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel-btn" onclick="resolveConfirm(false)">Cancel</button>
+      <button class="confirm-ok-btn" onclick="resolveConfirm(true)">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SIDEBAR ═══════════════════════════════════════════════════ -->
+<aside id="sidebar" role="navigation" aria-label="Sidebar">
+
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.6)" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M9 12l2 2 4-4" stroke="rgba(255,255,255,.85)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-text">CyberGuru AI</div>
+        <div class="logo-badge">
+          <svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="3" fill="currentColor"/></svg>
+          Security Intelligence
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="new-chat-btn" onclick="newChat()">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+    New Conversation
+  </button>
+
+  <div class="history-section">
+    <div class="history-label">Recent</div>
+    <div class="history-list" id="history-list">
+      <div class="history-empty" id="history-empty">No conversations yet.<br>Start by asking a question.</div>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <!-- User profile row -->
+    <div id="user-profile-row" style="display:none; align-items:center; gap:10px; padding:10px 14px 0; margin-bottom:8px; border-top:1px solid var(--border-subtle); padding-top:12px;">
+      <img id="user-avatar" src="" alt="" width="30" height="30" style="border-radius:50%; border:1px solid var(--border-default); flex-shrink:0;">
+      <div style="flex:1; min-width:0;">
+        <div id="user-name" style="font-size:12px; font-weight:500; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+        <div id="user-email" style="font-size:10px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+      </div>
+      <button onclick="logout()" title="Sign out" style="background:none; border:1px solid var(--border-subtle); border-radius:var(--r-sm); padding:4px 7px; cursor:pointer; color:var(--text-muted); font-size:10px; white-space:nowrap; transition:all .2s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-muted)'">Sign out</button>
+    </div>
+    <div class="sidebar-footer-top">
+      <div class="status-row">
+        <div class="status-dot"></div>
+        API Connected
+      </div>
+      <div class="theme-switcher">
+        <button class="theme-btn active" id="btn-cyber" onclick="setTheme('cyber')" title="Dark Blue">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+          </svg>
+        </button>
+        <button class="theme-btn" id="btn-oled" onclick="setTheme('oled')" title="OLED Black">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="9"/>
+            <path stroke-linecap="round" d="M12 3v18M3 12h18" opacity=".4"/>
+          </svg>
+        </button>
+        <button class="theme-btn" id="btn-hacker" onclick="setTheme('hacker')" title="Hacker Green">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <path stroke-linecap="round" d="M7 8l5 4-5 4M13 16h4"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="sidebar-version">v1.0 · Gemini 2.5 Flash</div>
+  </div>
+
+</aside>
+
+<!-- ═══ MAIN ═══════════════════════════════════════════════════════ -->
+<main id="main">
+
+  <!-- Rate-limit banner — in-flow so it pushes topbar down, not over it -->
+  <div id="rate-limit-banner" role="alert" aria-live="polite">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    </svg>
+    <span>Rate limit reached — next request available in</span>
+    <span id="rate-limit-countdown">60</span>s
+    <button id="rate-limit-dismiss" onclick="dismissRateBanner()">Dismiss</button>
+  </div>
+
+  <!-- Topbar -->
+  <div id="topbar">
+    <button id="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
+
+    <div class="topbar-context">
+      <div id="topbar-title">New Conversation</div>
+    </div>
+
+    <button id="export-btn" onclick="exportChat()" title="Export conversation" class="export-btn-el">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+      Export
+    </button>
+
+    <div class="topbar-divider"></div>
+
+    <div class="model-badge">
+      <div class="model-dot"></div>
+      Gemini 2.5 Flash
+    </div>
+    <div class="model-badge" id="tps-badge" style="display:none;">
+      <div class="model-dot" style="background:var(--green);"></div>
+      <span id="tps-value">0</span> t/s
+    </div>
+  </div>
+
+  <!-- Chat messages -->
+  <div id="chat-box">
+    <div id="welcome">
+      <div class="welcome-shield">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.55)" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M9 12l2 2 4-4" stroke="rgba(255,255,255,.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="welcome-text-group">
+        <div class="welcome-heading">CyberGuru AI</div>
+        <div class="welcome-sub">Your AI-powered cybersecurity learning assistant. Ask about threats, attacks, defenses, and security best practices.</div>
+      </div>
+      <div class="welcome-caps">
+        <button class="cap-pill quiz-pill" onclick="openQuizModal()">🎯 Quiz Mode</button>
+      </div>
+      <div class="suggest-grid">
+        <div class="suggest-card" onclick="fillAndSend('What is SQL Injection and how does it work?')">
+          <span class="sc-label">Attack Vector</span>
+          What is SQL Injection?
+        </div>
+        <div class="suggest-card" onclick="fillAndSend('Explain Cross-Site Scripting (XSS) attacks')">
+          <span class="sc-label">Client-side Exploit</span>
+          Explain XSS Attacks
+        </div>
+        <div class="suggest-card" onclick="fillAndSend('What are the different types of malware?')">
+          <span class="sc-label">Threat Intel</span>
+          Types of Malware
+        </div>
+        <div class="suggest-card" onclick="fillAndSend('What is OWASP Top 10 and why does it matter?')">
+          <span class="sc-label">Framework</span>
+          OWASP Top 10 Guide
+        </div>
+      </div>
+    </div>
+  </div><!-- /#chat-box -->
+
+  <!-- Scroll to bottom button -->
+  <button id="scroll-btn" onclick="scrollToBottom()" aria-label="Scroll to bottom">
+    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+    </svg>
+    Scroll to bottom
+  </button>
+
+  <!-- Typing indicator -->
+  <div id="typing-indicator" data-state="thinking">
+    <div class="typing-inner">
+      <div class="typing-avatar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.6)" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M9 12l2 2 4-4" stroke="rgba(255,255,255,.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="typing-body">
+        <div class="typing-state-row">
+          <!-- Icon swaps per state via JS -->
+          <svg class="typing-state-icon" id="typing-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- default: thinking brain / cpu chip -->
+            <rect x="7" y="7" width="10" height="10" rx="1" stroke-linecap="round"/>
+            <path stroke-linecap="round" d="M7 9H5M7 12H4M7 15H5M17 9h2M17 12h3M17 15h2M9 7V5M12 7V4M15 7V5M9 17v2M12 17v3M15 17v2"/>
+          </svg>
+          <span class="typing-label" id="typing-label">Thinking</span>
+        </div>
+        <div class="typing-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div id="input-area">
+    <div id="suggestions-box"></div>
+    <div class="input-wrapper">
+      <label for="fileInput" class="upload-btn" id="upload-label" title="Attach file (.txt, .log, .pdf)">
+        <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828L18 9.828a4 4 0 00-5.657-5.657L5.757 10.757a6 6 0 108.486 8.486L19 14"/>
+        </svg>
+        <span class="sr-only">Attach file</span>
+      </label>
+      <input type="file" id="fileInput" hidden accept=".txt,.log,.pdf">
+
+      <div class="file-indicator" id="file-indicator">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/>
+        </svg>
+        <span class="file-indicator-name" id="file-name"></span>
+        <button class="file-clear-btn" onclick="clearFile()" title="Remove file">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <textarea
+        id="user-input"
+        rows="1"
+        placeholder="Ask about phishing, malware, SQL injection, zero-days…"
+        aria-label="Message input"
+      ></textarea>
+      <button id="mic-btn" onclick="toggleVoice()" title="Voice input">
+        <svg id="mic-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <rect x="9" y="2" width="6" height="11" rx="3" stroke-linejoin="round"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
+        </svg>
+      </button>
+      <span id="char-count"></span>
+      <button id="stop-btn" onclick="stopGeneration()" title="Stop generating">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+      </button>
+      <button id="send-btn" onclick="sendToBackend()" title="Send (Enter)">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="input-hint">Enter to send &nbsp;·&nbsp; Shift+Enter for new line &nbsp;·&nbsp; Attach .txt .log .pdf &nbsp;·&nbsp; 🎤 Voice</div>
+  </div>
+<div id="quiz-modal" class="quiz-modal">
+
+  <div class="quiz-modal-content">
+
+    <h2>🎯 Choose a Quiz Topic</h2>
+
+    <div class="quiz-options">
+
+      <label>
+        <input type="radio" name="quiz-topic" value="sql injection" checked>
+        SQL Injection
+      </label>
+
+      <label>
+        <input type="radio" name="quiz-topic" value="xss">
+        XSS
+      </label>
+
+      <label>
+        <input type="radio" name="quiz-topic" value="malware">
+        Malware
+      </label>
+
+      <label>
+        <input type="radio" name="quiz-topic" value="phishing">
+        Phishing
+      </label>
+
+      <label>
+        <input type="radio" name="quiz-topic" value="network security">
+        Network Security
+      </label>
+
+    </div>
+
+    <div class="quiz-actions">
+
+     <button
+      class="quiz-cancel"
+        onclick="closeQuizModal()">
+
+        ✕ Cancel
+
+    </button>
+
+      <button class="start-btn" onclick="startQuiz()">
+        Start Quiz
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+</main>
+
+
+
+<!-- ─── LOGIN OVERLAY ──────────────────────────────────────────── -->
+<div id="login-overlay" style="
+  display:none; position:fixed; inset:0; z-index:9999;
+  background:var(--bg-base); align-items:center; justify-content:center;
+">
+  <div style="
+    background:var(--bg-card); border:1px solid var(--border-default);
+    border-radius:var(--r-xl); padding:48px 40px; max-width:400px; width:90%;
+    text-align:center; box-shadow:var(--shadow-md);
+  ">
+    <!-- Logo -->
+    <div style="margin-bottom:28px;">
+      <div style="display:inline-flex; align-items:center; justify-content:center;
+        width:56px; height:56px; border-radius:var(--r-lg);
+        background:linear-gradient(135deg,#1e40af,#0891b2);
+        margin-bottom:16px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <h1 style="font-size:22px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">CyberGuru AI</h1>
+      <p style="font-size:14px; color:var(--text-secondary);">Your cybersecurity learning assistant</p>
+    </div>
+
+    <!-- Sign in button -->
+    <button onclick="window.location.href='/auth/login'" style="
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      width:100%; padding:12px 20px; cursor:pointer;
+      background:var(--bg-surface); border:1px solid var(--border-default);
+      border-radius:var(--r-md); color:var(--text-primary);
+      font-size:14px; font-weight:500; font-family:var(--font-ui);
+      transition:all .2s; margin-bottom:16px;
+    " onmouseover="this.style.borderColor='var(--border-strong)';this.style.background='var(--bg-hover)'"
+       onmouseout="this.style.borderColor='var(--border-default)';this.style.background='var(--bg-surface)'">
+      <!-- Google G icon -->
+      <svg width="18" height="18" viewBox="0 0 24 24">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <p style="font-size:11px; color:var(--text-muted); line-height:1.6;">
+      By signing in you agree to use this tool responsibly.<br>
+      Only cybersecurity-related topics are supported.
+    </p>
+  </div>
+</div>
+
+<!-- ─── AUTH JS ────────────────────────────────────────────────── -->
+
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+</body>
+
+</html>

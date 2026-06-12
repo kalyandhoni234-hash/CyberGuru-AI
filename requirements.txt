@@ -1,0 +1,8 @@
+flask
+flask-cors
+requests
+python-dotenv
+gunicorn
+Flask-Limiter==3.8.0
+psycopg2-binary
+authlib

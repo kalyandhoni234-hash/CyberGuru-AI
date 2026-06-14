@@ -3,21 +3,14 @@ Cybersecurity Triage Service
 Handles security artifact analysis using Gemini Managed Agents
 """
 import os
+from dotenv import load_dotenv
 
-
-
-
-
+load_dotenv()
 from google import genai
 
 
 # Initialize Gemini client
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-print("Script started")
-
-api_key = os.getenv("GEMINI_API_KEY")
-print("API Key found:", api_key is not None)
-print("Client created successfully")
 SYSTEM_PROMPT = """# Cybersecurity Triage Agent
 
 You analyze security-related artifacts: log files, phishing emails, suspicious URLs, and malware-related reports.

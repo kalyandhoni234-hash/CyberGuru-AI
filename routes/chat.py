@@ -8,7 +8,7 @@ from services.gemini_service import gemini_post, build_contents, GeminiRateLimit
 from utils.sanitize import sanitize_input, validate_history
 from utils.grounding import needs_grounding
 from utils.quiz import sanitize_quiz_topic, build_quiz_prompt
-
+from services.cyberguru_agent import investigate
 
 # ==========================
 # CHAT ROUTE (non-streaming, kept for fallback)
@@ -26,6 +26,41 @@ def chat():
 
         if not user_message:
             return jsonify({"reply": "Please enter a message."}), 400
+        # CyberGuru Agent Mode
+        if user_message.lower().startswith("/investigate"):
+
+            artifact = user_message[len("/investigate"):].strip()
+
+            if not artifact:
+                return jsonify({
+                    "reply": (
+                        "⚠️ Please provide an artifact.\n\n"
+                        "Example:\n"
+                        "/investigate\n"
+                        "Failed login from 185.22.11.45"
+                    )
+                })
+
+            result = investigate(artifact)
+
+            reply = f"""
+        🛡️ CyberGuru Investigation Report
+
+        {result.get('report', 'No report generated')}
+
+        MITRE ATT&CK:
+        {result.get('mitre')}
+
+        IOCs:
+        {result.get('iocs')}
+
+        Threat Intelligence:
+        {result.get('threat_intel')}
+        """
+
+            return jsonify({
+                "reply": reply
+            })
 
         quiz_mode = False
         quiz_topic = ""

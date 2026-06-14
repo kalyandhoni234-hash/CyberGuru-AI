@@ -12,17 +12,18 @@ def investigate(artifact_text):
     # Step 1: Extract IOCs
     iocs = extract_iocs(artifact_text)
 
-    # Step 2: Gather threat intelligence
+    # Step 2: Threat Intelligence Gathering
     threat_intel = {
         "abuseipdb": [],
         "virustotal": []
     }
 
-    # IP lookups
     for ip in iocs["ips"]:
 
+        # AbuseIPDB Lookup
         try:
             abuse_result = check_abuseipdb(ip)
+
             threat_intel["abuseipdb"].append(
                 {
                     "ip": ip,
@@ -31,6 +32,7 @@ def investigate(artifact_text):
             )
 
         except Exception as e:
+
             threat_intel["abuseipdb"].append(
                 {
                     "ip": ip,
@@ -38,6 +40,7 @@ def investigate(artifact_text):
                 }
             )
 
+        # VirusTotal Lookup
         try:
             vt_result = check_virustotal_ip(ip)
 
@@ -49,6 +52,7 @@ def investigate(artifact_text):
             )
 
         except Exception as e:
+
             threat_intel["virustotal"].append(
                 {
                     "ip": ip,
@@ -56,16 +60,16 @@ def investigate(artifact_text):
                 }
             )
 
-    # Step 3: Gemini analysis
+    # Step 3: Gemini Analysis
     analysis = analyze_artifact(artifact_text)
 
-    # Step 4: MITRE mapping
+    # Step 4: MITRE Mapping
     mitre = None
 
-    analysis_text = (
-        analysis.get("analysis", "")
-        .lower()
-    )
+    analysis_text = analysis.get(
+        "analysis",
+        ""
+    ).lower()
 
     if "brute force" in analysis_text:
         mitre = lookup_mitre("brute force")
@@ -76,7 +80,7 @@ def investigate(artifact_text):
     elif "powershell" in analysis_text:
         mitre = lookup_mitre("powershell")
 
-    # Step 5: Generate report
+    # Step 5: Generate Incident Report
     report = generate_incident_report(
         verdict=analysis.get("verdict"),
         severity=analysis.get("severity"),
@@ -89,6 +93,7 @@ def investigate(artifact_text):
         ]
     )
 
+    # Step 6: Return Full Investigation
     return {
         "analysis": analysis,
         "iocs": iocs,

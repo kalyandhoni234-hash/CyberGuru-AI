@@ -126,6 +126,14 @@ def get_user_id():
     return get_remote_address()
 
 
+def get_user_id_int():
+    """Return the numeric user ID (for database operations). Returns None if not authenticated."""
+    user = session.get("user")
+    if user and user.get("id"):
+        return user["id"]
+    return None
+
+
 def jdump(obj):
     """Serialize with Unicode intact (fixes emoji encoding in SSE streams)."""
     return json.dumps(obj, ensure_ascii=False)

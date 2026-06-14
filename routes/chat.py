@@ -2,7 +2,7 @@ import json
 import requests
 from flask import jsonify, request, Response, stream_with_context
 
-from extensions import app, limiter, csrf_protect, login_required, get_user_id, jdump
+from extensions import app, get_user_id_int, limiter, csrf_protect, login_required, get_user_id, jdump
 from config import API_URL, API_URL_STREAM, SYSTEM_INSTRUCTION, GENERATION_CONFIG, GOOGLE_SEARCH_TOOL
 from services.gemini_service import gemini_post, build_contents, GeminiRateLimitError, GeminiServiceError
 from utils.sanitize import sanitize_input, validate_history
@@ -36,7 +36,7 @@ def chat():
                     "reply": "⚠️ Please provide an artifact to investigate.\n\nExample:\n/investigate <log content, email, URL, etc.>"
                 })
 
-            result = investigate(artifact, user_id=get_user_id())
+            result = investigate(artifact, user_id=get_user_id_int())
 
             analysis = result.get("analysis", {})
             verdict = analysis.get("verdict", "unknown") if analysis.get("status") != "error" else "unknown"
@@ -133,7 +133,7 @@ def chat_stream():
                     yield ("data: " + jdump({"done": True}) + "\n\n").encode("utf-8")
                 return Response(stream_with_context(no_artifact()), content_type="text/event-stream; charset=utf-8")
 
-            result = investigate(artifact, user_id=get_user_id())
+            result = investigate(artifact, user_id=get_user_id_int())
 
             def agent_response():
 

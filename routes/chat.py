@@ -336,8 +336,9 @@ def chat_stream():
         return Response(stream_with_context(rate_err()), content_type="text/event-stream; charset=utf-8")
 
     except GeminiServiceError as e:
+        error_status = e.status_code  # ✅ Capture outside generator
         def svc_err():
-            yield ("data: " + jdump({"error": f"⚠️ Gemini service error ({e.status_code}). Please try again shortly."}) + "\n\n").encode("utf-8")
+            yield ("data: " + jdump({"error": f"⚠️ Gemini service error ({error_status}). Please try again shortly."}) + "\n\n").encode("utf-8")
         return Response(stream_with_context(svc_err()), content_type="text/event-stream; charset=utf-8")
 
     except requests.exceptions.Timeout:
@@ -346,7 +347,8 @@ def chat_stream():
         return Response(stream_with_context(timeout_err()), content_type="text/event-stream; charset=utf-8")
 
     except Exception as e:
+        error_msg = str(e)  # ✅ Capture outside generator
         def general_err():
-            print(f"UNHANDLED ERROR [stream]: {e}")
+            print(f"UNHANDLED ERROR [stream]: {error_msg}")
             yield ("data: " + jdump({"error": "⚠️ An internal server error occurred. Please try again."}) + "\n\n").encode("utf-8")
         return Response(stream_with_context(general_err()), content_type="text/event-stream; charset=utf-8")

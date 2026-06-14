@@ -1,10 +1,16 @@
 import os
 import requests
 
-def check_abuseipdb(ip):
+
+def check_abuseipdb(ip, timeout=10):
+
+    api_key = os.getenv("ABUSEIPDB_API_KEY")
+
+    if not api_key:
+        raise RuntimeError("ABUSEIPDB_API_KEY environment variable is not set")
 
     headers = {
-        "Key": os.getenv("ABUSEIPDB_API_KEY"),
+        "Key": api_key,
         "Accept": "application/json"
     }
 
@@ -16,7 +22,14 @@ def check_abuseipdb(ip):
     response = requests.get(
         "https://api.abuseipdb.com/api/v2/check",
         headers=headers,
-        params=params
+        params=params,
+        timeout=timeout
     )
+
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"AbuseIPDB request failed for {ip}: "
+            f"HTTP {response.status_code} - {response.text[:200]}"
+        )
 
     return response.json()

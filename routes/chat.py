@@ -31,10 +31,25 @@ def chat():
 
             artifact = user_message[len("/investigate"):].strip()
 
-            result = investigate(artifact)
+            if not artifact:
+                return jsonify({
+                    "reply": "⚠️ Please provide an artifact to investigate.\n\nExample:\n/investigate <log content, email, URL, etc.>"
+                })
+
+            result = investigate(artifact, user_id=get_user_id())
+
+            analysis = result.get("analysis", {})
+            verdict = analysis.get("verdict", "unknown") if analysis.get("status") != "error" else "unknown"
+            severity = analysis.get("severity", "unknown") if analysis.get("status") != "error" else "unknown"
 
             return jsonify({
-                "reply": result["report"]
+                "reply": result["report"],
+                "investigation": {
+                    "verdict": verdict,
+                    "severity": severity,
+                    "mitre": result.get("mitre"),
+                    "from_cache": result.get("from_cache", False)
+                }
             })
 
         quiz_mode = False
@@ -110,27 +125,61 @@ def chat_stream():
             return jsonify({"reply": "Please enter a message."}), 400
         if user_message.lower().startswith("/investigate"):
 
-            print("🔥 STREAM INVESTIGATE HIT 🔥")
             artifact = user_message[len("/investigate"):].strip()
 
-            result = investigate(artifact)
+            if not artifact:
+                def no_artifact():
+                    yield ("data: " + jdump({"token": "⚠️ Please provide an artifact to investigate.\n\nExample:\n/investigate <log content, email, URL, etc.>"}) + "\n\n").encode("utf-8")
+                    yield ("data: " + jdump({"done": True}) + "\n\n").encode("utf-8")
+                return Response(stream_with_context(no_artifact()), content_type="text/event-stream; charset=utf-8")
 
-            print("RESULT =", result)
+            result = investigate(artifact, user_id=get_user_id())
+
             def agent_response():
 
                 analysis = result.get("analysis", {})
                 iocs = result.get("iocs", {})
                 mitre = result.get("mitre", {})
                 report = result.get("report", "")
+                from_cache = result.get("from_cache", False)
+
+                if analysis.get("status") == "error":
+                    verdict = "unknown"
+                    severity = "unknown"
+                    verdict_line = f"unknown (AI analysis failed: {analysis.get('error', 'unknown error')})"
+                    severity_line = "unknown"
+                else:
+                    verdict = analysis.get('verdict', 'unknown')
+                    severity = analysis.get('severity', 'unknown')
+                    verdict_line = verdict
+                    severity_line = severity
+
+                # Structured event for the frontend to render as a
+                # color-coded badge (verdict + severity). Sent first so
+                # the UI can show it immediately, before the text report.
+                yield (
+                    "data: "
+                    + jdump({
+                        "investigation": {
+                            "verdict": verdict,
+                            "severity": severity,
+                            "mitre": mitre,
+                            "from_cache": from_cache,
+                        }
+                    })
+                    + "\n\n"
+                ).encode("utf-8")
+
+                cache_note = "\n(Result from a recent prior investigation of this exact artifact)\n" if from_cache else ""
 
                 reply = f"""
             🛡️ CyberGuru Investigation
-
-            Verdict: {analysis.get('verdict', 'unknown')}
-            Severity: {analysis.get('severity', 'unknown')}
+{cache_note}
+            Verdict: {verdict_line}
+            Severity: {severity_line}
 
             📌 MITRE ATT&CK
-            {mitre.get('id', 'N/A')} - {mitre.get('name', 'N/A')}
+            {mitre.get('id', 'N/A') if mitre else 'N/A'} - {mitre.get('name', 'N/A') if mitre else 'N/A'}
 
             🌐 IPs
             {', '.join(iocs.get('ips', [])) or 'None'}
@@ -149,13 +198,16 @@ def chat_stream():
 
                 reply += "\n🌐 Threat Intelligence\n"
 
+                if not threat_intel.get("abuseipdb") and not threat_intel.get("virustotal"):
+                    reply += "\nNo IPs were checked.\n"
+
                 for item in threat_intel.get("abuseipdb", []):
 
                     if "result" in item:
                         reply += f"\nAbuseIPDB: {item['ip']}"
 
                     elif "error" in item:
-                        reply += f"\nAbuseIPDB Error: {item['error']}"
+                        reply += f"\nAbuseIPDB Error ({item['ip']}): {item['error']}"
 
                 for item in threat_intel.get("virustotal", []):
 
@@ -163,8 +215,9 @@ def chat_stream():
                         reply += f"\nVirusTotal: {item['ip']}"
 
                     elif "error" in item:
-                        reply += f"\nVirusTotal Error: {item['error']}"
-                    yield (
+                        reply += f"\nVirusTotal Error ({item['ip']}): {item['error']}"
+
+                yield (
                     "data: "
                     + jdump({"token": reply})
                     + "\n\n"

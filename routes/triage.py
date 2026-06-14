@@ -12,8 +12,7 @@ from services.triage_service import (
     analyze_artifact,
     analyze_log,
     analyze_email,
-    analyze_malware,
-    check_interaction_status
+    analyze_malware
 )
 
 
@@ -28,19 +27,20 @@ from services.triage_service import (
 def triage_analyze():
     """
     Analyze a security artifact (auto-detect type or specify)
-    
+
     Request:
     {
         "artifact": "log content / email / malware report",
         "type": "auto | log | phishing_email | malware | url"
     }
-    
+
     Response:
     {
         "verdict": "benign | suspicious | likely_malicious | inconclusive",
         "severity": "low | medium | high | critical",
         "analysis": "full agent analysis text",
-        "interaction_id": "gemini-interaction-id",
+        "tool_calls": [...],
+        "mitre_techniques": [...],
         "status": "completed"
     }
     """
@@ -48,17 +48,17 @@ def triage_analyze():
         data = request.get_json()
         artifact = data.get('artifact', '').strip()
         artifact_type = data.get('type', 'auto')
-        
+
         if not artifact:
             return jsonify({'error': 'artifact field is required'}), 400
-        
+
         result = analyze_artifact(artifact, artifact_type)
-        
+
         if result.get('status') == 'error':
             return jsonify(result), 500
-        
+
         return jsonify(result), 200
-    
+
     except Exception as e:
         print(f"TRIAGE ERROR [/api/triage/analyze]: {e}")
         return jsonify({'error': str(e), 'message': 'Analysis failed'}), 500
@@ -71,7 +71,7 @@ def triage_analyze():
 def triage_analyze_log():
     """
     Analyze a log file for security threats
-    
+
     Request:
     {
         "log": "log file content"
@@ -80,17 +80,17 @@ def triage_analyze_log():
     try:
         data = request.get_json()
         log_content = data.get('log', '').strip()
-        
+
         if not log_content:
             return jsonify({'error': 'log field is required'}), 400
-        
+
         result = analyze_log(log_content)
-        
+
         if result.get('status') == 'error':
             return jsonify(result), 500
-        
+
         return jsonify(result), 200
-    
+
     except Exception as e:
         print(f"TRIAGE ERROR [/api/triage/analyze-log]: {e}")
         return jsonify({'error': str(e), 'message': 'Log analysis failed'}), 500
@@ -103,7 +103,7 @@ def triage_analyze_log():
 def triage_analyze_email():
     """
     Analyze an email for phishing/security threats
-    
+
     Request:
     {
         "email": "email body content",
@@ -115,22 +115,22 @@ def triage_analyze_email():
     try:
         data = request.get_json()
         email_content = data.get('email', '').strip()
-        
+
         if not email_content:
             return jsonify({'error': 'email field is required'}), 400
-        
+
         result = analyze_email(
             email_content,
             subject=data.get('subject'),
             sender=data.get('from'),
             urls=data.get('urls', [])
         )
-        
+
         if result.get('status') == 'error':
             return jsonify(result), 500
-        
+
         return jsonify(result), 200
-    
+
     except Exception as e:
         print(f"TRIAGE ERROR [/api/triage/analyze-email]: {e}")
         return jsonify({'error': str(e), 'message': 'Email analysis failed'}), 500
@@ -143,7 +143,7 @@ def triage_analyze_email():
 def triage_analyze_malware():
     """
     Analyze a malware behavior report
-    
+
     Request:
     {
         "report": "malware analysis report content"
@@ -152,42 +152,20 @@ def triage_analyze_malware():
     try:
         data = request.get_json()
         report = data.get('report', '').strip()
-        
+
         if not report:
             return jsonify({'error': 'report field is required'}), 400
-        
+
         result = analyze_malware(report)
-        
+
         if result.get('status') == 'error':
             return jsonify(result), 500
-        
+
         return jsonify(result), 200
-    
+
     except Exception as e:
         print(f"TRIAGE ERROR [/api/triage/analyze-malware]: {e}")
         return jsonify({'error': str(e), 'message': 'Malware analysis failed'}), 500
-
-
-@app.route("/api/triage/status/<interaction_id>", methods=["GET"])
-@limiter.limit("30 per minute", key_func=get_user_id)
-@login_required
-def triage_status(interaction_id):
-    """
-    Check the status of an ongoing analysis
-    
-    Returns the analysis result when completed
-    """
-    try:
-        result = check_interaction_status(interaction_id)
-        
-        if result.get('status') == 'error':
-            return jsonify(result), 404
-        
-        return jsonify(result), 200
-    
-    except Exception as e:
-        print(f"TRIAGE ERROR [/api/triage/status]: {e}")
-        return jsonify({'error': str(e)}), 500
 
 
 @app.route("/api/triage/info", methods=["GET"])
@@ -197,7 +175,7 @@ def triage_info():
     (No auth required - informational endpoint)
     """
     return jsonify({
-        "name": "🔴 Cybersecurity Triage Agent",
+        "name": "Cybersecurity Triage Agent",
         "description": "AI-powered security artifact analysis",
         "status": "ready",
         "endpoints": [
@@ -224,16 +202,9 @@ def triage_info():
                 "path": "/api/triage/analyze-malware",
                 "description": "Analyze malware behavior",
                 "requires_auth": True
-            },
-            {
-                "method": "GET",
-                "path": "/api/triage/status/<interaction_id>",
-                "description": "Check analysis status",
-                "requires_auth": True
             }
         ],
         "rate_limits": {
-            "analyze_endpoints": "20 per minute, 100 per day",
-            "status_check": "30 per minute"
+            "analyze_endpoints": "20 per minute, 100 per day"
         }
     }), 200

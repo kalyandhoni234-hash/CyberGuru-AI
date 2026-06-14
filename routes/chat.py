@@ -31,43 +31,11 @@ def chat():
 
             artifact = user_message[len("/investigate"):].strip()
 
-            if not artifact:
-                return jsonify({
-                    "reply": (
-                        "⚠️ Please provide an artifact.\n\n"
-                        "Example:\n"
-                        "/investigate\n"
-                        "Failed login from 185.22.11.45"
-                    )
-                })
-
             result = investigate(artifact)
 
-            reply = f"""
-            🛡️ CyberGuru Investigation Report
-
-            Severity:
-            {result.get('analysis', {}).get('severity')}
-
-            Verdict:
-            {result.get('analysis', {}).get('verdict')}
-
-            IOCs:
-            {result.get('iocs')}
-
-            MITRE:
-            {result.get('mitre')}
-
-            Threat Intelligence:
-            {result.get('threat_intel')}
-
-            Report:
-            {result.get('report')}
-            """
-
             return jsonify({
-                "reply": reply
-        })
+                "reply": result["report"]
+            })
 
         quiz_mode = False
         quiz_topic = ""
@@ -127,10 +95,12 @@ def chat():
 # ==========================
 
 @app.route("/chat-stream", methods=["POST"])
+
 @limiter.limit("30 per minute; 200 per day", key_func=get_user_id)
 @csrf_protect
 @login_required
 def chat_stream():
+    
     try:
         data = request.get_json()
         user_message = sanitize_input(data.get("message", ""))
@@ -138,7 +108,78 @@ def chat_stream():
 
         if not user_message:
             return jsonify({"reply": "Please enter a message."}), 400
+        if user_message.lower().startswith("/investigate"):
 
+            print("🔥 STREAM INVESTIGATE HIT 🔥")
+            artifact = user_message[len("/investigate"):].strip()
+
+            result = investigate(artifact)
+
+            print("RESULT =", result)
+            def agent_response():
+
+                analysis = result.get("analysis", {})
+                iocs = result.get("iocs", {})
+                mitre = result.get("mitre", {})
+                report = result.get("report", "")
+
+                reply = f"""
+            🛡️ CyberGuru Investigation
+
+            Verdict: {analysis.get('verdict', 'unknown')}
+            Severity: {analysis.get('severity', 'unknown')}
+
+            📌 MITRE ATT&CK
+            {mitre.get('id', 'N/A')} - {mitre.get('name', 'N/A')}
+
+            🌐 IPs
+            {', '.join(iocs.get('ips', [])) or 'None'}
+
+            🔗 URLs
+            {', '.join(iocs.get('urls', [])) or 'None'}
+
+            📧 Emails
+            {', '.join(iocs.get('emails', [])) or 'None'}
+
+            📋 Report
+
+            {report}
+            """
+                threat_intel = result.get("threat_intel", {})
+
+                reply += "\n🌐 Threat Intelligence\n"
+
+                for item in threat_intel.get("abuseipdb", []):
+
+                    if "result" in item:
+                        reply += f"\nAbuseIPDB: {item['ip']}"
+
+                    elif "error" in item:
+                        reply += f"\nAbuseIPDB Error: {item['error']}"
+
+                for item in threat_intel.get("virustotal", []):
+
+                    if "result" in item:
+                        reply += f"\nVirusTotal: {item['ip']}"
+
+                    elif "error" in item:
+                        reply += f"\nVirusTotal Error: {item['error']}"
+                    yield (
+                    "data: "
+                    + jdump({"token": reply})
+                    + "\n\n"
+                ).encode("utf-8")
+
+                yield (
+                    "data: "
+                    + jdump({"done": True})
+                    + "\n\n"
+                ).encode("utf-8")
+
+            return Response(
+                stream_with_context(agent_response()),
+                content_type="text/event-stream; charset=utf-8"
+            )
         # ── Quiz mode (mirrors /chat handling) ──
         if user_message.lower().startswith("/quiz"):
             quiz_topic = user_message[5:].strip()

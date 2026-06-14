@@ -7,61 +7,60 @@ from utils.report_generator import generate_incident_report
 from services.triage_service import analyze_artifact
 
 
+
 def investigate(artifact_text):
+
+    print("🔥 CYBERGURU AGENT EXECUTED 🔥")
 
     # Step 1: Extract IOCs
     iocs = extract_iocs(artifact_text)
 
-    # Step 2: Threat Intelligence Gathering
+    print("IOCs:", iocs)
+
+    # Step 2: Threat Intel
     threat_intel = {
         "abuseipdb": [],
         "virustotal": []
     }
 
-    for ip in iocs["ips"]:
+    for ip in iocs.get("ips", []):
 
-        # AbuseIPDB Lookup
         try:
             abuse_result = check_abuseipdb(ip)
 
-            threat_intel["abuseipdb"].append(
-                {
-                    "ip": ip,
-                    "result": abuse_result
-                }
-            )
+            threat_intel["abuseipdb"].append({
+                "ip": ip,
+                "result": abuse_result
+            })
 
         except Exception as e:
 
-            threat_intel["abuseipdb"].append(
-                {
-                    "ip": ip,
-                    "error": str(e)
-                }
-            )
+            threat_intel["abuseipdb"].append({
+                "ip": ip,
+                "error": str(e)
+            })
 
-        # VirusTotal Lookup
         try:
             vt_result = check_virustotal_ip(ip)
 
-            threat_intel["virustotal"].append(
-                {
-                    "ip": ip,
-                    "result": vt_result
-                }
-            )
+            threat_intel["virustotal"].append({
+                "ip": ip,
+                "result": vt_result
+            })
 
         except Exception as e:
 
-            threat_intel["virustotal"].append(
-                {
-                    "ip": ip,
-                    "error": str(e)
-                }
-            )
+            threat_intel["virustotal"].append({
+                "ip": ip,
+                "error": str(e)
+            })
+
+    print("Threat Intel:", threat_intel)
 
     # Step 3: Gemini Analysis
     analysis = analyze_artifact(artifact_text)
+
+    print("Analysis:", analysis)
 
     # Step 4: MITRE Mapping
     mitre = None
@@ -80,7 +79,9 @@ def investigate(artifact_text):
     elif "powershell" in analysis_text:
         mitre = lookup_mitre("powershell")
 
-    # Step 5: Generate Incident Report
+    print("MITRE:", mitre)
+
+    # Step 5: Incident Report
     report = generate_incident_report(
         verdict=analysis.get("verdict"),
         severity=analysis.get("severity"),
@@ -93,7 +94,6 @@ def investigate(artifact_text):
         ]
     )
 
-    # Step 6: Return Full Investigation
     return {
         "analysis": analysis,
         "iocs": iocs,

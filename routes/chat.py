@@ -44,23 +44,30 @@ def chat():
             result = investigate(artifact)
 
             reply = f"""
-        🛡️ CyberGuru Investigation Report
+            🛡️ CyberGuru Investigation Report
 
-        {result.get('report', 'No report generated')}
+            Severity:
+            {result.get('analysis', {}).get('severity')}
 
-        MITRE ATT&CK:
-        {result.get('mitre')}
+            Verdict:
+            {result.get('analysis', {}).get('verdict')}
 
-        IOCs:
-        {result.get('iocs')}
+            IOCs:
+            {result.get('iocs')}
 
-        Threat Intelligence:
-        {result.get('threat_intel')}
-        """
+            MITRE:
+            {result.get('mitre')}
+
+            Threat Intelligence:
+            {result.get('threat_intel')}
+
+            Report:
+            {result.get('report')}
+            """
 
             return jsonify({
                 "reply": reply
-            })
+        })
 
         quiz_mode = False
         quiz_topic = ""

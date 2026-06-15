@@ -173,6 +173,7 @@
       </div>
       <div class="welcome-caps">
         <button class="cap-pill quiz-pill" onclick="openQuizModal()">🎯 Quiz Mode</button>
+        <button class="cap-pill news-pill" onclick="fetchCyberNews()">📰 CyberNews</button>
       </div>
       <div class="suggest-grid">
         <div class="suggest-card" onclick="fillAndSend('What is SQL Injection and how does it work?')">
@@ -265,6 +266,11 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
         </svg>
       </button>
+      <div id="voice-visualizer" class="voice-visualizer" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
       <span id="char-count"></span>
       <button id="stop-btn" onclick="stopGeneration()" title="Stop generating">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>

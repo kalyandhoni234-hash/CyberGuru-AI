@@ -13,7 +13,6 @@ from utils.sanitize import sanitize_input
 def health():
     return jsonify({"status": "ok"}), 200
 
-
 @app.route("/")
 def index():
     return render_template("index.html")

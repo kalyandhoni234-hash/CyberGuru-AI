@@ -2,9 +2,13 @@ import os
 import requests
 
 from utils.cache import get_virustotal_cached, set_virustotal_cached
+from utils.ioc_extractor import is_private_ip
 
 
 def check_virustotal_ip(ip, timeout=10):
+
+    if is_private_ip(ip):
+        return {"info": f"{ip} is a private/non-routable address — skipped lookup"}
 
     cached = get_virustotal_cached(ip)
     if cached is not None:

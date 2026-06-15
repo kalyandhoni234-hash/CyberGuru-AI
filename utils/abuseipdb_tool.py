@@ -1,8 +1,13 @@
 import os
 import requests
 
+from utils.ioc_extractor import is_private_ip
+
 
 def check_abuseipdb(ip, timeout=10):
+
+    if is_private_ip(ip):
+        return {"info": f"{ip} is a private/non-routable address — skipped lookup"}
 
     api_key = os.getenv("ABUSEIPDB_API_KEY")
 

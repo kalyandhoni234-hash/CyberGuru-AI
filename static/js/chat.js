@@ -457,6 +457,7 @@ function showWelcome() {
       </div>
       <div class="welcome-caps">
         <button class="cap-pill quiz-pill" onclick="openQuizModal()">🎯 Quiz Mode</button>
+        <button class="cap-pill news-pill" onclick="fetchCyberNews()">📰 CyberNews</button>
       </div>
       <div class="welcome-caps" style="margin-top:8px;">
         <span class="cap-pill">Threat Analysis</span>
@@ -522,9 +523,18 @@ function appendMessage(role, text, scroll = true) {
 
   const time    = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   const name    = role === 'user' ? 'You' : 'CyberGuru';
-  const rendered = role === 'bot'
-    ? (typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(renderMarkdown(text)) : renderMarkdown(text))
-    : `<p>${escapeHtml(text)}</p>`;
+  let rendered;
+  if(role === 'bot') {
+    // If the server or other code returned raw HTML, sanitize and render it directly.
+    const hasHtml = /<\/?\w+[^>]*>/.test(text);
+    if(hasHtml) {
+      rendered = (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(text) : text;
+    } else {
+      rendered = (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(renderMarkdown(text)) : renderMarkdown(text);
+    }
+  } else {
+    rendered = `<p>${escapeHtml(text)}</p>`;
+  }
 
   const userAvatar = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2">
     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -1281,6 +1291,8 @@ function appendGroundingBlock(streamId, grounding) {
     micBtn.classList.add('listening');
     micBtn.title = 'Listening… (click to stop)';
     document.getElementById('user-input').placeholder = '🎤 Listening…';
+    const vis = document.getElementById('voice-visualizer');
+    if(vis) vis.classList.add('active');
   };
 
   recognition.onresult = (e) => {
@@ -1321,6 +1333,8 @@ function appendGroundingBlock(streamId, grounding) {
     micBtn.classList.remove('listening');
     micBtn.title = 'Voice input';
     document.getElementById('user-input').placeholder = 'Ask about phishing, malware, SQL injection, zero-days…';
+    const vis = document.getElementById('voice-visualizer');
+    if(vis) vis.classList.remove('active');
     clearTimeout(silenceTimer);
   };
 
@@ -1329,6 +1343,8 @@ function appendGroundingBlock(streamId, grounding) {
     micBtn.classList.remove('listening');
     micBtn.title = 'Voice input';
     document.getElementById('user-input').placeholder = 'Ask about phishing, malware, SQL injection, zero-days…';
+    const vis = document.getElementById('voice-visualizer');
+    if(vis) vis.classList.remove('active');
 
     if(e.error === 'not-allowed') {
       // Show a brief message in the input
@@ -1340,7 +1356,48 @@ function appendGroundingBlock(streamId, grounding) {
     }
   };
 })();
+async function fetchCyberNews() {
+  // Push a user-style message into chat so it feels like a real query
+  if(!activeChatId) {
+    activeChatId = 'chat_' + Date.now();
+    chats[activeChatId] = { title: 'Cybersecurity News', msgs: [] };
+    localStorage.setItem(ACTIVE_KEY, activeChatId);
+    document.getElementById('topbar-title').textContent = chats[activeChatId].title;
+  }
 
+  const userLabel = '📰 Show me the latest cybersecurity news';
+  chats[activeChatId].msgs.push({ role: 'user', text: userLabel });
+  saveToStorage();
+  renderHistoryList();
+
+  appendMessage('user', userLabel);   // clears welcome screen, adds user bubble
+
+  setThinkingUI(true);
+  setTypingState('searching');
+
+  try {
+    const res = await fetch('/api/cybernews');
+    const articles = await res.json();
+    setThinkingUI(false);
+
+    let html = `<h3>📰 Latest Cybersecurity News</h3><ul>`;
+    articles.forEach(art => {
+      html += `<li><strong><a href="${art.link}" target="_blank" rel="noopener noreferrer">${escapeHtml(art.title)}</a></strong><br><small>${escapeHtml(art.source)} · ${escapeHtml(art.published)}</small><br>${escapeHtml(art.summary)}</li><br>`;
+    });
+    html += `</ul>`;
+
+    appendMessage('bot', html);
+    chats[activeChatId].msgs.push({ role: 'bot', text: html });
+    saveToStorage();
+
+  } catch (err) {
+    setThinkingUI(false);
+    const errMsg = '⚠️ Failed to fetch cybersecurity news.';
+    appendMessage('bot', errMsg);
+    chats[activeChatId].msgs.push({ role: 'bot', text: errMsg });
+    saveToStorage();
+  }
+}
 /* ─── TEXTAREA AUTO-RESIZE + CHAR COUNT ─────────────────────── */
 const ta = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');

@@ -1,4 +1,3 @@
-
 /* ─── THEME ──────────────────────────────────────────────────── */
 function setTheme(theme) {
   document.body.classList.remove('theme-cyber','theme-hacker','theme-light','theme-oled');
@@ -1676,4 +1675,3 @@ function closeSidebar() {
   resize();
   draw();
 })();
-

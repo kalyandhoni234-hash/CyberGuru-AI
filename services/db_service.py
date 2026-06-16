@@ -305,22 +305,31 @@ def delete_chat_session(session_id, user_id):
             return cur.rowcount > 0
 
 
-def save_message(session_id, role, content):
-    """Append a message to a session and bump the session's updated_at."""
+def save_message(session_id, user_id, role, content):
+    """
+    Append a message to a session owned by user_id and bump updated_at.
+    Returns None if the session does not belong to that user.
+    """
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO messages (session_id, role, content)
-                VALUES (%s, %s, %s)
+                SELECT id, %s, %s
+                FROM chat_sessions
+                WHERE id = %s AND user_id = %s
                 RETURNING *
-            """, (session_id, role, content))
+            """, (role, content, session_id, user_id))
+            message = cur.fetchone()
+            if not message:
+                conn.rollback()
+                return None
             cur.execute("""
                 UPDATE chat_sessions
                 SET updated_at = NOW()
-                WHERE id = %s
-            """, (session_id,))
+                WHERE id = %s AND user_id = %s
+            """, (session_id, user_id))
             conn.commit()
-            return cur.fetchone()
+            return message
 
 
 def get_messages(session_id, user_id, limit=200):

@@ -355,8 +355,13 @@ def _persist_turn(session_id, user_text: str, bot_text: str):
     """
     if not session_id:
         return
+    user_id = get_user_id_int()
+    if not user_id:
+        return
     try:
-        save_message(session_id, "user", user_text)
-        save_message(session_id, "bot",  bot_text)
+        user_saved = save_message(session_id, user_id, "user", user_text)
+        bot_saved = save_message(session_id, user_id, "bot", bot_text)
+        if not user_saved or not bot_saved:
+            logger.warning("Skipped persistence for session %s not owned by user %s", session_id, user_id)
     except Exception:
         logger.exception("Failed to persist turn to session %s", session_id)

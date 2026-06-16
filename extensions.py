@@ -26,10 +26,13 @@ if not _secret_key:
 app.secret_key = _secret_key
 
 # ── Session cookie config ──────────────────────────────────────
-IS_PRODUCTION = os.getenv("RENDER", False)  # Render sets this automatically
+# FIX #1: os.getenv returns a string or None, never a bool.
+# bool("false") == True in Python, so we must check for None explicitly.
+IS_PRODUCTION = os.getenv("RENDER") is not None   # Render sets RENDER="true" automatically
+
 app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=bool(IS_PRODUCTION),
+    SESSION_COOKIE_SECURE=IS_PRODUCTION,           # bool, not a string
     SESSION_COOKIE_HTTPONLY=True,
     PERMANENT_SESSION_LIFETIME=60 * 60 * 24 * 30,  # 30 days
 )
@@ -42,13 +45,15 @@ _ALLOWED_ORIGINS = [o.strip() for o in os.getenv(
 CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=True)
 
 # ── Rate limiter ──────────────────────────────────────────────
+# NOTE: In-memory storage means rate limits are NOT shared across multiple
+# worker processes. For true multi-process rate limiting on Render, set
+# REDIS_URL and switch storage_uri to _REDIS_URL below.
 _REDIS_URL = os.getenv("REDIS_URL")
-# To this:
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["1000 per day", "200 per hour"],
-    storage_uri="memory://",  # ← Force in-memory, ignore REDIS_URL entirely
+    storage_uri=_REDIS_URL if _REDIS_URL else "memory://",
 )
 
 

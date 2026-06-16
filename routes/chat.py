@@ -108,6 +108,100 @@ def chat():
 
 
 # ==========================
+# CHAT ROUTE (streaming)
+# ==========================
+
+@app.route("/chat-stream", methods=["POST"])
+@limiter.limit("30 per minute; 200 per day", key_func=get_user_id)
+@csrf_protect
+@login_required
+def chat_stream():
+    try:
+        data         = request.get_json(silent=True) or {}
+        user_message = sanitize_input(data.get("message", ""))
+        history      = validate_history(data.get("history", []))
+        session_id   = data.get("session_id")
+
+        if not user_message:
+            return jsonify({"reply": "Please enter a message."}), 400
+
+        # Quiz mode
+        if user_message.lower().startswith("/quiz"):
+            quiz_topic = user_message[5:].strip()
+            if not quiz_topic:
+                return jsonify({"reply": "⚠️ Please provide a topic.\n\nExample:\n/quiz sql injection"})
+            safe_topic = sanitize_quiz_topic(quiz_topic)
+            if not safe_topic:
+                return jsonify({"reply": (
+                    "⚠️ That topic isn't in the quiz library.\n\n"
+                    "Try one of: SQL Injection, XSS, Malware, Phishing, "
+                    "Network Security, Cryptography, Ransomware, OWASP Top 10, "
+                    "Buffer Overflow, Social Engineering, or another cybersecurity topic."
+                )})
+            user_message = build_quiz_prompt(safe_topic)
+
+        payload = {
+            "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+            "contents": build_contents(history, user_message),
+            "generationConfig": GENERATION_CONFIG,
+        }
+
+        if needs_grounding(user_message):
+            payload["tools"] = [GOOGLE_SEARCH_TOOL]
+
+        def generate():
+            bot_reply_parts = []
+            try:
+                # gemini_post returns a Response object; iterate its lines for SSE
+                resp = gemini_post(API_URL_STREAM, payload, stream=True, timeout=30)
+                for raw_line in resp.iter_lines():
+                    if not raw_line:
+                        continue
+                    # raw_line is bytes, e.g. b'data: {"candidates":[...]}'
+                    line = raw_line.decode("utf-8")
+                    if not line.startswith("data:"):
+                        continue
+                    json_str = line[5:].strip()
+                    if not json_str or json_str == "[DONE]":
+                        continue
+                    try:
+                        chunk_data = json.loads(json_str)
+                        token = (
+                            chunk_data
+                            .get("candidates", [{}])[0]
+                            .get("content", {})
+                            .get("parts", [{}])[0]
+                            .get("text", "")
+                        )
+                        if token:
+                            bot_reply_parts.append(token)
+                            yield f"data: {jdump({'token': token})}\n\n"
+                    except (json.JSONDecodeError, IndexError, KeyError):
+                        continue
+
+                yield f"data: {jdump({'done': True})}\n\n"
+                _persist_turn(session_id, data.get("message", ""), "".join(bot_reply_parts))
+
+            except GeminiRateLimitError:
+                yield f"data: {jdump({'rate_limited': True, 'retry_after': 60})}\n\n"
+            except GeminiServiceError as e:
+                yield f"data: {jdump({'error': f'⚠️ Gemini service error ({e.status_code}).'})}\n\n"
+            except requests.exceptions.Timeout:
+                yield f"data: {jdump({'error': '⚠️ Request timed out.'})}\n\n"
+            except requests.exceptions.RequestException:
+                yield f"data: {jdump({'error': '⚠️ Unable to reach Gemini API.'})}\n\n"
+            except Exception:
+                logger.exception("Unhandled error in /chat-stream generator")
+                yield f"data: {jdump({'error': '⚠️ An internal error occurred.'})}\n\n"
+
+        return Response(stream_with_context(generate()), mimetype="text/event-stream")
+
+    except Exception:
+        logger.exception("Unhandled error in /chat-stream")
+        return jsonify({"reply": "⚠️ An internal error occurred. Please try again."}), 500
+
+
+# ==========================
 # FIX #8 — /investigate is now its own dedicated endpoint
 # ==========================
 

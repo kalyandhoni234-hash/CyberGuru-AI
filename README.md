@@ -10,7 +10,7 @@
 [![Render](https://img.shields.io/badge/Deployed_on-Render-46E3B7?style=flat&logo=render&logoColor=white)](https://render.com)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
 
-[Live Demo](https://cyberguru_ai.onrender.com) • [Report Bug](https://github.com/kalyandhoni234-hash/CyberGuru-AI/issues) • [Request Feature](https://github.com/GuruSharanKalyan/CyberGuru-AI/issues)
+[Live Demo](https://cyberguru-ai.onrender.com) • [Report Bug](https://github.com/kalyandhoni234-hash/CyberGuru-AI/issues) • [Request Feature](https://github.com/GuruSharanKalyan/CyberGuru-AI/issues)
 
 </div>
 

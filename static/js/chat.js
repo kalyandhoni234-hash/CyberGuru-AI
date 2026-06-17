@@ -24,6 +24,7 @@ const API_BASE    = '';  // ← change to deployed URL
 let chats        = {};
 let activeChatId = null;
 let isThinking   = false;
+let suggestionTimer = null;
 
 // ── Stop generation ──
 let activeReader  = null;   // holds current stream reader so we can cancel it
@@ -321,7 +322,7 @@ function newChat() {
   if(exportBtn) exportBtn.classList.remove('visible');
   document.getElementById('user-input').focus();
   if(window.innerWidth <= 768) closeSidebar();
-  let suggestionTimer;
+  // suggestionTimer is declared globally; do not redeclare here.
 }
 // ── Local suggestion bank — no API call, no rate limit impact ──
 const SUGGESTION_BANK = [
@@ -1248,164 +1249,248 @@ function appendGroundingBlock(streamId, grounding) {
 
 /* ─── VOICE INPUT ────────────────────────────────────────────── */
 (function initVoice() {
+  console.log('[Voice] Script Loaded');
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const micBtn = document.getElementById('mic-btn');
 
-  // BUG FIX #1: If SpeechRecognition is unsupported, hide the button AND define
-  // a no-op window.toggleVoice so the onclick="toggleVoice()" in HTML never
-  // throws "ReferenceError: toggleVoice is not defined" in the console.
+  // Expose a default toggle so inline onclick won't throw even if not supported
+  window.toggleVoice = function() { console.log('[Voice] toggleVoice() called before init'); };
+
   if (!SpeechRecognition) {
+    console.warn('[Voice] SpeechRecognition not available in this browser. Hiding mic button.');
     if (micBtn) micBtn.style.display = 'none';
-    window.toggleVoice = function() {};
+    console.log('[Voice] Browser Supported: false');
     return;
   }
 
-  const recognition = new SpeechRecognition();
-  recognition.lang           = 'en-US';
-  recognition.continuous     = false;   // stop after first pause
-  recognition.interimResults = true;    // show text as you speak
+  console.log('[Voice] Browser Supported: true');
 
-  let isListening     = false;
-  let isStarting      = false;  // BUG FIX #2: guard against rapid double-clicks
-  let silenceTimer    = null;
-  let pendingSend     = false;  // BUG FIX #3: track whether onend should auto-send
+  // Create recognition safely
+  let recognition;
+  try {
+    recognition = new SpeechRecognition();
+  } catch (err) {
+    console.error('[Voice] Failed to create SpeechRecognition:', err);
+    if (micBtn) micBtn.style.display = 'none';
+    return;
+  }
+
+  recognition.lang = 'en-US';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  let isListening = false;
+  let isStarting = false;
+  let silenceTimer = null;
+  let pendingSend = false;
   let finalTranscript = '';
+  let watchdogTimer = null;
+  let isStopping = false;
+  let isSending = false;
+  
 
   const DEFAULT_PLACEHOLDER = 'Ask about phishing, malware, SQL injection, zero-days…';
 
   function setVoiceUI(active) {
-    micBtn.classList.toggle('listening', active);
-    micBtn.title = active ? 'Listening… (click to stop)' : 'Voice input';
-    document.getElementById('user-input').placeholder = active ? '🎤 Listening…' : DEFAULT_PLACEHOLDER;
+    if (micBtn) micBtn.classList.toggle('listening', active);
+    if (micBtn) micBtn.title = active ? 'Listening… (click to stop)' : 'Voice input';
+    const inputEl = document.getElementById('user-input');
+    if (inputEl) inputEl.placeholder = active ? '🎤 Listening…' : DEFAULT_PLACEHOLDER;
     const vis = document.getElementById('voice-visualizer');
     if (vis) vis.classList.toggle('active', active);
   }
 
   function showPlaceholderMsg(msg, durationMs = 3500) {
     const inputEl = document.getElementById('user-input');
+    if (!inputEl) return;
     inputEl.placeholder = msg;
-    setTimeout(() => { inputEl.placeholder = DEFAULT_PLACEHOLDER; }, durationMs);
+    setTimeout(() => { if (inputEl) inputEl.placeholder = DEFAULT_PLACEHOLDER; }, durationMs);
+  }
+
+  function clearSilenceTimer() {
+    if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+  }
+
+  function clearWatchdog() {
+    if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null; }
+  }
+
+  function startWatchdog() {
+    clearWatchdog();
+    // Force-stop recognition after 30s to avoid stuck state
+    watchdogTimer = setTimeout(() => {
+      console.warn('[Voice] Watchdog timeout — forcing recognition.stop()');
+      try { recognition.stop(); } catch (e) {}
+      isStarting = false; isListening = false; setVoiceUI(false);
+    }, 30000);
   }
 
   function startListening() {
-    // BUG FIX #2: SpeechRecognition.start() throws InvalidStateError if called
-    // while the engine is still running or in the middle of shutting down.
-    // Guard with both isListening and isStarting to prevent the exception
-    // that silently swallows the click and leaves the button unresponsive.
+    console.log('[Voice] startListening() called — isListening=', isListening, 'isStarting=', isStarting);
     if (isListening || isStarting) return;
     isStarting = true;
     finalTranscript = '';
     pendingSend = false;
     try {
       recognition.start();
+      console.log('[Voice] recognition.start() called');
+      startWatchdog();
     } catch (err) {
-      // start() failed (e.g. browser denied, or called too soon after stop)
       isStarting = false;
-      console.warn('Voice: recognition.start() failed —', err.message);
+      console.warn('[Voice] recognition.start() failed:', err && err.name ? err.name : err);
       showPlaceholderMsg('⚠️ Could not start microphone. Try clicking again.');
     }
   }
 
   function stopListening() {
-    clearTimeout(silenceTimer);
-    try {
-      recognition.stop();
-    } catch (err) {
-      // recognition was already stopped — safe to ignore
+    console.log('[Voice] stopListening() called');
+    // If user manually stops, ensure we will submit any final transcript
+    clearSilenceTimer();
+    clearWatchdog();
+    if (finalTranscript && finalTranscript.trim()) {
+      pendingSend = true;
+      console.log('[Voice] Manual stop requested — pendingSend set to true');
     }
+    if (isStopping) {
+      console.log('[Voice] stop already in progress — ignoring duplicate stop');
+      return;
+    }
+    isStopping = true;
+    try { recognition.stop(); console.log('[Voice] recognition.stop() called'); } catch (err) { isStopping = false; /* ignore */ }
   }
 
-  // BUG FIX #1 (continued): toggleVoice is always defined on window, even if
-  // SpeechRecognition is supported, so the onclick attribute never errors.
+  // Attach toggle on window so HTML onclick works; keep behavior same
   window.toggleVoice = function() {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
+    console.log('[Voice] toggleVoice()');
+    if (isListening) stopListening(); else startListening();
   };
 
+  // Add a click listener for diagnostic logging (doesn't replace onclick)
+  if (micBtn) micBtn.addEventListener('click', () => console.log('[Voice] mic button clicked'));
+
   recognition.onstart = () => {
-    isListening = true;
-    isStarting  = false;
-    setVoiceUI(true);
+    console.log('[Voice] onstart');
+    isListening = true; isStarting = false; isStopping = false; setVoiceUI(true);
+    console.log('[Voice] Started Listening');
   };
 
   recognition.onresult = (e) => {
-    let interim  = '';
+    console.log('[Voice] onresult, resultIndex=', e.resultIndex, 'resultsLen=', e.results.length);
+    let interim = '';
     let newFinal = '';
-
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const t = e.results[i][0].transcript;
       if (e.results[i].isFinal) {
         newFinal += t;
+        console.log('[Voice] Final Transcript:', t);
       } else {
         interim += t;
+        console.log('[Voice] Interim Transcript:', t);
       }
     }
-
     if (newFinal) finalTranscript += newFinal;
-
-    // Show live transcript in input box
     const inputEl = document.getElementById('user-input');
-    inputEl.value = finalTranscript || interim;
-    autoResize(inputEl);
+    if (inputEl) { inputEl.value = (finalTranscript || interim); autoResize(inputEl); }
 
-    // BUG FIX #3: Don't call sendToBackend() directly from the silenceTimer.
-    // recognition.stop() triggers onend(), and the original code also called
-    // clearTimeout(silenceTimer) inside onend — meaning the send was cancelled
-    // before it could fire. Instead, set a flag (pendingSend) and let onend
-    // decide whether to send after cleanup is complete.
-    clearTimeout(silenceTimer);
-    if (finalTranscript) {
+    clearSilenceTimer();
+    // Start 1s silence timer after last detected final transcript
+    if (finalTranscript && finalTranscript.trim()) {
       silenceTimer = setTimeout(() => {
         pendingSend = !!finalTranscript.trim();
-        recognition.stop();  // triggers onend → onend checks pendingSend
-      }, 1500);
+        console.log('[Voice] Silence Detected — pendingSend=', pendingSend);
+        // Guard against multiple stop() calls
+        if (isStopping) {
+          console.log('[Voice] recognition.stop() already in progress from another action');
+          return;
+        }
+        isStopping = true;
+        try { recognition.stop(); console.log('[Voice] recognition.stop() called (silence timer)'); } catch (e) { isStopping = false; console.warn('[Voice] recognition.stop() failed in silenceTimer', e); }
+      }, 1000);
     }
   };
 
   recognition.onend = () => {
-    isListening = false;
-    isStarting  = false;
-    setVoiceUI(false);
-    clearTimeout(silenceTimer);
-
-    // BUG FIX #3: Send here, after cleanup, instead of inside the silenceTimer
-    // callback — which was always cancelled by the clearTimeout in this handler.
-    if (pendingSend && finalTranscript.trim()) {
+    console.log('[Voice] onend — isListening=', isListening, 'pendingSend=', pendingSend);
+    isListening = false; isStarting = false; setVoiceUI(false); clearSilenceTimer(); clearWatchdog(); isStopping = false;
+    console.log('[Voice] Recognition Stopped');
+    if (pendingSend && finalTranscript && finalTranscript.trim()) {
       pendingSend = false;
-      sendToBackend();
+      if (isSending) {
+        console.log('[Voice] send already in progress — skipping duplicate');
+        return;
+      }
+      console.log('[Voice] Auto Send Triggered');
+      isSending = true;
+      // Ensure the input contains the final transcript before sending
+      const inputEl = document.getElementById('user-input');
+      if (inputEl) inputEl.value = finalTranscript.trim();
+      sendToBackend().then(() => {
+        console.log('[Voice] Message Submitted');
+        isSending = false;
+        // Clear final transcript buffer to prevent re-sends
+        finalTranscript = '';
+      }).catch((err) => {
+        console.warn('[Voice] sendToBackend failed', err);
+        isSending = false;
+      });
     }
   };
 
-  // BUG FIX #4: Handle all SpeechRecognition error codes, not just 'not-allowed'.
-  // Previously 'network', 'audio-capture', 'aborted', etc. silently reset the
-  // button state without giving the user any feedback.
   recognition.onerror = (e) => {
-    isListening = false;
-    isStarting  = false;
-    pendingSend = false;
-    clearTimeout(silenceTimer);
-    setVoiceUI(false);
+    console.warn('[Voice] onerror', e && e.error ? e.error : e);
+    isListening = false; isStarting = false; pendingSend = false; clearSilenceTimer(); clearWatchdog(); setVoiceUI(false);
 
     const errorMessages = {
       'not-allowed':   '⚠️ Microphone access denied. Check browser permissions.',
       'audio-capture': '⚠️ No microphone found. Plug one in and try again.',
       'network':       '⚠️ Network error during voice recognition. Try again.',
-      'aborted':       null,   // user-initiated stop — no message needed
+      'aborted':       null,
       'no-speech':     '⚠️ No speech detected. Try speaking closer to your mic.',
       'service-not-allowed': '⚠️ Voice input requires HTTPS.',
     };
-
-    const msg = errorMessages[e.error];
-    if (msg) {
-      showPlaceholderMsg(msg, 4000);
-    } else if (!(e.error in errorMessages)) {
-      // Unknown error — log it but don't alarm the user
-      console.warn('Voice recognition error:', e.error);
-    }
+    const msg = e && e.error ? errorMessages[e.error] : null;
+    if (msg) showPlaceholderMsg(msg, 4000);
   };
+
+  // Diagnostic helper: prints browser / mic / recognition state
+  window.voiceDebug = async function() {
+    console.log('--- Voice Debug ---');
+    try {
+      const ua = navigator.userAgent;
+      console.log('Browser UA:', ua);
+      console.log('SpeechRecognition available:', !!SpeechRecognition);
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const p = await navigator.permissions.query({ name: 'microphone' });
+          console.log('Microphone permission state:', p.state);
+        } catch (permErr) {
+          console.log('Permission API error:', permErr);
+        }
+      } else {
+        console.log('Permissions API not available in this browser.');
+      }
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        try {
+          const devs = await navigator.mediaDevices.enumerateDevices();
+          const mics = devs.filter(d => d.kind === 'audioinput');
+          console.log('Microphone devices found:', mics.length, mics.map(m => ({ label: m.label, id: m.deviceId }))); 
+        } catch (mdErr) { console.log('enumerateDevices error:', mdErr); }
+      } else {
+        console.log('mediaDevices.enumerateDevices not supported');
+      }
+      console.log('Mic button exists:', !!micBtn);
+      console.log('Event listeners attached: onstart/onresult/onend/onerror:', !!recognition.onstart, !!recognition.onresult, !!recognition.onend, !!recognition.onerror);
+      console.log('Current recognition state: isListening=', isListening, 'isStarting=', isStarting, 'pendingSend=', pendingSend);
+      console.log('-------------------');
+    } catch (err) { console.error('[Voice] voiceDebug failed', err); }
+  };
+
+  // Expose some internals for debugging in console
+  window._voice = { recognition, isListening: () => isListening };
+
+  // Startup self-test logs
+  console.log('[Voice] Mic Button Found:', !!micBtn);
+  console.log('[Voice] Ready');
 })();
 async function fetchCyberNews() {
   // Push a user-style message into chat so it feels like a real query

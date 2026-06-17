@@ -71,7 +71,10 @@ def set_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    # Allow same-origin use of sensitive features (microphone/camera/geolocation)
+    # Older config disabled these entirely which prevents in-browser mic access.
+    # Use `(self)` to allow the app's own pages to access these features.
+    response.headers["Permissions-Policy"] = "geolocation=(self), microphone=(self), camera=(self)"
     if not response.content_type.startswith("text/html"):
         response.headers["Content-Security-Policy"] = "default-src 'none'"
     return response

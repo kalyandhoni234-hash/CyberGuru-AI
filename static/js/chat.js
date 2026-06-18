@@ -1,9 +1,9 @@
 /* ─── THEME ──────────────────────────────────────────────────── */
 function setTheme(theme) {
-  document.body.classList.remove('theme-cyber','theme-hacker','theme-light','theme-oled');
+  document.body.classList.remove('theme-cyber','theme-light','theme-oled');
   document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-  if(theme === 'hacker') document.body.classList.add('theme-hacker');
-  else if(theme === 'light') document.body.classList.add('theme-light');
+ 
+  if(theme === 'light') document.body.classList.add('theme-light');
   else if(theme === 'oled') document.body.classList.add('theme-oled');
   const btn = document.getElementById('btn-' + theme);
   if(btn) btn.classList.add('active');
@@ -12,8 +12,8 @@ function setTheme(theme) {
 
 function loadTheme() {
   const saved = localStorage.getItem('cyberguru_theme') || 'cyber';
-  // light theme removed — fall back to cyber
-  setTheme(saved === 'light' ? 'cyber' : saved);
+  const valid = ['cyber', 'light', 'oled'];
+  setTheme(valid.includes(saved) ? saved : 'cyber');
 }
 
 /* ─── GLOBALS ────────────────────────────────────────────────── */
@@ -134,6 +134,20 @@ function setTypingState(state) {
   labelEl.textContent = cfg.label;
   iconEl.innerHTML = cfg.icon;
 }
+function toggleSidebarCollapse() {
+  const sidebar = document.getElementById('sidebar');
+  const isCollapsed = sidebar.classList.toggle('collapsed');
+  document.body.classList.toggle('sidebar-collapsed', isCollapsed);
+  localStorage.setItem('sidebar_collapsed', isCollapsed);
+}
+
+// In your init/loadTheme area, add:
+function loadSidebarState() {
+  if (localStorage.getItem('sidebar_collapsed') === 'true') {
+    document.getElementById('sidebar').classList.add('collapsed');
+    document.body.classList.add('sidebar-collapsed');
+  }
+}
 
 // ── Tokens/sec counter ──
 let tpsStartTime  = 0;
@@ -230,8 +244,8 @@ function exportChat() {
 /* ─── INIT ───────────────────────────────────────────────────── */
 (function init() {
   loadTheme();
-  // NOTE: loadFromStorage() and renderHistoryList() are called in
-  // showUserProfile() after Google login, so history is always user-scoped.
+  loadSidebarState(); 
+  loadAppearanceSettings(); 
   initScrollTracking();
 
   // File input: show indicator when file chosen
@@ -1292,7 +1306,15 @@ function appendGroundingBlock(streamId, grounding) {
   const DEFAULT_PLACEHOLDER = 'Ask about phishing, malware, SQL injection, zero-days…';
 
   function setVoiceUI(active) {
-    if (micBtn) micBtn.classList.toggle('listening', active);
+    if (micBtn) {
+      micBtn.classList.toggle('listening', active);
+      micBtn.setAttribute('aria-label', active ? 'Stop recording' : 'Start voice input');
+      micBtn.title = active ? 'Stop recording' : 'Voice input';
+      const idle = document.getElementById('mic-icon-idle');
+      const stop = document.getElementById('mic-icon-stop');
+      if (idle) idle.style.display = active ? 'none' : '';
+      if (stop) stop.style.display = active ? '' : 'none';
+    }
     if (micBtn) micBtn.title = active ? 'Listening… (click to stop)' : 'Voice input';
     const inputEl = document.getElementById('user-input');
     if (inputEl) inputEl.placeholder = active ? '🎤 Listening…' : DEFAULT_PLACEHOLDER;
@@ -1535,8 +1557,8 @@ async function fetchCyberNews() {
   }
 }
 /* ─── TEXTAREA AUTO-RESIZE + CHAR COUNT ─────────────────────── */
-const ta = document.getElementById('user-input');
-const sendBtn = document.getElementById('send-btn');
+var ta = document.getElementById('user-input');
+var sendBtn = document.getElementById('send-btn');
 
 function updateSendBtn() {
   const hasText = ta.value.trim().length > 0;
@@ -1634,10 +1656,9 @@ function closeSidebar() {
   // ── Accent colour per theme ──
   function accent() {
     const b = document.body;
-    if (b.classList.contains('theme-hacker')) return [0, 230, 118];
-    if (b.classList.contains('theme-light'))  return [37, 99, 235];
-    if (b.classList.contains('theme-oled'))   return [147, 197, 253];
-    return [59, 130, 246];
+    if (b.classList.contains('theme-light'))  return [67, 56, 202];
+    if (b.classList.contains('theme-oled'))   return [124, 110, 247];
+    return [79, 110, 247];
   }
 
   function resize() {
@@ -1812,3 +1833,100 @@ function closeSidebar() {
   resize();
   draw();
 })();
+/* ── User Menu Dropdown ── */
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  const dropdown = document.getElementById('user-menu-dropdown');
+  const trigger  = document.getElementById('user-menu-trigger');
+  const isOpen   = dropdown.classList.contains('open');
+  if (isOpen) {
+    dropdown.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+  } else {
+    dropdown.classList.add('open');
+    trigger.setAttribute('aria-expanded', 'true');
+  }
+}
+
+function closeUserMenu() {
+  const dropdown = document.getElementById('user-menu-dropdown');
+  const trigger  = document.getElementById('user-menu-trigger');
+  if (dropdown) dropdown.classList.remove('open');
+  if (trigger)  trigger.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('user-menu-wrap');
+  if (wrap && !wrap.contains(e.target)) closeUserMenu();
+});
+
+/* ── Settings Panel ── */
+function openSettings() {
+  // Populate user info
+  const avatar = document.getElementById('user-avatar');
+  const name   = document.getElementById('user-name');
+  const email  = document.getElementById('user-email');
+  if (avatar) document.getElementById('sp-avatar').src = avatar.src;
+  if (name)   document.getElementById('sp-name').textContent  = name.textContent;
+  if (email)  document.getElementById('sp-email').textContent = email.textContent;
+
+  document.getElementById('settings-panel').classList.add('show');
+  document.getElementById('settings-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  updateThemeCards();
+  updateFontButtons();
+}
+
+function closeSettings() {
+  document.getElementById('settings-panel').classList.remove('show');
+  document.getElementById('settings-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.sp-tab').forEach((t,i) => {
+    t.classList.toggle('active', ['account','appearance','about'][i] === tab);
+  });
+  document.querySelectorAll('.sp-body').forEach(b => b.classList.add('hidden'));
+  document.getElementById('tab-' + tab).classList.remove('hidden');
+}
+
+function updateThemeCards() {
+  const saved = localStorage.getItem('cyberguru_theme') || 'cyber';
+  document.querySelectorAll('.sp-theme-card').forEach(c => c.classList.remove('active'));
+  const el = document.getElementById('tc-' + saved);
+  if (el) el.classList.add('active');
+}
+
+function setFontSize(size) {
+  document.documentElement.style.setProperty('--msg-font-size',
+    size === 'compact' ? '13px' : size === 'large' ? '16px' : '14px'
+  );
+  document.querySelectorAll('.sp-font-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('fs-' + size);
+  if (el) el.classList.add('active');
+  localStorage.setItem('font_size', size);
+}
+
+function updateFontButtons() {
+  const saved = localStorage.getItem('font_size') || 'default';
+  document.querySelectorAll('.sp-font-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('fs-' + saved);
+  if (el) el.classList.add('active');
+}
+
+function toggleCompactSidebar(on) {
+  document.documentElement.style.setProperty('--sidebar-w', on ? '200px' : '264px');
+  localStorage.setItem('compact_sidebar', on);
+}
+
+// Load saved font size and sidebar on init
+function loadAppearanceSettings() {
+  const fs = localStorage.getItem('font_size') || 'default';
+  setFontSize(fs);
+  const compact = localStorage.getItem('compact_sidebar') === 'true';
+  if (compact) {
+    document.getElementById('compact-sidebar-toggle').checked = true;
+    toggleCompactSidebar(true);
+  }
+}

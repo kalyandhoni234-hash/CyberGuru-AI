@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" integrity="sha512-jB0TkTBeQC9ZSkBqDhdmfTv1qdfbWpPougH0lDjKDkqtSyBiEHca32FDRFnx+lSd+bSRSRobLwmJnEbIXkEAw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}">
@@ -42,6 +42,7 @@
 </div>
 
 <!-- Sidebar -->
+
 <aside id="sidebar" role="navigation" aria-label="Sidebar">
 
   <div class="sidebar-logo">
@@ -77,41 +78,54 @@
   </div>
 
   <div class="sidebar-footer">
-    <!-- User profile row -->
-    <div id="user-profile-row" style="display:none; align-items:center; gap:10px; padding:10px 14px 0; margin-bottom:8px; border-top:1px solid var(--border-subtle); padding-top:12px;">
-      <img id="user-avatar" src="" alt="" width="30" height="30" style="border-radius:50%; border:1px solid var(--border-default); flex-shrink:0;">
-      <div style="flex:1; min-width:0;">
-        <div id="user-name" style="font-size:12px; font-weight:500; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
-        <div id="user-email" style="font-size:10px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
-      </div>
-      <button onclick="logout()" title="Sign out" style="background:none; border:1px solid var(--border-subtle); border-radius:var(--r-sm); padding:4px 7px; cursor:pointer; color:var(--text-muted); font-size:10px; white-space:nowrap; transition:all .2s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-muted)'">Sign out</button>
-    </div>
+
+    <!-- Status row -->
     <div class="sidebar-footer-top">
       <div class="status-row">
         <div class="status-dot"></div>
         API Connected
       </div>
-      <div class="theme-switcher">
-        <button class="theme-btn active" id="btn-cyber" onclick="setTheme('cyber')" title="Dark Blue">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+      <div class="sidebar-version">v1.0 | Gemini 2.5 Flash</div>
+    </div>
+
+    <!-- User profile row with three-dots dropdown -->
+    <div id="user-profile-row" style="display:none;">
+      <img id="user-avatar" src="" alt="" width="32" height="32" class="user-profile-avatar">
+      <div class="user-profile-info">
+        <div id="user-name" class="user-profile-name"></div>
+        <div id="user-email" class="user-profile-email"></div>
+      </div>
+
+      <!-- Three-dots button -->
+      <div class="user-menu-wrap" id="user-menu-wrap">
+        <button class="user-menu-btn" id="user-menu-trigger" onclick="toggleUserMenu(event)" title="More options" aria-haspopup="true" aria-expanded="false">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
+            <circle cx="5" cy="12" r="1.8" fill="currentColor"/>
+            <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
+            <circle cx="19" cy="12" r="1.8" fill="currentColor"/>
           </svg>
         </button>
-        <button class="theme-btn" id="btn-oled" onclick="setTheme('oled')" title="OLED Black">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <circle cx="12" cy="12" r="9"/>
-            <path stroke-linecap="round" d="M12 3v18M3 12h18" opacity=".4"/>
-          </svg>
-        </button>
-        <button class="theme-btn" id="btn-hacker" onclick="setTheme('hacker')" title="Hacker Green">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <path stroke-linecap="round" d="M7 8l5 4-5 4M13 16h4"/>
-          </svg>
-        </button>
+
+        <!-- Dropdown menu -->
+        <div class="user-menu-dropdown" id="user-menu-dropdown" role="menu">
+          <button class="user-menu-item" onclick="openSettings(); closeUserMenu();" role="menuitem">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            Settings
+          </button>
+          <div class="user-menu-divider"></div>
+          <button class="user-menu-item user-menu-item--danger" onclick="logout(); closeUserMenu();" role="menuitem">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            Sign out
+          </button>
+        </div>
       </div>
     </div>
-    <div class="sidebar-version">v1.0 | Gemini 2.5 Flash</div>
+
   </div>
 
 </aside>
@@ -136,7 +150,11 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
     </button>
-
+     <button id="sidebar-toggle" onclick="toggleSidebarCollapse()" title="Toggle sidebar">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
     <div class="topbar-context">
       <div id="topbar-title">New Conversation</div>
     </div>
@@ -260,10 +278,15 @@
         placeholder="Ask about phishing, malware, SQL injection, zero-days..."
         aria-label="Message input"
       ></textarea>
-      <button id="mic-btn" onclick="toggleVoice()" title="Voice input">
-        <svg id="mic-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+      <button id="mic-btn" onclick="if(typeof toggleVoice==='function') toggleVoice()" title="Voice input" aria-label="Start voice input">
+        <!-- idle: microphone -->
+        <svg id="mic-icon-idle" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
           <rect x="9" y="2" width="6" height="11" rx="3" stroke-linejoin="round"/>
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
+        </svg>
+        <!-- listening: filled stop square -->
+        <svg id="mic-icon-stop" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+          <rect x="4" y="4" width="16" height="16" rx="3"/>
         </svg>
       </button>
       <div id="voice-visualizer" class="voice-visualizer" aria-hidden="true">
@@ -276,8 +299,8 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
       </button>
       <button id="send-btn" onclick="sendToBackend()" title="Send (Enter)">
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
         </svg>
       </button>
     </div>
@@ -398,6 +421,138 @@
 
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+<!-- Settings Panel -->
+<div id="settings-overlay" onclick="closeSettings()"></div>
+
+<div id="settings-panel">
+  <div class="sp-header">
+    <div class="sp-title">Settings</div>
+    <button class="sp-close" onclick="closeSettings()">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="sp-tabs">
+    <button class="sp-tab active" onclick="switchTab('account')">Account</button>
+    <button class="sp-tab" onclick="switchTab('appearance')">Appearance</button>
+    <button class="sp-tab" onclick="switchTab('about')">About</button>
+  </div>
+
+  <!-- Account Tab -->
+  <div class="sp-body" id="tab-account">
+    <div class="sp-avatar-section">
+      <img id="sp-avatar" src="" alt="" class="sp-avatar-img"/>
+      <div>
+        <div id="sp-name" class="sp-name"></div>
+        <div id="sp-email" class="sp-email"></div>
+      </div>
+    </div>
+
+    <div class="sp-divider"></div>
+
+    <div class="sp-section-label">Account</div>
+    <div class="sp-info-row">
+      <span class="sp-info-key">Status</span>
+      <span class="sp-info-val sp-status-val">
+        <span class="status-dot"></span> Active
+      </span>
+    </div>
+    <div class="sp-info-row">
+      <span class="sp-info-key">Model</span>
+      <span class="sp-info-val">Gemini 2.5 Flash</span>
+    </div>
+
+    <div class="sp-divider"></div>
+
+    <button class="sp-danger-btn" onclick="logout()">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+      Sign out
+    </button>
+  </div>
+
+  <!-- Appearance Tab -->
+  <div class="sp-body hidden" id="tab-appearance">
+    <div class="sp-section-label">Theme</div>
+    <div class="sp-theme-grid">
+      <button class="sp-theme-card" onclick="setTheme('cyber'); updateThemeCards();" id="tc-cyber">
+        <div class="sp-theme-preview tc-preview-cyber"></div>
+        <span>Dark Blue</span>
+      </button>
+      <button class="sp-theme-card" onclick="setTheme('oled'); updateThemeCards();" id="tc-oled">
+        <div class="sp-theme-preview tc-preview-oled"></div>
+        <span>OLED Violet</span>
+      </button>
+      <button class="sp-theme-card" onclick="setTheme('light'); updateThemeCards();" id="tc-light">
+        <div class="sp-theme-preview tc-preview-light"></div>
+        <span>Premium White</span>
+      </button>
+    </div>
+
+    <div class="sp-divider"></div>
+
+    <div class="sp-section-label">Font Size</div>
+    <div class="sp-font-row">
+      <button class="sp-font-btn" onclick="setFontSize('compact')" id="fs-compact">A<small>compact</small></button>
+      <button class="sp-font-btn active" onclick="setFontSize('default')" id="fs-default">A<small>default</small></button>
+      <button class="sp-font-btn" onclick="setFontSize('large')" id="fs-large">A<small>large</small></button>
+    </div>
+
+    <div class="sp-divider"></div>
+
+    <div class="sp-section-label">Sidebar</div>
+    <div class="sp-toggle-row">
+      <span class="sp-toggle-label">Compact sidebar</span>
+      <label class="sp-switch">
+        <input type="checkbox" id="compact-sidebar-toggle" onchange="toggleCompactSidebar(this.checked)">
+        <span class="sp-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- About Tab -->
+  <div class="sp-body hidden" id="tab-about">
+    <div class="sp-about-logo">
+      <div class="sp-about-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.6)" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M9 12l2 2 4-4" stroke="rgba(255,255,255,.85)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="sp-about-name">CyberGuru AI</div>
+      <div class="sp-about-tagline">Security Intelligence Platform</div>
+    </div>
+
+    <div class="sp-divider"></div>
+
+    <div class="sp-section-label">Info</div>
+    <div class="sp-info-row">
+      <span class="sp-info-key">Version</span>
+      <span class="sp-info-val">v1.0</span>
+    </div>
+    <div class="sp-info-row">
+      <span class="sp-info-key">Model</span>
+      <span class="sp-info-val">Gemini 2.5 Flash</span>
+    </div>
+    <div class="sp-info-row">
+      <span class="sp-info-key">Author</span>
+      <span class="sp-info-val">Guru Sharan Kalyan</span>
+    </div>
+
+    <div class="sp-divider"></div>
+
+    <div class="sp-section-label">Links</div>
+    <a class="sp-link-row" href="https://github.com/kalyandhoni234-hash/CyberGuru-AI" target="_blank">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+      Github Repository
+      <svg class="sp-link-arrow" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M7 7h10v10"/></svg>
+    </a>
+  </div>
+</div>
 </body>
 
 </html>

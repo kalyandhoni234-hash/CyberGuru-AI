@@ -9,3 +9,5 @@ authlib
 google-genai>=2.8.0
 feedparser==6.0.12
 edge-tts
+
+edge-tts

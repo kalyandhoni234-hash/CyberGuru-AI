@@ -3,13 +3,14 @@ import asyncio
 import logging
 import edge_tts
 from flask import request, jsonify, Response
-from extensions import app, limiter, login_required, get_user_id
+from extensions import app, csrf_protect, limiter, login_required, get_user_id
 
 logger = logging.getLogger(__name__)
 MAX_CHARS = 1500
 
 @app.route("/api/tts", methods=["POST"])
 @limiter.limit("30 per minute; 200 per day", key_func=get_user_id)
+@csrf_protect
 @login_required
 def text_to_speech():
     data = request.get_json(silent=True) or {}

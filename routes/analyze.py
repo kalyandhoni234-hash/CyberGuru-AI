@@ -1,13 +1,25 @@
 import json
 import requests
 from flask import jsonify, request, Response, stream_with_context
-
 from extensions import app, limiter, csrf_protect, login_required, get_user_id, jdump
 from config import API_URL_STREAM, SYSTEM_INSTRUCTION, GENERATION_CONFIG, GOOGLE_SEARCH_TOOL
 from services.gemini_service import gemini_post, GeminiRateLimitError, GeminiServiceError
 from services.file_service import extract_pdf_text, parse_log_file, build_analysis_prompt
 from utils.grounding import needs_grounding
+MAGIC_BYTES = {
+    b'\x25\x50\x44\x46': 'pdf',
+    b'\x50\x4b\x03\x04': 'zip',   # block zip disguised as other types
+    b'\xff\xd8\xff':      'jpg',
+    b'\x89\x50\x4e\x47': 'png',
+    b'\x47\x49\x46\x38': 'gif',
+    b'\x4d\x5a':          'exe',   # block executables
+}
 
+def get_magic_type(data: bytes) -> str | None:
+    for sig, ftype in MAGIC_BYTES.items():
+        if data[:len(sig)] == sig:
+            return ftype
+    return None
 
 @app.route("/analyze-file", methods=["POST"])
 @limiter.limit("10 per minute; 50 per day", key_func=get_user_id)
@@ -29,6 +41,18 @@ def analyze_file():
 
     try:
         file_bytes = uploaded_file.read()
+
+        magic = get_magic_type(file_bytes)
+        if magic in ('exe', 'zip'):
+            def blocked():
+                yield ("data: " + jdump({"error": "⚠️ Blocked: executable or archive files are not allowed."}) + "\n\n").encode("utf-8")
+            return Response(stream_with_context(blocked()), content_type="text/event-stream; charset=utf-8")
+
+        if magic and magic not in ('pdf',) and ext == 'pdf':
+            def fake_pdf():
+                yield ("data: " + jdump({"error": "⚠️ File does not appear to be a valid PDF."}) + "\n\n").encode("utf-8")
+            return Response(stream_with_context(fake_pdf()), content_type="text/event-stream; charset=utf-8")
+
         MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
         if len(file_bytes) > MAX_FILE_SIZE:
             def size_err():

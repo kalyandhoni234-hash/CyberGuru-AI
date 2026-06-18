@@ -75,8 +75,16 @@ def set_security_headers(response):
     # Older config disabled these entirely which prevents in-browser mic access.
     # Use `(self)` to allow the app's own pages to access these features.
     response.headers["Permissions-Policy"] = "geolocation=(self), microphone=(self), camera=(self)"
-    if not response.content_type.startswith("text/html"):
-        response.headers["Content-Security-Policy"] = "default-src 'none'"
+    if response.content_type.startswith("text/html"):
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline'; "
+            "connect-src 'self'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' https://cdnjs.cloudflare.com"
+        )
+    
     return response
 
 

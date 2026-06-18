@@ -2050,6 +2050,21 @@ body.theme-oled .hljs-attr      { color: #c4b5fd; }
   #sidebar.open { transform: translateX(0); }
   #sidebar-overlay.show { display:block; }
   #menu-toggle { display:flex; }
+  /* Desktop */
+  #sidebar-toggle {
+      display: flex;
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+      #menu-toggle {
+          display: flex;
+      }
+
+      #sidebar-toggle {
+          display: none;
+      }
+  }
 
   #main { height: 100dvh; }
 

@@ -2064,7 +2064,13 @@ body.theme-oled .hljs-attr      { color: #c4b5fd; }
       #sidebar-toggle {
           display: none;
       }
+  
+     #sidebar.collapsed{
+        width:82vw;
+        min-width:82vw;
+     }
   }
+
 
   #main { height: 100dvh; }
 

@@ -2070,7 +2070,17 @@ body.theme-oled .hljs-attr      { color: #c4b5fd; }
         min-width:82vw;
      }
   }
-
+/* TTS button — inherits .msg-action-btn base, just adds playing state */
+.msg-action-btn.tts-btn.playing {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(34,211,238,.08);
+}
+.msg-action-btn.tts-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
   #main { height: 100dvh; }
 

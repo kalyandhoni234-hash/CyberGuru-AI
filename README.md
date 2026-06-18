@@ -228,4 +228,4 @@ Test coverage includes: auth routes, chat persistence, file upload validation, I
 **Guru Sharan Kalyan**  
 B.Tech CSE (Cybersecurity) — Government Engineering College, Ajmer
 
-[![GitHub](https://img.shields.io/badge/GitHub-GuruSharanKalyan-181717?style=flat&logo=github)](https://github.com/GuruSharanKalyan)
+[![GitHub](https://img.shields.io/badge/GitHub-GuruSharanKalyan-181717?style=flat&logo=github)](https://github.com/GuruSharanKalyan)3

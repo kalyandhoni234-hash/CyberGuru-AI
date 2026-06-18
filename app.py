@@ -9,7 +9,7 @@ from services.db_service import init_db
 init_db()
 
 # Import route modules to register their @app.route handlers
-from routes import auth, chat, analyze, misc, triage, news  # add news # noqa: F401,E402
+from routes import auth, chat, analyze, misc, triage, news ,tts  # add news # noqa: F401,E402
 # ↑ Added 'triage' to import the new security triage agent routes
 
 # ==========================

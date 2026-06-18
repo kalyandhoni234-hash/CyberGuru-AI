@@ -264,7 +264,140 @@ function exportChat() {
     updateSendBtn();
   });
 })();
+// ── TTS ──────────────────────────────────────────────────────────────────────
 
+let currentAudio  = null;
+let currentTTSBtn = null;
+let ttsLoading    = false;  // lock: true while fetch is in-flight
+
+// Strip markdown syntax so gTTS doesn't read asterisks, backticks, etc. aloud
+function stripMarkdown(text) {
+  return text
+    .replace(/```[\s\S]*?```/g, 'code block.')   // fenced code → spoken label
+    .replace(/`[^`]+`/g, '')                      // inline code → silence
+    .replace(/#{1,6}\s/g, '')                     // headings
+    .replace(/\*\*\*(.+?)\*\*\*/g, '$1')          // bold+italic
+    .replace(/\*\*(.+?)\*\*/g, '$1')              // bold
+    .replace(/\*(.+?)\*/g, '$1')                  // italic
+    .replace(/^[-*]\s/gm, '')                     // list bullets
+    .replace(/^\d+\.\s/gm, '')                    // numbered list
+    .replace(/^>\s/gm, '')                        // blockquotes
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')      // links → link text
+    .replace(/\n{2,}/g, '. ')                     // double newlines → pause
+    .replace(/\n/g, ' ')
+    .trim();
+}
+
+function _ttsReset(btn) {
+  if (btn) {
+    btn.innerHTML = btn._listenHTML || '🔊';
+    btn.disabled  = false;
+    btn.classList.remove('playing');
+  }
+}
+
+async function speakText(text, btn) {
+  // ── Case 1: fetch already in-flight — block all clicks until it resolves ──
+  if (ttsLoading) return;
+
+  // ── Case 2: audio is playing ──
+  if (currentAudio) {
+    // Stop playback and reset whichever button was playing
+    currentAudio.pause();
+    currentAudio.onended = null;   // prevent onended firing after manual stop
+    URL.revokeObjectURL(currentAudio.src);
+    currentAudio = null;
+    _ttsReset(currentTTSBtn);
+    const wasBtn = currentTTSBtn;
+    currentTTSBtn = null;
+    // Same button = toggle off, different button = fall through to play new one
+    if (wasBtn === btn) return;
+  }
+
+  // ── Start new TTS request ──
+  btn._listenHTML = btn.innerHTML;
+  ttsLoading      = true;
+  currentTTSBtn   = btn;
+
+  btn.innerHTML = `<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite">
+    <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
+  </svg> Loading…`;
+  btn.disabled = true;
+
+  // Disable ALL other listen buttons while loading so only one can queue
+  document.querySelectorAll('.tts-btn').forEach(b => { if (b !== btn) b.disabled = true; });
+
+  try {
+    const res = await fetch('/api/tts', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ text: stripMarkdown(text) })
+    });
+
+    if (!res.ok) throw new Error(`TTS ${res.status}`);
+
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+
+    // If user managed to click stop while we were fetching, abort playback
+    if (currentTTSBtn !== btn) {
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    currentAudio = audio;
+    ttsLoading   = false;
+
+    btn.innerHTML = `<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
+    </svg> Stop`;
+    btn.disabled = false;
+    btn.classList.add('playing');
+
+    // Re-enable all other listen buttons now that fetch is done
+    document.querySelectorAll('.tts-btn').forEach(b => { if (b !== btn) b.disabled = false; });
+
+    audio.play().catch(e => {
+      console.error('Audio play() rejected:', e);
+      _ttsReset(btn);
+      currentAudio  = null;
+      currentTTSBtn = null;
+    });
+
+    audio.onended = () => {
+      _ttsReset(btn);
+      currentAudio  = null;
+      currentTTSBtn = null;
+      URL.revokeObjectURL(url);
+    };
+
+  } catch (err) {
+    console.error('TTS error:', err);
+    ttsLoading = false;
+    _ttsReset(btn);
+    currentTTSBtn = null;
+    // Re-enable all buttons on failure
+    document.querySelectorAll('.tts-btn').forEach(b => { b.disabled = false; });
+  }
+}
+
+// Attach a speaker button to a bot message's .msg-actions bar (or .msg-body as fallback)
+function addTTSButton(msgBodyEl, rawText) {
+  const btn = document.createElement('button');
+  btn.className   = 'msg-action-btn tts-btn';
+  btn.title       = 'Read aloud';
+  btn.innerHTML   = `<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5z"/>
+    <path stroke-linecap="round" stroke-linejoin="round" d="M15.54 8.46a5 5 0 010 7.07"/>
+    <path stroke-linecap="round" stroke-linejoin="round" d="M19.07 4.93a10 10 0 010 14.14"/>
+  </svg> Listen`;
+  btn.onclick = () => speakText(rawText, btn);
+
+  const actionsBar = msgBodyEl.querySelector('.msg-actions');
+  if (actionsBar) actionsBar.appendChild(btn);
+  else msgBodyEl.appendChild(btn);
+}
 function clearFile() {
   const fi = document.getElementById('fileInput');
   fi.value = '';
@@ -589,6 +722,12 @@ function appendMessage(role, text, scroll = true) {
     </div>`;
 
   content.appendChild(row);
+
+  // Attach TTS button to bot messages
+  if(role === 'bot') {
+    const msgBody = row.querySelector('.msg-body');
+    if(msgBody) addTTSButton(msgBody, text);
+  }
 
   // Show export button once there are messages
   const exportBtn = document.getElementById('export-btn');
@@ -1183,6 +1322,12 @@ function updateStreamingMessage(streamId, fullText, isFinal) {
   if(isFinal) {
     // Full markdown render on completion
     contentEl.innerHTML = renderMarkdown(fullText);
+
+    // Attach TTS button to the actions bar (or msg-body) once text is final
+    const msgBody = contentEl.closest('.msg-body');
+    if(msgBody && !msgBody.querySelector('.tts-btn')) {
+      addTTSButton(msgBody, fullText);
+    }
   } else {
     // Plain text during streaming (fast, no markdown flicker)
     contentEl.textContent = fullText;

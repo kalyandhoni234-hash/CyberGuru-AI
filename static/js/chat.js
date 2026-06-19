@@ -604,6 +604,7 @@ function showWelcome() {
       </div>
       <div class="welcome-caps">
         <button class="cap-pill quiz-pill" onclick="openQuizModal()">🎯 Quiz Mode</button>
+        <button class="cap-pill ctf-pill" onclick="openCtfModal()">🚩 CTF Challenge</button>
         <button class="cap-pill news-pill" onclick="fetchCyberNews()">📰 CyberNews</button>
       </div>
       <div class="welcome-caps" style="margin-top:8px;">
@@ -1131,7 +1132,7 @@ async function sendToBackend() {
       const res = await fetch(`${API_BASE}/chat-stream`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ message, history }),
+        body:    JSON.stringify({ message, history, model: currentModel }),
         signal:  abortCtrl.signal
       });
 
@@ -2073,5 +2074,22 @@ function loadAppearanceSettings() {
   if (compact) {
     document.getElementById('compact-sidebar-toggle').checked = true;
     toggleCompactSidebar(true);
+  }
+}
+let currentModel = 'gemini';  // global
+
+function setModel(m) {
+  currentModel = m;
+  document.querySelectorAll('.model-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.model === m);
+  });
+  const label = document.getElementById('model-active-label');
+  const topbar = document.getElementById('topbar-model-text');
+  if (m === 'groq') {
+    if (label)  label.textContent  = 'Groq Llama3.1 8B · Ultra Fast';
+    if (topbar) topbar.textContent = 'Groq Llama3.1 8B';
+  } else {
+    if (label)  label.textContent  = 'Gemini 2.5 Flash · Smart';
+    if (topbar) topbar.textContent = 'Gemini 2.5 Flash';
   }
 }

@@ -35,21 +35,23 @@ from utils.quiz import sanitize_quiz_topic, build_quiz_prompt
 
 logger = logging.getLogger(__name__)
 
+from services.groq_service import groq_chat, groq_stream, build_groq_messages
+
 
 # ==========================
 # CHAT ROUTE (non-streaming fallback)
 # ==========================
-
 @app.route("/chat", methods=["POST"])
 @limiter.limit("30 per minute; 200 per day", key_func=get_user_id)
 @csrf_protect
 @login_required
 def chat():
     try:
-        data = request.get_json(silent=True) or {}
+        data         = request.get_json(silent=True) or {}
         user_message = sanitize_input(data.get("message", ""))
-        history       = validate_history(data.get("history", []))
-        session_id    = data.get("session_id")   # optional — if provided, auto-persist
+        history      = validate_history(data.get("history", []))
+        session_id   = data.get("session_id")   # optional — if provided, auto-persist
+        model        = data.get("model", "gemini")  # "gemini" | "groq"
 
         if not user_message:
             return jsonify({"reply": "Please enter a message."}), 400
@@ -74,6 +76,14 @@ def chat():
                 )})
             user_message = build_quiz_prompt(safe_topic)
 
+        # ── Groq path ──────────────────────────────────────────────
+        if model == "groq":
+            messages  = build_groq_messages(SYSTEM_INSTRUCTION, history, user_message)
+            bot_reply = groq_chat(messages)
+            _persist_turn(session_id, data.get("message", ""), bot_reply)
+            return jsonify({"reply": bot_reply, "model": "groq"})
+
+        # ── Gemini path ────────────────────────────────────────────
         payload = {
             "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
             "contents": build_contents(history, user_message),
@@ -90,7 +100,7 @@ def chat():
         # Persist to DB if a session_id was supplied.
         _persist_turn(session_id, data.get("message", ""), bot_reply)
 
-        return jsonify({"reply": bot_reply})
+        return jsonify({"reply": bot_reply, "model": "gemini"})
 
     except GeminiRateLimitError:
         return jsonify({"reply": "⚠️ Gemini rate limit reached. Please wait a moment and try again."}), 429
@@ -121,6 +131,7 @@ def chat_stream():
         user_message = sanitize_input(data.get("message", ""))
         history      = validate_history(data.get("history", []))
         session_id   = data.get("session_id")
+        model        = data.get("model", "gemini")  # "gemini" | "groq"
 
         if not user_message:
             return jsonify({"reply": "Please enter a message."}), 400
@@ -140,6 +151,25 @@ def chat_stream():
                 )})
             user_message = build_quiz_prompt(safe_topic)
 
+        # ── Groq streaming path ────────────────────────────────────
+        if model == "groq":
+            messages = build_groq_messages(SYSTEM_INSTRUCTION, history, user_message)
+
+            def generate_groq():
+                bot_reply_parts = []
+                try:
+                    for chunk in groq_stream(messages):
+                        bot_reply_parts.append(chunk)
+                        yield f"data: {jdump({'token': chunk})}\n\n"
+                    yield f"data: {jdump({'done': True})}\n\n"
+                    _persist_turn(session_id, data.get("message", ""), "".join(bot_reply_parts))
+                except Exception:
+                    logger.exception("Unhandled error in /chat-stream groq generator")
+                    yield f"data: {jdump({'error': '⚠️ Groq error. Please try again.'})}\n\n"
+
+            return Response(stream_with_context(generate_groq()), mimetype="text/event-stream")
+
+        # ── Gemini streaming path ──────────────────────────────────
         payload = {
             "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
             "contents": build_contents(history, user_message),

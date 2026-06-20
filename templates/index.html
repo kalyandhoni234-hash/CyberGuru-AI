@@ -113,7 +113,7 @@
         <div class="status-dot"></div>
         API Connected
       </div>
-      <div class="sidebar-version">v1.0 | Gemini 2.5 Flash</div>
+      <div class="sidebar-version" id="sidebar-version">v1.1 | Gemini 2.5 Flash</div>
     </div>
 
     <!-- User profile row with three-dots dropdown -->
@@ -217,30 +217,8 @@
         <div class="welcome-heading">CyberGuru AI</div>
         <div class="welcome-sub">Your AI-powered cybersecurity learning assistant. Ask about threats, attacks, defenses, and security best practices.</div>
       </div>
-      <div class="welcome-caps">
-        <span class="cap-pill">Threat Analysis</span>
-        <span class="cap-pill">Vulnerability Research</span>
-        <span class="cap-pill">OWASP Top 10</span>
-        <span class="cap-pill">Malware &amp; Exploits</span>
-      </div>
-      <div class="suggest-grid">
-        <div class="suggest-card" onclick="fillAndSend('What is SQL Injection and how does it work?')">
-          <span class="sc-label">Attack Vector</span>
-          What is SQL Injection?
-        </div>
-        <div class="suggest-card" onclick="fillAndSend('Explain Cross-Site Scripting (XSS) attacks')">
-          <span class="sc-label">Client-side Exploit</span>
-          Explain XSS Attacks
-        </div>
-        <div class="suggest-card" onclick="fillAndSend('What are the different types of malware?')">
-          <span class="sc-label">Threat Intel</span>
-          Types of Malware
-        </div>
-        <div class="suggest-card" onclick="fillAndSend('What is OWASP Top 10 and why does it matter?')">
-          <span class="sc-label">Framework</span>
-          OWASP Top 10 Guide
-        </div>
-      </div>
+      <div class="welcome-caps" id="welcome-caps"></div>
+      <div class="suggest-grid" id="suggest-grid"></div>
     </div>
   </div><!-- /#chat-box -->
 
@@ -298,11 +276,11 @@
           </svg>
           Groq Llama3
         </button>
-        <button class="model-btn" data-model="gemma" onclick="setModel('gemma')">
+        <button class="model-btn" data-model="lite" onclick="setModel('lite')">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
           </svg>
-          Gemma
+          Flash Lite
         </button>
         <span class="model-switcher-sep"></span>
         <span class="model-active-label" id="model-active-label">Gemini 2.5 Flash · Smart</span>
@@ -310,7 +288,7 @@
 
       <!-- Bottom row: attach + textarea + controls -->
       <div class="input-row">
-      <label for="fileInput" class="upload-btn" id="upload-label" title="Attach file (.txt, .log, .pdf)">
+      <label for="fileInput" class="upload-btn" id="upload-label" title="Attach file (.txt, .log, .pdf)" aria-label="Attach file">
         <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828L18 9.828a4 4 0 00-5.657-5.657L5.757 10.757a6 6 0 108.486 8.486L19 14"/>
         </svg>
@@ -332,7 +310,7 @@
       <textarea
         id="user-input"
         rows="1"
-        placeholder="Ask about phishing, malware, SQL injection, zero-days..."
+        placeholder="Ask CyberGuru anything about threats, attacks, defenses..."
         aria-label="Message input"
       ></textarea>
       <button id="mic-btn" onclick="if(typeof toggleVoice==='function') toggleVoice()" title="Voice input" aria-label="Start voice input">
@@ -355,14 +333,14 @@
       <button id="stop-btn" onclick="stopGeneration()" title="Stop generating">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
       </button>
-      <button id="send-btn" onclick="sendToBackend()" title="Send (Enter)">
+      <button id="send-btn" onclick="sendToBackend()" title="Send message" aria-label="Send message">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
         </svg>
       </button>
       </div><!-- /.input-row -->
     </div>
-    <div class="input-hint">Enter to send | Shift+Enter for new line | Attach .txt .log .pdf | Voice</div>
+    <div class="input-hint"><span>Enter to send</span><span>Shift+Enter for new line</span><span>.txt .log .pdf supported</span></div>
   </div>
 <div id="quiz-modal" class="quiz-modal">
   <div class="quiz-modal-content ctf-modal-content" id="quiz-modal-body">

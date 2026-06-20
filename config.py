@@ -19,6 +19,16 @@ API_URL_STREAM = (
     f"{MODEL}:streamGenerateContent?alt=sse"
 )
 
+FLASH_LITE_MODEL = "gemini-3.1-flash-lite"
+FLASH_LITE_API_URL = (
+    f"https://generativelanguage.googleapis.com/v1beta/models/"
+    f"{FLASH_LITE_MODEL}:generateContent"
+)
+FLASH_LITE_API_URL_STREAM = (
+    f"https://generativelanguage.googleapis.com/v1beta/models/"
+    f"{FLASH_LITE_MODEL}:streamGenerateContent?alt=sse"
+)
+
 GEMINI_HEADERS = {
     "Content-Type": "application/json",
     "x-goog-api-key": API_KEY,

@@ -17,7 +17,7 @@ import requests
 from flask import jsonify, request, Response, stream_with_context
 
 from extensions import app, get_user_id_int, limiter, csrf_protect, login_required, get_user_id, jdump
-from config import API_URL, API_URL_STREAM, SYSTEM_INSTRUCTION, GENERATION_CONFIG, GOOGLE_SEARCH_TOOL
+from config import API_URL, API_URL_STREAM, FLASH_LITE_API_URL, FLASH_LITE_API_URL_STREAM, SYSTEM_INSTRUCTION, GENERATION_CONFIG, GOOGLE_SEARCH_TOOL
 from services.gemini_service import gemini_post, build_contents, GeminiRateLimitError, GeminiServiceError
 from services.cyberguru_agent import investigate
 from services.db_service import (
@@ -82,6 +82,18 @@ def chat():
             bot_reply = groq_chat(messages)
             _persist_turn(session_id, data.get("message", ""), bot_reply)
             return jsonify({"reply": bot_reply, "model": "groq"})
+
+        # ── Flash Lite path (gemini-3.1-flash-lite) ────────────────
+        if model == "lite":
+            payload = {
+                "contents": build_contents(history, user_message),
+                "generationConfig": GENERATION_CONFIG,
+            }
+            response = gemini_post(FLASH_LITE_API_URL, payload, timeout=30)
+            response_data = response.json()
+            bot_reply = response_data["candidates"][0]["content"]["parts"][0]["text"]
+            _persist_turn(session_id, data.get("message", ""), bot_reply)
+            return jsonify({"reply": bot_reply, "model": "lite"})
 
         # ── Gemini path ────────────────────────────────────────────
         payload = {
@@ -168,6 +180,52 @@ def chat_stream():
                     yield f"data: {jdump({'error': '⚠️ Groq error. Please try again.'})}\n\n"
 
             return Response(stream_with_context(generate_groq()), mimetype="text/event-stream")
+
+        # ── Flash Lite streaming path (gemini-3.1-flash-lite) ──────
+        if model == "lite":
+            payload = {
+                "contents": build_contents(history, user_message),
+                "generationConfig": GENERATION_CONFIG,
+            }
+
+            def generate_lite():
+                bot_reply_parts = []
+                try:
+                    resp = gemini_post(FLASH_LITE_API_URL_STREAM, payload, stream=True, timeout=30)
+                    for raw_line in resp.iter_lines():
+                        if not raw_line:
+                            continue
+                        line = raw_line.decode("utf-8")
+                        if not line.startswith("data:"):
+                            continue
+                        json_str = line[5:].strip()
+                        if not json_str or json_str == "[DONE]":
+                            continue
+                        try:
+                            chunk_data = json.loads(json_str)
+                            token = (
+                                chunk_data
+                                .get("candidates", [{}])[0]
+                                .get("content", {})
+                                .get("parts", [{}])[0]
+                                .get("text", "")
+                            )
+                            if token:
+                                bot_reply_parts.append(token)
+                                yield f"data: {jdump({'token': token})}\n\n"
+                        except (json.JSONDecodeError, IndexError, KeyError):
+                            continue
+                    yield f"data: {jdump({'done': True})}\n\n"
+                    _persist_turn(session_id, data.get("message", ""), "".join(bot_reply_parts))
+                except GeminiRateLimitError:
+                    yield f"data: {jdump({'rate_limited': True, 'retry_after': 60})}\n\n"
+                except GeminiServiceError as e:
+                    yield f"data: {jdump({'error': f'⚠️ Flash Lite service error ({e.status_code}).'})}\n\n"
+                except Exception:
+                    logger.exception("Unhandled error in /chat-stream lite generator")
+                    yield f"data: {jdump({'error': '⚠️ Flash Lite error. Please try again.'})}\n\n"
+
+            return Response(stream_with_context(generate_lite()), mimetype="text/event-stream")
 
         # ── Gemini streaming path ──────────────────────────────────
         payload = {

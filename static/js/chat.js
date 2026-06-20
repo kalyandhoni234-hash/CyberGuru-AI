@@ -1,3 +1,27 @@
+// ── Global declarations (must be first — referenced before their original positions) ──
+
+let currentModel = 'gemini';
+
+const WELCOME_CAPS = [
+  '🎯 Quiz Mode',
+  '🚩 CTF Challenges',
+  '🛡️ Threat Pulse',
+];
+
+const WELCOME_CARD_ICONS = {
+  database: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>',
+  code: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8 4 12l4 4"/><path d="m16 8 4 4-4 4"/><path d="m14 5-4 14"/></svg>',
+  pulse: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2-6 4 10 2-4h4"/><path d="M4 6h16"/></svg>',
+  shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8.9 7 10 4.1-1.1 7-5.4 7-10V6l-7-3Z"/><path d="M9 12l2 2 4-4"/></svg>',
+};
+
+const WELCOME_CARDS = [
+  { icon: 'database', label: 'Attack Vector',       text: 'What is SQL Injection and how does it work?', action: () => fillAndSend('What is SQL Injection and how does it work?') },
+  { icon: 'code',     label: 'Client-side Exploit', text: 'Explain XSS Attacks',                         action: () => fillAndSend('Explain Cross-Site Scripting (XSS) attacks') },
+  { icon: 'pulse',    label: 'Threat Intel',        text: 'Types of Malware',                             action: () => fillAndSend('What are the different types of malware?') },
+  { icon: 'shield',   label: 'Framework',           text: 'OWASP Top 10 Guide',                           action: () => fillAndSend('What is OWASP Top 10 and why does it matter?') },
+];
+
 /* ─── THEME ──────────────────────────────────────────────────── */
 function setTheme(theme) {
   document.body.classList.remove('theme-cyber','theme-light','theme-oled');
@@ -62,8 +86,7 @@ function dismissRateBanner() {
   clearInterval(_rateBannerTimer);
   const banner = document.getElementById('rate-limit-banner');
   if(banner) banner.classList.remove('show');
-  const sendBtn = document.getElementById('send-btn');
-  if(sendBtn) sendBtn.disabled = false;
+  if(typeof updateSendBtn === 'function') updateSendBtn();
 }
 
 function stopGeneration() {
@@ -85,6 +108,7 @@ function setThinkingUI(on) {
     sendBtn.style.display = 'flex';
     stopBtn.style.display = 'none';
     typer.style.display   = 'none';
+    if(typeof updateSendBtn === 'function') updateSendBtn();
     hideTPS();
   }
   document.getElementById('chat-box').scrollTo({ top: 99999, behavior: 'auto' });
@@ -247,6 +271,7 @@ function exportChat() {
   loadSidebarState(); 
   loadAppearanceSettings(); 
   initScrollTracking();
+  _initStaticWelcome();
 
   // File input: show indicator when file chosen
   document.getElementById('fileInput').addEventListener('change', function() {
@@ -403,6 +428,7 @@ function clearFile() {
   fi.value = '';
   document.getElementById('upload-label').classList.remove('has-file');
   document.getElementById('file-indicator').classList.remove('show');
+  document.getElementById('file-name').textContent = '';
   updateSendBtn();
 }
 
@@ -588,9 +614,21 @@ function renderSuggestions(suggestions) {
   });
   box.style.display = "block";
 }
-function showWelcome() {
-  const box = document.getElementById('chat-box');
-  box.innerHTML = `
+// ── Welcome screen config ──────────────────────────────────────────────────
+// Add new capabilities and suggest cards here — the welcome screen updates automatically.
+
+function _buildWelcomeHTML() {
+  const caps = WELCOME_CAPS
+    .map(c => `<span>${c.replace(/^.*?(Quiz|CTF|Threat Pulse).*$/, '$1')}</span>`)
+    .join('');
+  const cards = WELCOME_CARDS
+    .map(c => `
+      <div class="suggest-card" onclick="(${c.action.toString()})()">
+        <span class="sc-icon" aria-hidden="true">${WELCOME_CARD_ICONS[c.icon]}</span>
+        <span class="sc-copy"><span class="sc-label">${c.label}</span>${c.text}</span>
+      </div>`)
+    .join('');
+  return `
     <div id="welcome">
       <div class="welcome-shield">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
@@ -602,27 +640,26 @@ function showWelcome() {
         <div class="welcome-heading">CyberGuru AI</div>
         <div class="welcome-sub">Your AI-powered cybersecurity learning assistant. Ask about threats, attacks, defenses, and security best practices.</div>
       </div>
-      <div class="welcome-caps">
-        <span class="cap-pill">Threat Analysis</span>
-        <span class="cap-pill">Vulnerability Research</span>
-        <span class="cap-pill">OWASP Top 10</span>
-        <span class="cap-pill">Malware &amp; Exploits</span>
-      </div>
-      <div class="suggest-grid">
-        <div class="suggest-card" onclick="fillAndSend('What is SQL Injection and how does it work?')">
-          <span class="sc-label">Attack Vector</span>What is SQL Injection?
-        </div>
-        <div class="suggest-card" onclick="fillAndSend('Explain Cross-Site Scripting (XSS) attacks')">
-          <span class="sc-label">Client-side Exploit</span>Explain XSS Attacks
-        </div>
-        <div class="suggest-card" onclick="fillAndSend('What are the different types of malware?')">
-          <span class="sc-label">Threat Intel</span>Types of Malware
-        </div>
-        <div class="suggest-card" onclick="fillAndSend('What is OWASP Top 10 and why does it matter?')">
-          <span class="sc-label">Framework</span>OWASP Top 10 Guide
-        </div>
-      </div>
+      <div class="welcome-caps"><span class="new-dot" aria-hidden="true"></span><span class="new-label">New:</span>${caps}</div>
+      <div class="suggest-grid">${cards}</div>
     </div>`;
+}
+
+function _initStaticWelcome() {
+  // Populate the welcome screen already in the HTML (initial page load)
+  const caps = document.getElementById('welcome-caps');
+  const grid = document.getElementById('suggest-grid');
+  if (caps) caps.innerHTML = `<span class="new-dot" aria-hidden="true"></span><span class="new-label">New:</span>${WELCOME_CAPS.map(c => `<span>${c.replace(/^.*?(Quiz|CTF|Threat Pulse).*$/, '$1')}</span>`).join('')}`;
+  if (grid) grid.innerHTML = WELCOME_CARDS.map(c => `
+    <div class="suggest-card" onclick="(${c.action.toString()})()">
+      <span class="sc-icon" aria-hidden="true">${WELCOME_CARD_ICONS[c.icon]}</span>
+      <span class="sc-copy"><span class="sc-label">${c.label}</span>${c.text}</span>
+    </div>`).join('');
+}
+
+function showWelcome() {
+  const box = document.getElementById('chat-box');
+  box.innerHTML = _buildWelcomeHTML();
 }
 
 
@@ -952,7 +989,11 @@ async function deleteChat(id, event) {
 // Named fillAndSend() to avoid collision with the /suggest autocomplete route.
 // All suggest-card onclick handlers and quiz mode call this.
 function fillAndSend(text) {
-  document.getElementById('user-input').value = text;
+  const inputEl = document.getElementById('user-input');
+  inputEl.value = text;
+  autoResize(inputEl);
+  updateCharCount(inputEl.value.length);
+  updateSendBtn();
   sendToBackend();
 }
 
@@ -966,9 +1007,17 @@ async function sendToBackend() {
   const file      = fileInput.files[0];
 
   if(!message && !file) return;
+  if(inputEl.value.length > INPUT_MAX_CHARS) {
+    updateCharCount(inputEl.value.length);
+    updateSendBtn();
+    inputEl.focus();
+    return;
+  }
 
   inputEl.value = '';
   autoResize(inputEl);
+  updateCharCount(0);
+  updateSendBtn();
   isThinking = true;
 
   /* ── FILE UPLOAD PATH (streaming) ── */
@@ -1678,11 +1727,18 @@ async function fetchCyberNews() {
 /* ─── TEXTAREA AUTO-RESIZE + CHAR COUNT ─────────────────────── */
 var ta = document.getElementById('user-input');
 var sendBtn = document.getElementById('send-btn');
+const INPUT_MAX_CHARS = 4000;
 
 function updateSendBtn() {
   const hasText = ta.value.trim().length > 0;
   const hasFile = document.getElementById('fileInput').files.length > 0;
-  sendBtn.disabled = !(hasText || hasFile);
+  const isOverLimit = ta.value.length > INPUT_MAX_CHARS;
+  sendBtn.disabled = !(hasText || hasFile) || isOverLimit;
+  const wrapper = document.querySelector('.input-wrapper');
+  if(wrapper) {
+    wrapper.classList.toggle('is-ready', (hasText || hasFile) && !isOverLimit);
+    wrapper.classList.toggle('is-over-limit', isOverLimit);
+  }
 }
 
 // Initial state — disabled on page load
@@ -1705,12 +1761,11 @@ ta.addEventListener('keydown', function(e) {
 function updateCharCount(len) {
   const el = document.getElementById('char-count');
   if(!el) return;
-  const MAX = 4000;
   if(len === 0) { el.classList.remove('visible','warn','over'); return; }
-  el.textContent = len >= MAX ? `${len}/${MAX}` : len;
+  el.textContent = len >= INPUT_MAX_CHARS * 0.8 ? `${len}/${INPUT_MAX_CHARS}` : len;
   el.classList.toggle('visible', len > 0);
-  el.classList.toggle('warn', len > MAX * 0.8 && len <= MAX);
-  el.classList.toggle('over', len > MAX);
+  el.classList.toggle('warn', len > INPUT_MAX_CHARS * 0.8 && len <= INPUT_MAX_CHARS);
+  el.classList.toggle('over', len > INPUT_MAX_CHARS);
 }
 
 function autoResize(el) {
@@ -2076,8 +2131,6 @@ function loadAppearanceSettings() {
     toggleCompactSidebar(true);
   }
 }
-let currentModel = 'gemini';  // global
-
 function setModel(m) {
   currentModel = m;
   document.querySelectorAll('.model-btn').forEach(b => {
@@ -2085,14 +2138,18 @@ function setModel(m) {
   });
   const label = document.getElementById('model-active-label');
   const topbar = document.getElementById('topbar-model-text');
+  const version = document.getElementById('sidebar-version');
   if (m === 'groq') {
-    if (label)  label.textContent  = 'Groq Llama3.1 8B · Ultra Fast';
-    if (topbar) topbar.textContent = 'Groq Llama3.1 8B';
-  } else if (m === 'gemma') {
-    if (label)  label.textContent  = 'Gemma 2 9B · Lightweight';
-    if (topbar) topbar.textContent = 'Gemma 2 9B';
+    if (label)   label.textContent   = 'Groq Llama3.1 8B · Ultra Fast';
+    if (topbar)  topbar.textContent  = 'Groq Llama3.1 8B';
+    if (version) version.textContent = 'v1.1 | Groq Llama 3.1 8B';
+  } else if (m === 'lite') {
+    if (label)   label.textContent   = 'Flash Lite · Fastest';
+    if (topbar)  topbar.textContent  = 'Gemini 3.1 Flash Lite';
+    if (version) version.textContent = 'v1.1 | Gemini 3.1 Flash Lite';
   } else {
-    if (label)  label.textContent  = 'Gemini 2.5 Flash · Smart';
-    if (topbar) topbar.textContent = 'Gemini 2.5 Flash';
+    if (label)   label.textContent   = 'Gemini 2.5 Flash · Smart';
+    if (topbar)  topbar.textContent  = 'Gemini 2.5 Flash';
+    if (version) version.textContent = 'v1.1 | Gemini 2.5 Flash';
   }
 }

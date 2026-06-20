@@ -33,25 +33,69 @@ _pool = psycopg2.pool.ThreadedConnectionPool(
 
 
 class _PooledConnection:
-    """Context manager that borrows a connection from the pool and returns it."""
+    """
+    Context manager that borrows a connection from the pool and returns it.
+
+    FIX #8: Neon (and most managed Postgres free tiers) silently closes
+    connections that have been idle for a while. The pool doesn't know this
+    happened until a query is actually run on that connection, which used to
+    surface as an unhandled psycopg2.OperationalError ("SSL connection has
+    been closed unexpectedly") on whatever request happened to draw it —
+    most visibly during /auth/callback, crashing login with a 500.
+
+    Now every checkout is "pinged" with a cheap SELECT 1 first. If that fails,
+    the dead connection is discarded (not returned to the pool) and a fresh
+    one is opened instead, transparently, before the caller ever sees it.
+    Connections that error out *during* use are also discarded rather than
+    recycled, since a connection that failed mid-query may be left in an
+    inconsistent state.
+    """
 
     def __init__(self):
         self._conn = None
 
+    @staticmethod
+    def _is_alive(conn) -> bool:
+        if conn is None or conn.closed:
+            return False
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+            return True
+        except Exception:
+            return False
+
     def __enter__(self):
-        self._conn = _pool.getconn()
+        last_conn = None
+        for _ in range(2):  # one retry is enough for a stale-on-checkout connection
+            candidate = _pool.getconn()
+            if self._is_alive(candidate):
+                self._conn = candidate
+                return self._conn
+            last_conn = candidate
+            try:
+                _pool.putconn(candidate, close=True)
+            except Exception:
+                logger.exception("DB pool: failed to discard dead connection")
+        # Both attempts were dead — hand back whatever we last got so the
+        # caller's own error handling/logging still fires with a clear cause.
+        self._conn = last_conn
         return self._conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._conn:
-            if exc_type:
+            is_connection_error = isinstance(exc_val, (psycopg2.OperationalError, psycopg2.InterfaceError))
+            if exc_type and not is_connection_error:
                 # Roll back any uncommitted work on error before returning
                 # the connection to the pool so it's in a clean state.
                 try:
                     self._conn.rollback()
                 except Exception:
                     pass
-            _pool.putconn(self._conn)
+            try:
+                _pool.putconn(self._conn, close=is_connection_error)
+            except Exception:
+                logger.exception("DB pool: failed to return connection")
         return False   # do not suppress exceptions
 
 

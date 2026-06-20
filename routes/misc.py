@@ -1,6 +1,6 @@
 import re
 import json
-from flask import jsonify, render_template, request
+from flask import jsonify, render_template, request, send_from_directory
 
 from extensions import app, limiter, csrf_protect, login_required, get_user_id
 from config import API_URL
@@ -16,6 +16,14 @@ def health():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/favicon.ico")
+@limiter.exempt
+def favicon():
+    """Some browsers/bookmark tools request /favicon.ico directly,
+    bypassing the <link rel="icon"> tag in index.html."""
+    return send_from_directory(app.static_folder, "favicon.ico", mimetype="image/vnd.microsoft.icon")
 
 
 @app.route("/generate-title", methods=["POST"])

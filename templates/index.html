@@ -18,7 +18,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}?v=2">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
 <body>
@@ -69,6 +69,34 @@
     </svg>
     New Conversation
   </button>
+
+  <div class="tools-menu-wrap" id="tools-menu-wrap">
+    <button class="tools-menu-btn" id="tools-menu-trigger" onclick="toggleToolsMenu(event)" aria-haspopup="true" aria-expanded="false">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+      Tools
+      <svg class="tools-menu-chevron" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/>
+      </svg>
+    </button>
+
+    <div class="tools-menu-dropdown" id="tools-menu-dropdown" role="menu">
+      <button class="tools-menu-item" onclick="openQuizModal(); closeToolsMenu();" role="menuitem">
+        <span class="tools-menu-icon">🎯</span> Quiz Mode
+      </button>
+      <button class="tools-menu-item" onclick="openCtfModal(); closeToolsMenu();" role="menuitem">
+        <span class="tools-menu-icon">🚩</span> CTF Challenge
+      </button>
+      <button class="tools-menu-item" onclick="fetchCyberNews(); closeToolsMenu();" role="menuitem">
+        <span class="tools-menu-icon">📰</span> CyberNews
+      </button>
+      <button class="tools-menu-item" onclick="openThreatPulse(); closeToolsMenu();" role="menuitem">
+        <span class="tools-menu-icon">🛡️</span> Threat Pulse
+      </button>
+    </div>
+  </div>
 
   <div class="history-section">
     <div class="history-label">Recent</div>
@@ -190,9 +218,10 @@
         <div class="welcome-sub">Your AI-powered cybersecurity learning assistant. Ask about threats, attacks, defenses, and security best practices.</div>
       </div>
       <div class="welcome-caps">
-        <button class="cap-pill quiz-pill" onclick="openQuizModal()">Quiz Mode</button>
-        <button class="cap-pill ctf-pill" onclick="openCtfModal()">CTF Challenge</button>
-        <button class="cap-pill news-pill" onclick="fetchCyberNews()">CyberNews</button>
+        <span class="cap-pill">Threat Analysis</span>
+        <span class="cap-pill">Vulnerability Research</span>
+        <span class="cap-pill">OWASP Top 10</span>
+        <span class="cap-pill">Malware &amp; Exploits</span>
       </div>
       <div class="suggest-grid">
         <div class="suggest-card" onclick="fillAndSend('What is SQL Injection and how does it work?')">
@@ -269,6 +298,12 @@
           </svg>
           Groq Llama3
         </button>
+        <button class="model-btn" data-model="gemma" onclick="setModel('gemma')">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/>
+          </svg>
+          Gemma
+        </button>
         <span class="model-switcher-sep"></span>
         <span class="model-active-label" id="model-active-label">Gemini 2.5 Flash · Smart</span>
       </div>
@@ -330,64 +365,38 @@
     <div class="input-hint">Enter to send | Shift+Enter for new line | Attach .txt .log .pdf | Voice</div>
   </div>
 <div id="quiz-modal" class="quiz-modal">
-
-  <div class="quiz-modal-content">
-
-    <h2>Choose a Quiz Topic</h2>
-
-    <div class="quiz-options">
-
-      <label>
-        <input type="radio" name="quiz-topic" value="sql injection" checked>
-        SQL Injection
-      </label>
-
-      <label>
-        <input type="radio" name="quiz-topic" value="xss">
-        XSS
-      </label>
-
-      <label>
-        <input type="radio" name="quiz-topic" value="malware">
-        Malware
-      </label>
-
-      <label>
-        <input type="radio" name="quiz-topic" value="phishing">
-        Phishing
-      </label>
-
-      <label>
-        <input type="radio" name="quiz-topic" value="network security">
-        Network Security
-      </label>
-
-    </div>
-
-    <div class="quiz-actions">
-
-     <button
-      class="quiz-cancel"
-        onclick="closeQuizModal()">
-
-        x Cancel
-
-    </button>
-
-      <button class="start-btn" onclick="startQuiz()">
-        Start Quiz
-      </button>
-
-    </div>
-
+  <div class="quiz-modal-content ctf-modal-content" id="quiz-modal-body">
+    <!-- populated dynamically by static/js/quiz.js -->
   </div>
-
 </div>
 
 <!-- CTF Challenge Mode modal -->
 <div id="ctf-modal" class="quiz-modal">
   <div class="quiz-modal-content ctf-modal-content" id="ctf-modal-body">
     <!-- populated dynamically by static/js/ctf.js -->
+  </div>
+</div>
+
+<!-- Threat Pulse dashboard modal -->
+<div id="tp-modal" class="quiz-modal">
+  <div class="quiz-modal-content tp-modal-content">
+    <div class="tp-hdr">
+      <div class="tp-hdr-left">
+        <div class="tp-hdr-icon">🛡️</div>
+        <div class="tp-hdr-text">
+          <h2>Threat Pulse</h2>
+          <p>Live cybersecurity intelligence — CVEs · CISA exploits · malware · headlines</p>
+        </div>
+      </div>
+      <div class="tp-hdr-actions">
+        <button class="tp-refresh-btn" onclick="_tpLoad()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+        <button class="tp-close-btn" onclick="closeThreatPulse()" aria-label="Close">✕</button>
+      </div>
+    </div>
+    <div id="tp-content"><!-- populated by threat_pulse.js --></div>
   </div>
 </div>
 
@@ -451,6 +460,8 @@
 
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ctf.js') }}"></script>
+<script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
+<script src="{{ url_for('static', filename='js/threat_pulse.js') }}"></script>
 <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 <!-- Settings Panel -->
 <div id="settings-overlay" onclick="closeSettings()"></div>

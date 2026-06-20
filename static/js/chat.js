@@ -603,11 +603,6 @@ function showWelcome() {
         <div class="welcome-sub">Your AI-powered cybersecurity learning assistant. Ask about threats, attacks, defenses, and security best practices.</div>
       </div>
       <div class="welcome-caps">
-        <button class="cap-pill quiz-pill" onclick="openQuizModal()">🎯 Quiz Mode</button>
-        <button class="cap-pill ctf-pill" onclick="openCtfModal()">🚩 CTF Challenge</button>
-        <button class="cap-pill news-pill" onclick="fetchCyberNews()">📰 CyberNews</button>
-      </div>
-      <div class="welcome-caps" style="margin-top:8px;">
         <span class="cap-pill">Threat Analysis</span>
         <span class="cap-pill">Vulnerability Research</span>
         <span class="cap-pill">OWASP Top 10</span>
@@ -631,7 +626,6 @@ function showWelcome() {
 }
 
 
-/* ─── LOAD EXISTING CHAT ─────────────────────────────────────── */
 function loadChat(id, closeMenu = true) {
   activeChatId = id;
   localStorage.setItem(ACTIVE_KEY, id);
@@ -739,29 +733,8 @@ function appendMessage(role, text, scroll = true) {
   }
 }
 
-function openQuizModal(){
-  document
-    .getElementById('quiz-modal')
-    .classList.add('show');
-}
-
-function closeQuizModal(){
-  document
-    .getElementById('quiz-modal')
-    .classList.remove('show');
-}
-
-function startQuiz(){
-
-  const topic =
-    document.querySelector(
-      'input[name="quiz-topic"]:checked'
-    ).value;
-
-  closeQuizModal();
-
-  fillAndSend(`/quiz ${topic}`);
-}
+/* Quiz Mode is now a self-contained interactive flow — see static/js/quiz.js
+   for openQuizModal/closeQuizModal and the full picker→play→result UI. */
 
 /* ─── MARKDOWN RENDERER ──────────────────────────────────────── */
 function renderMarkdown(text) {
@@ -1979,6 +1952,33 @@ function closeSidebar() {
   resize();
   draw();
 })();
+/* ── Sidebar Tools Dropdown ── */
+function toggleToolsMenu(e) {
+  e.stopPropagation();
+  const dropdown = document.getElementById('tools-menu-dropdown');
+  const trigger  = document.getElementById('tools-menu-trigger');
+  const isOpen   = dropdown.classList.contains('open');
+  if (isOpen) {
+    dropdown.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+  } else {
+    dropdown.classList.add('open');
+    trigger.setAttribute('aria-expanded', 'true');
+  }
+}
+
+function closeToolsMenu() {
+  const dropdown = document.getElementById('tools-menu-dropdown');
+  const trigger  = document.getElementById('tools-menu-trigger');
+  if (dropdown) dropdown.classList.remove('open');
+  if (trigger)  trigger.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('tools-menu-wrap');
+  if (wrap && !wrap.contains(e.target)) closeToolsMenu();
+});
+
 /* ── User Menu Dropdown ── */
 function toggleUserMenu(e) {
   e.stopPropagation();
@@ -2088,6 +2088,9 @@ function setModel(m) {
   if (m === 'groq') {
     if (label)  label.textContent  = 'Groq Llama3.1 8B · Ultra Fast';
     if (topbar) topbar.textContent = 'Groq Llama3.1 8B';
+  } else if (m === 'gemma') {
+    if (label)  label.textContent  = 'Gemma 2 9B · Lightweight';
+    if (topbar) topbar.textContent = 'Gemma 2 9B';
   } else {
     if (label)  label.textContent  = 'Gemini 2.5 Flash · Smart';
     if (topbar) topbar.textContent = 'Gemini 2.5 Flash';

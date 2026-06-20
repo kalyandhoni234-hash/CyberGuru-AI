@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 _client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
 MODEL = "llama-3.1-8b-instant"
+GEMMA_MODEL = "gemma2-9b-it"
 
 
 # ── Message builder ────────────────────────────────────────────────────────────
@@ -30,11 +31,11 @@ def build_groq_messages(system_prompt: str, history: list[dict], user_message: s
 
 # ── Non-streaming ──────────────────────────────────────────────────────────────
 
-def groq_chat(messages: list[dict]) -> str:
+def groq_chat(messages: list[dict], model: str = MODEL) -> str:
     """Blocking Groq completion. Returns full reply string."""
     try:
         response = _client.chat.completions.create(
-            model=MODEL,
+            model=model,
             messages=messages,
             max_tokens=1024,
             temperature=0.7,
@@ -47,11 +48,11 @@ def groq_chat(messages: list[dict]) -> str:
 
 # ── Streaming ──────────────────────────────────────────────────────────────────
 
-def groq_stream(messages: list[dict]):
+def groq_stream(messages: list[dict], model: str = MODEL):
     """Generator that yields text chunks from Groq SSE stream."""
     try:
         stream = _client.chat.completions.create(
-            model=MODEL,
+            model=model,
             messages=messages,
             max_tokens=1024,
             temperature=0.7,

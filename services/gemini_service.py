@@ -1,6 +1,9 @@
 import time
+import logging
 import requests
 from config import GEMINI_HEADERS, MAX_RETRIES, BASE_BACKOFF
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiRateLimitError(Exception):
@@ -36,7 +39,7 @@ def gemini_post(url, payload, stream=False, timeout=60):
         if resp.status_code == 429:
             retry_after = int(resp.headers.get("Retry-After", 0))
             wait = retry_after if retry_after > 0 else BASE_BACKOFF * (2 ** attempt)
-            print(f"[Retry {attempt+1}/{MAX_RETRIES}] 429 rate limit — waiting {wait}s")
+            logger.warning("[Retry %d/%d] 429 rate limit — waiting %ds", attempt + 1, MAX_RETRIES, wait)
             if attempt < MAX_RETRIES - 1:
                 time.sleep(wait)
             else:
@@ -44,7 +47,7 @@ def gemini_post(url, payload, stream=False, timeout=60):
 
         elif resp.status_code == 503:
             wait = BASE_BACKOFF * (2 ** attempt)
-            print(f"[Retry {attempt+1}/{MAX_RETRIES}] 503 unavailable — waiting {wait}s")
+            logger.warning("[Retry %d/%d] 503 unavailable — waiting %ds", attempt + 1, MAX_RETRIES, wait)
             if attempt < MAX_RETRIES - 1:
                 time.sleep(wait)
             else:

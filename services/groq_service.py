@@ -19,12 +19,13 @@ GEMMA_MODEL = "gemma2-9b-it"
 def build_groq_messages(system_prompt: str, history: list[dict], user_message: str) -> list[dict]:
     """
     Convert CyberGuru history format → OpenAI-style messages list for Groq.
-    history entries are expected as {"role": "user"|"bot", "content": "..."}
+    history entries are expected as {"role": "user"|"bot", "text": "..."}
+    (matches utils.sanitize.validate_history's output shape — NOT "content").
     """
     msgs = [{"role": "system", "content": system_prompt}]
     for h in history:
         role = "assistant" if h.get("role") == "bot" else "user"
-        msgs.append({"role": role, "content": h.get("content", "")})
+        msgs.append({"role": role, "content": h.get("text", "")})
     msgs.append({"role": "user", "content": user_message})
     return msgs
 

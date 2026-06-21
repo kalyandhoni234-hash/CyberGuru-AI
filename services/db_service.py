@@ -238,20 +238,23 @@ def save_investigation(
             return cur.fetchone()
 
 
-def find_recent_investigation(artifact_hash, max_age_hours=24):
+def find_recent_investigation(artifact_hash, user_id, max_age_hours=24):
     """
     Return the most recent investigation matching this artifact hash
-    within max_age_hours, or None if not found / too old.
+    AND user_id within max_age_hours, or None if not found / too old.
+    Scoped per-user so two different users submitting byte-identical
+    artifact text don't see each other's cached analysis.
     """
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT * FROM investigations
                 WHERE artifact_hash = %s
+                  AND user_id = %s
                   AND created_at > NOW() - (%s || ' hours')::INTERVAL
                 ORDER BY created_at DESC
                 LIMIT 1
-            """, (artifact_hash, str(max_age_hours)))
+            """, (artifact_hash, user_id, str(max_age_hours)))
             return cur.fetchone()
 
 

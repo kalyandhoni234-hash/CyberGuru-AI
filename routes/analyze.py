@@ -1,4 +1,5 @@
 import json
+import logging
 import requests
 from flask import jsonify, request, Response, stream_with_context
 from extensions import app, limiter, csrf_protect, login_required, get_user_id, jdump
@@ -6,6 +7,8 @@ from config import API_URL_STREAM, SYSTEM_INSTRUCTION, GENERATION_CONFIG, GOOGLE
 from services.gemini_service import gemini_post, GeminiRateLimitError, GeminiServiceError
 from services.file_service import extract_pdf_text, parse_log_file, build_analysis_prompt
 from utils.grounding import needs_grounding
+
+logger = logging.getLogger(__name__)
 MAGIC_BYTES = {
     b'\x25\x50\x44\x46': 'pdf',
     b'\x50\x4b\x03\x04': 'zip',   # block zip disguised as other types
@@ -58,7 +61,7 @@ def analyze_file():
             def size_err():
                 yield ("data: " + jdump({"error": "⚠️ File too large. Maximum allowed size is 5 MB."}) + "\n\n").encode("utf-8")
             return Response(stream_with_context(size_err()), content_type="text/event-stream; charset=utf-8")
-        print(f"FILE: {filename} | EXT: {ext} | SIZE: {len(file_bytes)} bytes")
+        logger.info("File upload: %s | ext=%s | size=%d bytes", filename, ext, len(file_bytes))
 
         # ── Extract content based on type ──
         if ext == "pdf":
@@ -134,8 +137,10 @@ def analyze_file():
         return Response(stream_with_context(rate_err()), content_type="text/event-stream; charset=utf-8")
 
     except GeminiServiceError as e:
+        status_code = e.status_code  # capture before the implicit `del e` at except-block exit —
+                                      # the generator below runs later, after e is gone (see Bug #2 fix)
         def svc_err():
-            yield ("data: " + jdump({"error": f"⚠️ Gemini service error ({e.status_code}). Please try again shortly."}) + "\n\n").encode("utf-8")
+            yield ("data: " + jdump({"error": f"⚠️ Gemini service error ({status_code}). Please try again shortly."}) + "\n\n").encode("utf-8")
         return Response(stream_with_context(svc_err()), content_type="text/event-stream; charset=utf-8")
 
     except requests.exceptions.Timeout:
@@ -144,8 +149,7 @@ def analyze_file():
         return Response(stream_with_context(timeout_err()), content_type="text/event-stream; charset=utf-8")
 
     except Exception as e:
-        print(f"analyze_file error: {e}")
+        logger.exception("analyze_file error: %s", e)
         def general_err():
-            print(f"UNHANDLED ERROR [stream]: {e}")
             yield ("data: " + jdump({"error": "⚠️ An internal server error occurred. Please try again."}) + "\n\n").encode("utf-8")
         return Response(stream_with_context(general_err()), content_type="text/event-stream; charset=utf-8")

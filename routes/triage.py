@@ -17,6 +17,7 @@ from services.triage_service import (
     analyze_email,
     analyze_malware,
 )
+from utils.sanitize import sanitize_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ def triage_analyze():
     """
     try:
         data = request.get_json(silent=True) or {}
-        artifact = data.get("artifact", "").strip()
+        artifact = sanitize_artifact(data.get("artifact", ""))
         artifact_type = data.get("type", "auto")
 
         if not artifact:
@@ -71,7 +72,7 @@ def triage_analyze_log():
     """Analyze a log file for security threats."""
     try:
         data = request.get_json(silent=True) or {}
-        log_content = data.get("log", "").strip()
+        log_content = sanitize_artifact(data.get("log", ""))
 
         if not log_content:
             return jsonify({"error": "log field is required"}), 400
@@ -99,7 +100,7 @@ def triage_analyze_email():
     """Analyze an email for phishing/security threats."""
     try:
         data = request.get_json(silent=True) or {}
-        email_content = data.get("email", "").strip()
+        email_content = sanitize_artifact(data.get("email", ""))
 
         if not email_content:
             return jsonify({"error": "email field is required"}), 400
@@ -132,7 +133,7 @@ def triage_analyze_malware():
     """Analyze a malware behavior report."""
     try:
         data = request.get_json(silent=True) or {}
-        report = data.get("report", "").strip()
+        report = sanitize_artifact(data.get("report", ""))
 
         if not report:
             return jsonify({"error": "report field is required"}), 400

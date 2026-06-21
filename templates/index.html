@@ -11,13 +11,17 @@
 <meta property="og:title" content="CyberGuru AI">
 <meta property="og:description" content="Learn cybersecurity concepts with an AI-powered cybersecurity assistant.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://cyber-guru-ai.vercel.app/">
+<meta property="og:url" content="https://cyberguru-ai.onrender.com/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<!-- TODO(security): add integrity="sha384-..." here. cdnjs builds this bundle itself (it isn't
+     published as a single file on npm), so generate the hash from the live cdnjs URL — paste
+     https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js into
+     https://www.srihash.org/ (or your browser devtools) rather than trusting a guessed value. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}?v=2">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
@@ -440,6 +444,7 @@
 <script src="{{ url_for('static', filename='js/ctf.js') }}"></script>
 <script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
 <script src="{{ url_for('static', filename='js/threat_pulse.js') }}"></script>
+<script src="{{ url_for('static', filename='js/investigation_badge.js') }}"></script>
 <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 <!-- Settings Panel -->
 <div id="settings-overlay" onclick="closeSettings()"></div>

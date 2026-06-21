@@ -1344,7 +1344,8 @@ function updateStreamingMessage(streamId, fullText, isFinal) {
 
   if(isFinal) {
     // Full markdown render on completion
-    contentEl.innerHTML = renderMarkdown(fullText);
+    const renderedHtml = renderMarkdown(fullText);
+    contentEl.innerHTML = (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(renderedHtml) : renderedHtml;
 
     // Attach TTS button to the actions bar (or msg-body) once text is final
     const msgBody = contentEl.closest('.msg-body');

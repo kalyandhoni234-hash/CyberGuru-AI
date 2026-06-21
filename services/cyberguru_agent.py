@@ -21,7 +21,7 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
     artifact_hash = _hash_artifact(artifact_text)
 
     if allow_cached:
-        cached = find_recent_investigation(artifact_hash, max_age_hours=DEDUPE_WINDOW_HOURS)
+        cached = find_recent_investigation(artifact_hash, user_id, max_age_hours=DEDUPE_WINDOW_HOURS)
         if cached:
             return _result_from_db_row(cached, from_cache=True)
 

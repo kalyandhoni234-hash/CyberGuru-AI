@@ -1,5 +1,5 @@
 import re
-from config import MAX_INPUT_CHARS, MAX_HISTORY_MSG_CHARS
+from config import MAX_INPUT_CHARS, MAX_HISTORY_MSG_CHARS, MAX_ARTIFACT_CHARS
 
 ALLOWED_HISTORY_ROLES = {"user", "bot"}
 
@@ -12,6 +12,22 @@ def sanitize_input(text: str) -> str:
     cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
     if len(cleaned) > MAX_INPUT_CHARS:
         cleaned = cleaned[:MAX_INPUT_CHARS]
+    return cleaned.strip()
+
+
+def sanitize_artifact(text: str) -> str:
+    """
+    Same control-character stripping as sanitize_input(), but with the
+    larger MAX_ARTIFACT_CHARS ceiling appropriate for triage artifacts
+    (log files, phishing emails, malware reports) rather than chat
+    messages. Used by routes/triage.py so artifact text passed to the
+    Gemini agent loop is bounded, not unlimited.
+    """
+    if not isinstance(text, str):
+        return ""
+    cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+    if len(cleaned) > MAX_ARTIFACT_CHARS:
+        cleaned = cleaned[:MAX_ARTIFACT_CHARS]
     return cleaned.strip()
 
 

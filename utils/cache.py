@@ -32,6 +32,12 @@ if REDIS_AVAILABLE and REDIS_URL:
 # In-memory cache fallback (simple dict with expiry times)
 _memory_cache = {}
 
+# Cap on the in-memory fallback so a long-running process without Redis
+# can't grow this dict unboundedly (each distinct IP looked up adds an
+# entry that otherwise only gets cleared on a matching get_cached() call
+# after expiry — many entries may simply never be read again).
+_MEMORY_CACHE_MAX_ENTRIES = 5_000
+
 # Matches AbuseIPDB's maxAgeInDays=90 window used in abuseipdb_tool.py
 ABUSEIPDB_TTL_SECONDS = 90 * 24 * 60 * 60
 
@@ -81,10 +87,32 @@ def set_cached(prefix, ip, value, ttl_seconds):
             pass  # Fall through to memory cache
     
     # Fall back to in-memory cache
+    if len(_memory_cache) >= _MEMORY_CACHE_MAX_ENTRIES:
+        _evict_memory_cache()
+
     _memory_cache[key] = {
         "value": value,
         "expires_at": datetime.now() + timedelta(seconds=ttl_seconds)
     }
+
+
+def _evict_memory_cache():
+    """
+    Free up space in the in-memory cache: first drop anything already
+    expired, then (if still over the cap) drop the oldest-inserted
+    entries until we're back under the limit.
+    """
+    now = datetime.now()
+    expired_keys = [k for k, v in _memory_cache.items() if v["expires_at"] <= now]
+    for k in expired_keys:
+        del _memory_cache[k]
+
+    if len(_memory_cache) >= _MEMORY_CACHE_MAX_ENTRIES:
+        # dicts preserve insertion order in modern Python, so the first
+        # keys are the oldest entries
+        overflow = len(_memory_cache) - _MEMORY_CACHE_MAX_ENTRIES + 1
+        for k in list(_memory_cache.keys())[:overflow]:
+            del _memory_cache[k]
 
 
 def get_abuseipdb_cached(ip):

@@ -17,6 +17,12 @@ from authlib.integrations.flask_client import OAuth
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False   # preserve emojis in jsonify() responses
 
+# Reject any request body over 6MB before Flask buffers it into memory.
+# Set slightly above the 5MB file-upload cap enforced in routes/analyze.py
+# so legitimate uploads still pass; this stops oversized JSON/multipart
+# bodies from being fully read into memory before our own size checks run.
+app.config['MAX_CONTENT_LENGTH'] = 6 * 1024 * 1024
+
 _secret_key = os.getenv("FLASK_SECRET_KEY")
 if not _secret_key:
     raise ValueError(
@@ -28,7 +34,18 @@ app.secret_key = _secret_key
 # ── Session cookie config ──────────────────────────────────────
 # FIX #1: os.getenv returns a string or None, never a bool.
 # bool("false") == True in Python, so we must check for None explicitly.
-IS_PRODUCTION = os.getenv("RENDER") is not None   # Render sets RENDER="true" automatically
+#
+# Prefer an explicit APP_ENV var (portable across any host) over detecting
+# Render specifically. Falls back to the RENDER auto-set var so the current
+# Render deployment keeps working as-is even before APP_ENV is configured
+# there — but if this app is ever redeployed elsewhere (Railway, Fly.io, a
+# VPS) without setting APP_ENV=production, it would otherwise silently lose
+# the Secure cookie flag.
+_APP_ENV = os.getenv("APP_ENV", "").strip().lower()
+if _APP_ENV:
+    IS_PRODUCTION = _APP_ENV == "production"
+else:
+    IS_PRODUCTION = os.getenv("RENDER") is not None   # Render sets RENDER="true" automatically
 
 app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
@@ -40,7 +57,7 @@ app.config.update(
 # ── CORS ──────────────────────────────────────────────────────
 _ALLOWED_ORIGINS = [o.strip() for o in os.getenv(
     "ALLOWED_ORIGINS",
-    "https://cyber-guru-ai.vercel.app"
+    "https://cyberguru-ai.onrender.com"
 ).split(",") if o.strip()]
 CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=True)
 
@@ -64,6 +81,14 @@ def rate_limit_handler(e):
         "rate_limited": True,
         "retry_after": 60
     }), 429
+
+
+@app.errorhandler(413)
+def request_too_large_handler(e):
+    return jsonify({
+        "error": "⚠️ Request body too large. Please reduce the file/content size and try again.",
+        "too_large": True
+    }), 413
 
 
 @app.after_request

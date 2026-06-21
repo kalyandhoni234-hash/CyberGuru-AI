@@ -48,6 +48,12 @@ MAX_HISTORY_BYTES    = 60_000
 MAX_HISTORY_MSG_CHARS = 8000
 MAX_INPUT_CHARS      = 4000
 
+# Triage artifacts (logs, emails, malware reports) are legitimately longer
+# than chat messages, but still need a hard ceiling — unbounded artifact
+# text gets forwarded straight into the agent's multi-round tool-calling
+# loop, which is a cost/latency-amplification DoS vector without one.
+MAX_ARTIFACT_CHARS   = 20_000
+
 # ==========================
 # SYSTEM INSTRUCTION
 # ==========================

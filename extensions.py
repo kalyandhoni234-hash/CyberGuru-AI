@@ -96,18 +96,14 @@ def set_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    # Allow same-origin use of sensitive features (microphone/camera/geolocation)
-    # Older config disabled these entirely which prevents in-browser mic access.
-    # Use `(self)` to allow the app's own pages to access these features.
-    response.headers["Permissions-Policy"] = "geolocation=(self), microphone=(self), camera=(self)"
-    if response.content_type.startswith("text/html"):
-        response.headers["Content-Security-Policy"] = (
+    response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
             "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
             "connect-src 'self' https://cdnjs.cloudflare.com; "
             "img-src 'self' data: https:; "
-            "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com"
+            "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
+            "media-src 'self' blob: data:;"
         )
     
     return response

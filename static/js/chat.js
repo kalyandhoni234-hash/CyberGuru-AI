@@ -2231,3 +2231,116 @@ function setModel(m) {
     if (version) version.textContent = 'v1.1 | Gemini 2.5 Flash';
   }
 }
+// ── Plus menu ──
+function togglePlusMenu() {
+  const btn = document.getElementById('plus-btn');
+  const menu = document.getElementById('plus-menu-dropdown');
+  const open = menu.classList.toggle('open');
+  btn.setAttribute('aria-expanded', open);
+  if (open) {
+    document.addEventListener('click', closePlusOnOutside, { once: true, capture: true });
+  }
+}
+function closePlusMenu() {
+  document.getElementById('plus-menu-dropdown')?.classList.remove('open');
+  document.getElementById('plus-btn')?.setAttribute('aria-expanded', 'false');
+  // close submenu too
+  document.getElementById('models-submenu')?.classList.remove('open');
+  document.querySelector('.plus-menu-item.submenu-open')?.classList.remove('submenu-open');
+}
+function closePlusOnOutside(e) {
+  if (!document.getElementById('plus-menu-wrap')?.contains(e.target)) closePlusMenu();
+}
+function toggleModelsSubmenu(e) {
+  e.stopPropagation();
+  const sub = document.getElementById('models-submenu');
+  const btn = e.currentTarget;
+  const isOpen = sub.classList.toggle('open');
+  btn.classList.toggle('submenu-open', isOpen);
+}
+function updatePlusModelLabel(label) {
+  const el = document.getElementById('plus-active-model');
+  if (el) el.textContent = label;
+}
+
+// ── Investigate panel ──
+let _invType = 'auto';
+
+function openInvestigatePanel() {
+  document.getElementById('investigate-panel')?.classList.add('open');
+  document.getElementById('investigate-overlay')?.classList.add('open');
+  setTimeout(() => document.getElementById('investigate-input')?.focus(), 150);
+}
+function closeInvestigatePanel() {
+  document.getElementById('investigate-panel')?.classList.remove('open');
+  document.getElementById('investigate-overlay')?.classList.remove('open');
+}
+function setInvType(btn, type) {
+  _invType = type;
+  document.querySelectorAll('.inv-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function runInvestigate() {
+  const artifact = document.getElementById('investigate-input')?.value?.trim();
+  if (!artifact) return;
+
+  const runBtn = document.getElementById('investigate-run-btn');
+  const resultEl = document.getElementById('investigate-result');
+
+  runBtn.disabled = true;
+  runBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Analyzing…`;
+  resultEl.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/triage/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artifact, type: _invType }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      resultEl.innerHTML = `<span style="color:var(--red)">${data.error || data.message || 'Analysis failed'}</span>`;
+      return;
+    }
+
+    resultEl.innerHTML = renderInvestigateResult(data);
+  } catch (err) {
+    resultEl.innerHTML = `<span style="color:var(--red)">Network error — ${err.message}</span>`;
+  } finally {
+    runBtn.disabled = false;
+    runBtn.innerHTML = `<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Analyze`;
+  }
+}
+
+function renderInvestigateResult(d) {
+  const sev = (d.severity || 'unknown').toLowerCase();
+  const iocs = d.iocs || {};
+  const mitre = d.mitre_techniques || [];
+  const summary = d.summary || d.message || '';
+
+  let html = `<div class="inv-severity ${sev}">⚠ Severity: ${sev.toUpperCase()}</div>`;
+  if (summary) html += `<div style="margin-bottom:8px">${summary}</div>`;
+
+  const allIocs = [
+    ...(iocs.ips || []).map(x => ({ v: x, t: 'IP' })),
+    ...(iocs.domains || []).map(x => ({ v: x, t: 'Domain' })),
+    ...(iocs.hashes || []).map(x => ({ v: x, t: 'Hash' })),
+    ...(iocs.urls || []).map(x => ({ v: x, t: 'URL' })),
+  ];
+  if (allIocs.length) {
+    html += `<div class="inv-section-label">IOCs (${allIocs.length})</div>`;
+    html += allIocs.map(i => `<span class="inv-tag" title="${i.t}">${i.v}</span>`).join('');
+  }
+  if (mitre.length) {
+    html += `<div class="inv-section-label">MITRE ATT&CK</div>`;
+    html += mitre.map(t => `<span class="inv-tag">${t.id || t} · ${t.name || ''}</span>`).join('');
+  }
+  return html;
+}
+
+// Keyboard shortcut — Escape closes investigate panel
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeInvestigatePanel();
+});

@@ -5109,16 +5109,99 @@ body.theme-light .tp-pill { background: rgba(220,38,38,.05); border-color: rgba(
   .mentor-msg-bubble { max-width: 88%; }
   .mterm-screen { min-height: 200px; }
   .mchat-sidebar { width: 180px; }
+  /* Roadmap — tighten for narrow sidebar viewports */
+  .roadmap-phase { gap: 0 10px; }
+  .roadmap-dot { width: 32px; height: 32px; }
+  .roadmap-card-header { padding: 12px 14px; gap: 8px; }
+  .roadmap-phase-title { font-size: 13px; }
+  .roadmap-topics { padding: 10px 14px; gap: 6px; }
+  .roadmap-topic { gap: 8px; padding: 9px 10px; }
+  .roadmap-topic-name { font-size: 12.5px; }
+  .roadmap-topic-tag, .roadmap-topic-badge { font-size: 9px; padding: 2px 5px; }
+  .roadmap-resources { padding: 0 14px 12px; gap: 6px; }
+  .domain-header { padding: 14px 16px; }
+  .domain-core-toggle { padding: 12px 14px; font-size: 12.5px; }
+  .domain-core-body { padding: 4px 14px 12px; }
 }
+
 @media (max-width: 480px) {
+  /* Dashboard / quiz / badge grids */
   .mdash-grid { grid-template-columns: 1fr; }
   .mdash-analytics-grid { grid-template-columns: 1fr; }
   .mdash-domain-bar-label { width: 80px; font-size: 11px; }
   .quiz-topic-grid { grid-template-columns: 1fr; }
   .mbadge-grid { grid-template-columns: repeat(2, 1fr); }
   .domain-grid { grid-template-columns: 1fr; }
-  .mentor-nav { width: 100%; flex-direction: row; padding: 6px 8px; overflow-x: auto; }
+
+  /* Body: stack vertically */
   .mentor-body { flex-direction: column; }
+
+  /* Nav → bottom tab bar */
+  .mentor-nav {
+    width: 100%; flex-direction: row;
+    padding: 0 4px; gap: 0; overflow-x: auto;
+    order: 10; flex-shrink: 0;
+    border-right: none; border-top: 1px solid var(--border-subtle);
+    height: 56px; justify-content: space-around;
+  }
+  .mentor-nav-item {
+    flex: 1; min-width: 46px; max-width: 70px;
+    padding: 6px 2px 5px; font-size: 7.5px; border-radius: 8px;
+  }
+
+  /* Content panel sits above the nav */
+  .mentor-panel { order: 1; padding: 14px 12px; }
+
+  /* ── Roadmap spine ── */
+  .roadmap-phase { gap: 0 8px; }
+  .roadmap-dot { width: 28px; height: 28px; font-size: 11px; }
+
+  /* ── Phase card header — wrap title when tight ── */
+  .roadmap-card-header { flex-wrap: wrap; padding: 10px 12px; gap: 6px; }
+  .roadmap-phase-badge { font-size: 8px; padding: 3px 6px; }
+  .roadmap-phase-title { font-size: 12px; flex: 1 1 calc(100% - 130px); min-width: 0; }
+  .roadmap-progress-mini { font-size: 10px; }
+
+  /* ── Topic rows — two-row layout ──
+     Row 1: [checkbox] [name                ] [▼]
+     Row 2:            [tag] [badge]
+  */
+  .roadmap-topics { padding: 8px 10px; gap: 6px; }
+  .roadmap-topic {
+    flex-wrap: wrap; gap: 4px 8px;
+    padding: 8px 10px; align-items: flex-start;
+  }
+  .roadmap-topic input[type="checkbox"] {
+    flex-shrink: 0; align-self: flex-start; margin-top: 1px;
+  }
+  .roadmap-topic-name {
+    flex: 1 1 auto; min-width: 0;
+    font-size: 12px; line-height: 1.4; align-self: flex-start;
+  }
+  .roadmap-topic-detail-toggle {
+    flex-shrink: 0; align-self: flex-start; margin-top: 1px;
+  }
+  /* Tags wrap to second row, indented to align with name text */
+  .roadmap-topic-tag {
+    font-size: 9px; padding: 2px 5px;
+    margin-left: 26px; /* checkbox(18px) + gap(8px) = 26px */
+  }
+  .roadmap-topic-badge { font-size: 9px; padding: 2px 5px; }
+  /* Details panel spans full width when expanded */
+  .roadmap-topic-details { width: 100%; order: 10; font-size: 12px; padding: 10px 12px; }
+  .roadmap-resources { padding: 0 10px 10px; gap: 6px; }
+
+  /* ── Domain header ── */
+  .domain-header { padding: 10px 12px; gap: 8px; }
+  .domain-header-icon { font-size: 26px; }
+  .domain-header-name { font-size: 14px; }
+  .domain-header-desc { font-size: 11px; }
+  .domain-change-btn { font-size: 11px; padding: 6px 12px; }
+
+  /* ── Core section ── */
+  .domain-core-toggle { padding: 10px 12px; font-size: 12px; }
+  .domain-core-body { padding: 4px 12px 10px; }
+  .domain-core-body .roadmap-topic { padding: 6px 8px; }
 }
 
 /* ══ DOMAIN SELECTOR ══ */

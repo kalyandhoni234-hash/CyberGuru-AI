@@ -38,6 +38,43 @@ logger = logging.getLogger(__name__)
 from services.groq_service import groq_chat, groq_stream, build_groq_messages
 
 
+# ── Fallback chains ────────────────────────────────────────────────────────────
+# Order to try when a model is rate-limited or fails, keyed by requested model.
+_FALLBACK_CHAINS = {
+    "gemini": ["gemini", "groq", "lite"],
+    "groq":   ["groq", "gemini", "lite"],
+    "lite":   ["lite", "gemini", "groq"],
+}
+
+
+def _call_model(model_name: str, history: list, user_message: str) -> str:
+    """Call a single model and return the reply text. Raises on failure."""
+    if model_name == "gemini":
+        payload = {
+            "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+            "contents": build_contents(history, user_message),
+            "generationConfig": GENERATION_CONFIG,
+        }
+        if needs_grounding(user_message):
+            payload["tools"] = [GOOGLE_SEARCH_TOOL]
+        resp = gemini_post(API_URL, payload, timeout=30)
+        return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+    if model_name == "groq":
+        messages = build_groq_messages(SYSTEM_INSTRUCTION, history, user_message)
+        return groq_chat(messages)
+
+    if model_name == "lite":
+        payload = {
+            "contents": build_contents(history, user_message),
+            "generationConfig": GENERATION_CONFIG,
+        }
+        resp = gemini_post(FLASH_LITE_API_URL, payload, timeout=30)
+        return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+    raise ValueError(f"Unknown model: {model_name}")
+
+
 # ==========================
 # CHAT ROUTE (non-streaming fallback)
 # ==========================
@@ -46,91 +83,70 @@ from services.groq_service import groq_chat, groq_stream, build_groq_messages
 @csrf_protect
 @login_required
 def chat():
-    try:
-        data         = request.get_json(silent=True) or {}
-        user_message = sanitize_input(data.get("message", ""))
-        history      = validate_history(data.get("history", []))
-        session_id   = data.get("session_id")   # optional — if provided, auto-persist
-        model        = data.get("model", "gemini")  # "gemini" | "groq"
+    data         = request.get_json(silent=True) or {}
+    user_message = sanitize_input(data.get("message", ""))
+    history      = validate_history(data.get("history", []))
+    session_id   = data.get("session_id")
+    model        = data.get("model", "gemini")
 
-        if not user_message:
-            return jsonify({"reply": "Please enter a message."}), 400
+    if not user_message:
+        return jsonify({"reply": "Please enter a message."}), 400
 
-        # Quiz mode
-        quiz_mode  = False
-        quiz_topic = ""
-        if user_message.lower().startswith("/quiz"):
-            quiz_mode  = True
-            quiz_topic = user_message[5:].strip()
+    # Quiz mode
+    if user_message.lower().startswith("/quiz"):
+        quiz_topic = user_message[5:].strip()
+        if not quiz_topic:
+            return jsonify({"reply": "⚠️ Please provide a topic.\n\nExample:\n/quiz sql injection"})
+        safe_topic = sanitize_quiz_topic(quiz_topic)
+        if not safe_topic:
+            return jsonify({"reply": (
+                "⚠️ That topic isn't in the quiz library.\n\n"
+                "Try one of: SQL Injection, XSS, Malware, Phishing, "
+                "Network Security, Cryptography, Ransomware, OWASP Top 10, "
+                "Buffer Overflow, Social Engineering, or another cybersecurity topic."
+            )})
+        user_message = build_quiz_prompt(safe_topic)
 
-        if quiz_mode:
-            if not quiz_topic:
-                return jsonify({"reply": "⚠️ Please provide a topic.\n\nExample:\n/quiz sql injection"})
-            safe_topic = sanitize_quiz_topic(quiz_topic)
-            if not safe_topic:
-                return jsonify({"reply": (
-                    "⚠️ That topic isn't in the quiz library.\n\n"
-                    "Try one of: SQL Injection, XSS, Malware, Phishing, "
-                    "Network Security, Cryptography, Ransomware, OWASP Top 10, "
-                    "Buffer Overflow, Social Engineering, or another cybersecurity topic."
-                )})
-            user_message = build_quiz_prompt(safe_topic)
+    # ── Auto-fallback: try each model in the chain ─────────────────
+    fallback_chain = _FALLBACK_CHAINS.get(model, _FALLBACK_CHAINS["gemini"])
+    fallback_from = []
+    last_exc = None
 
-        # ── Groq path ──────────────────────────────────────────────
-        if model == "groq":
-            messages  = build_groq_messages(SYSTEM_INSTRUCTION, history, user_message)
-            bot_reply = groq_chat(messages)
+    for m in fallback_chain:
+        try:
+            bot_reply = _call_model(m, history, user_message)
             _persist_turn(session_id, data.get("message", ""), bot_reply)
-            return jsonify({"reply": bot_reply, "model": "groq"})
 
-        # ── Flash Lite path (gemini-3.1-flash-lite) ────────────────
-        if model == "lite":
-            payload = {
-                "contents": build_contents(history, user_message),
-                "generationConfig": GENERATION_CONFIG,
-            }
-            response = gemini_post(FLASH_LITE_API_URL, payload, timeout=30)
-            response_data = response.json()
-            bot_reply = response_data["candidates"][0]["content"]["parts"][0]["text"]
-            _persist_turn(session_id, data.get("message", ""), bot_reply)
-            return jsonify({"reply": bot_reply, "model": "lite"})
+            resp = {"reply": bot_reply, "model": m}
+            if fallback_from:
+                resp["fallback"] = True
+                resp["fallback_from"] = fallback_from
+            return jsonify(resp)
 
-        # ── Gemini path ────────────────────────────────────────────
-        payload = {
-            "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
-            "contents": build_contents(history, user_message),
-            "generationConfig": GENERATION_CONFIG,
-        }
+        except GeminiRateLimitError:
+            fallback_from.append(m)
+            last_exc = None
+            logger.info("Model %s rate limited, trying next in chain", m)
+            continue
+        except Exception as e:
+            fallback_from.append(m)
+            last_exc = e
+            logger.warning("Model %s failed (%s), trying next in chain", m, type(e).__name__)
+            continue
 
-        if needs_grounding(user_message):
-            payload["tools"] = [GOOGLE_SEARCH_TOOL]
-
-        response = gemini_post(API_URL, payload, timeout=30)
-        response_data = response.json()
-        bot_reply = response_data["candidates"][0]["content"]["parts"][0]["text"]
-
-        # Persist to DB if a session_id was supplied.
-        _persist_turn(session_id, data.get("message", ""), bot_reply)
-
-        return jsonify({"reply": bot_reply, "model": "gemini"})
-
-    except GeminiRateLimitError:
-        return jsonify({"reply": "⚠️ Gemini rate limit reached. Please wait a moment and try again."}), 429
-    except GeminiServiceError as e:
-        return jsonify({"reply": f"⚠️ Gemini service error ({e.status_code}). Please try again shortly."}), 503
-    except requests.exceptions.Timeout:
-        return jsonify({"reply": "⚠️ Request timed out."}), 500
-    except requests.exceptions.RequestException:
-        return jsonify({"reply": "⚠️ Unable to reach Gemini API."}), 500
-    except KeyError:
-        return jsonify({"reply": "⚠️ Unexpected response format from Gemini."}), 500
-    except Exception:
-        logger.exception("Unhandled error in /chat")
-        return jsonify({"reply": "⚠️ An internal error occurred. Please try again."}), 500
+    # All models exhausted
+    if last_exc is None:
+        return jsonify({"reply": "⚠️ All AI models are rate limited. Please wait a moment and try again."}), 429
+    if isinstance(last_exc, requests.exceptions.Timeout):
+        return jsonify({"reply": "⚠️ Request timed out on all models."}), 500
+    if isinstance(last_exc, requests.exceptions.RequestException):
+        return jsonify({"reply": "⚠️ Unable to reach any AI API."}), 500
+    logger.exception("All models failed in /chat")
+    return jsonify({"reply": "⚠️ All AI models failed. Please try again."}), 500
 
 
 # ==========================
-# CHAT ROUTE (streaming)
+# CHAT ROUTE (streaming with auto-fallback)
 # ==========================
 
 @app.route("/chat-stream", methods=["POST"])
@@ -143,7 +159,7 @@ def chat_stream():
         user_message = sanitize_input(data.get("message", ""))
         history      = validate_history(data.get("history", []))
         session_id   = data.get("session_id")
-        model        = data.get("model", "gemini")  # "gemini" | "groq"
+        model        = data.get("model", "gemini")
 
         if not user_message:
             return jsonify({"reply": "Please enter a message."}), 400
@@ -163,126 +179,116 @@ def chat_stream():
                 )})
             user_message = build_quiz_prompt(safe_topic)
 
-        # ── Groq streaming path ────────────────────────────────────
-        if model == "groq":
-            messages = build_groq_messages(SYSTEM_INSTRUCTION, history, user_message)
-
-            def generate_groq():
-                bot_reply_parts = []
+        # ── Single streaming generator with fallback chain ─────────
+        def _stream_gemini_tokens():
+            """Yield text tokens from Gemini 2.5 Flash."""
+            payload = {
+                "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+                "contents": build_contents(history, user_message),
+                "generationConfig": GENERATION_CONFIG,
+            }
+            if needs_grounding(user_message):
+                payload["tools"] = [GOOGLE_SEARCH_TOOL]
+            resp = gemini_post(API_URL_STREAM, payload, stream=True, timeout=30)
+            for raw_line in resp.iter_lines():
+                if not raw_line:
+                    continue
+                line = raw_line.decode("utf-8")
+                if not line.startswith("data:"):
+                    continue
+                json_str = line[5:].strip()
+                if not json_str or json_str == "[DONE]":
+                    continue
                 try:
-                    for chunk in groq_stream(messages):
-                        bot_reply_parts.append(chunk)
-                        yield f"data: {jdump({'token': chunk})}\n\n"
-                    yield f"data: {jdump({'done': True})}\n\n"
-                    _persist_turn(session_id, data.get("message", ""), "".join(bot_reply_parts))
-                except Exception:
-                    logger.exception("Unhandled error in /chat-stream groq generator")
-                    yield f"data: {jdump({'error': '⚠️ Groq error. Please try again.'})}\n\n"
+                    chunk_data = json.loads(json_str)
+                    token = (
+                        chunk_data.get("candidates", [{}])[0]
+                        .get("content", {})
+                        .get("parts", [{}])[0]
+                        .get("text", "")
+                    )
+                    if token:
+                        yield token
+                except (json.JSONDecodeError, IndexError, KeyError):
+                    continue
 
-            return Response(stream_with_context(generate_groq()), mimetype="text/event-stream")
-
-        # ── Flash Lite streaming path (gemini-3.1-flash-lite) ──────
-        if model == "lite":
+        def _stream_lite_tokens():
+            """Yield text tokens from Gemini 3.1 Flash Lite."""
             payload = {
                 "contents": build_contents(history, user_message),
                 "generationConfig": GENERATION_CONFIG,
             }
+            resp = gemini_post(FLASH_LITE_API_URL_STREAM, payload, stream=True, timeout=30)
+            for raw_line in resp.iter_lines():
+                if not raw_line:
+                    continue
+                line = raw_line.decode("utf-8")
+                if not line.startswith("data:"):
+                    continue
+                json_str = line[5:].strip()
+                if not json_str or json_str == "[DONE]":
+                    continue
+                try:
+                    chunk_data = json.loads(json_str)
+                    token = (
+                        chunk_data.get("candidates", [{}])[0]
+                        .get("content", {})
+                        .get("parts", [{}])[0]
+                        .get("text", "")
+                    )
+                    if token:
+                        yield token
+                except (json.JSONDecodeError, IndexError, KeyError):
+                    continue
 
-            def generate_lite():
+        def generate_with_fallback():
+            fallback_chain = _FALLBACK_CHAINS.get(model, _FALLBACK_CHAINS["gemini"])
+            last_was_rate_limit = False
+
+            for i, m in enumerate(fallback_chain):
+                if i > 0:
+                    yield f"data: {jdump({'model_switch': m})}\n\n"
+
                 bot_reply_parts = []
                 try:
-                    resp = gemini_post(FLASH_LITE_API_URL_STREAM, payload, stream=True, timeout=30)
-                    for raw_line in resp.iter_lines():
-                        if not raw_line:
-                            continue
-                        line = raw_line.decode("utf-8")
-                        if not line.startswith("data:"):
-                            continue
-                        json_str = line[5:].strip()
-                        if not json_str or json_str == "[DONE]":
-                            continue
-                        try:
-                            chunk_data = json.loads(json_str)
-                            token = (
-                                chunk_data
-                                .get("candidates", [{}])[0]
-                                .get("content", {})
-                                .get("parts", [{}])[0]
-                                .get("text", "")
-                            )
-                            if token:
-                                bot_reply_parts.append(token)
-                                yield f"data: {jdump({'token': token})}\n\n"
-                        except (json.JSONDecodeError, IndexError, KeyError):
-                            continue
-                    yield f"data: {jdump({'done': True})}\n\n"
-                    _persist_turn(session_id, data.get("message", ""), "".join(bot_reply_parts))
-                except GeminiRateLimitError:
-                    yield f"data: {jdump({'rate_limited': True, 'retry_after': 60})}\n\n"
-                except GeminiServiceError as e:
-                    yield f"data: {jdump({'error': f'⚠️ Flash Lite service error ({e.status_code}).'})}\n\n"
-                except Exception:
-                    logger.exception("Unhandled error in /chat-stream lite generator")
-                    yield f"data: {jdump({'error': '⚠️ Flash Lite error. Please try again.'})}\n\n"
-
-            return Response(stream_with_context(generate_lite()), mimetype="text/event-stream")
-
-        # ── Gemini streaming path ──────────────────────────────────
-        payload = {
-            "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
-            "contents": build_contents(history, user_message),
-            "generationConfig": GENERATION_CONFIG,
-        }
-
-        if needs_grounding(user_message):
-            payload["tools"] = [GOOGLE_SEARCH_TOOL]
-
-        def generate():
-            bot_reply_parts = []
-            try:
-                # gemini_post returns a Response object; iterate its lines for SSE
-                resp = gemini_post(API_URL_STREAM, payload, stream=True, timeout=30)
-                for raw_line in resp.iter_lines():
-                    if not raw_line:
-                        continue
-                    # raw_line is bytes, e.g. b'data: {"candidates":[...]}'
-                    line = raw_line.decode("utf-8")
-                    if not line.startswith("data:"):
-                        continue
-                    json_str = line[5:].strip()
-                    if not json_str or json_str == "[DONE]":
-                        continue
-                    try:
-                        chunk_data = json.loads(json_str)
-                        token = (
-                            chunk_data
-                            .get("candidates", [{}])[0]
-                            .get("content", {})
-                            .get("parts", [{}])[0]
-                            .get("text", "")
-                        )
-                        if token:
+                    if m == "groq":
+                        messages = build_groq_messages(SYSTEM_INSTRUCTION, history, user_message)
+                        for chunk in groq_stream(messages):
+                            bot_reply_parts.append(chunk)
+                            yield f"data: {jdump({'token': chunk})}\n\n"
+                    elif m == "lite":
+                        for token in _stream_lite_tokens():
                             bot_reply_parts.append(token)
                             yield f"data: {jdump({'token': token})}\n\n"
-                    except (json.JSONDecodeError, IndexError, KeyError):
-                        continue
+                    else:  # gemini
+                        for token in _stream_gemini_tokens():
+                            bot_reply_parts.append(token)
+                            yield f"data: {jdump({'token': token})}\n\n"
 
-                yield f"data: {jdump({'done': True})}\n\n"
-                _persist_turn(session_id, data.get("message", ""), "".join(bot_reply_parts))
+                    yield f"data: {jdump({'done': True})}\n\n"
+                    _persist_turn(session_id, data.get("message", ""), "".join(bot_reply_parts))
+                    return
 
-            except GeminiRateLimitError:
+                except GeminiRateLimitError:
+                    last_was_rate_limit = True
+                    logger.info("Stream model %s rate limited, trying next", m)
+                    continue
+                except GeminiServiceError:
+                    last_was_rate_limit = False
+                    logger.info("Stream model %s service error, trying next", m)
+                    continue
+                except Exception:
+                    last_was_rate_limit = False
+                    logger.warning("Stream model %s failed, trying next", m)
+                    continue
+
+            # All models exhausted
+            if last_was_rate_limit:
                 yield f"data: {jdump({'rate_limited': True, 'retry_after': 60})}\n\n"
-            except GeminiServiceError as e:
-                yield f"data: {jdump({'error': f'⚠️ Gemini service error ({e.status_code}).'})}\n\n"
-            except requests.exceptions.Timeout:
-                yield f"data: {jdump({'error': '⚠️ Request timed out.'})}\n\n"
-            except requests.exceptions.RequestException:
-                yield f"data: {jdump({'error': '⚠️ Unable to reach Gemini API.'})}\n\n"
-            except Exception:
-                logger.exception("Unhandled error in /chat-stream generator")
-                yield f"data: {jdump({'error': '⚠️ An internal error occurred.'})}\n\n"
+            else:
+                yield f"data: {jdump({'error': '⚠️ All AI models failed. Please try again.'})}\n\n"
 
-        return Response(stream_with_context(generate()), mimetype="text/event-stream")
+        return Response(stream_with_context(generate_with_fallback()), mimetype="text/event-stream")
 
     except Exception:
         logger.exception("Unhandled error in /chat-stream")

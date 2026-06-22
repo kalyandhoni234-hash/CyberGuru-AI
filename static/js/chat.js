@@ -6,6 +6,7 @@ const WELCOME_CAPS = [
   '🎯 Quiz Mode',
   '🚩 CTF Challenges',
   '🛡️ Threat Pulse',
+  '🎓 Cyber Mentor',
 ];
 
 const WELCOME_CARD_ICONS = {
@@ -619,7 +620,7 @@ function renderSuggestions(suggestions) {
 
 function _buildWelcomeHTML() {
   const caps = WELCOME_CAPS
-    .map(c => `<span>${c.replace(/^.*?(Quiz|CTF|Threat Pulse).*$/, '$1')}</span>`)
+    .map(c => `<span>${c.replace(/^.*?(Quiz|CTF|Threat Pulse|Cyber Mentor).*$/, '$1')}</span>`)
     .join('');
   const cards = WELCOME_CARDS
     .map(c => `
@@ -628,6 +629,29 @@ function _buildWelcomeHTML() {
         <span class="sc-copy"><span class="sc-label">${c.label}</span>${c.text}</span>
       </div>`)
     .join('');
+  const mentorCard = `
+    <div class="mentor-welcome-card" onclick="openMentorOverlay()" style="opacity:0;animation:cardFadeUp .4s ease .4s forwards">
+      <div class="mentor-wc-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+        </svg>
+      </div>
+      <div class="mentor-wc-body">
+        <div class="mentor-wc-label">New — Beginner Mode</div>
+        <div class="mentor-wc-title">Cyber Mentor</div>
+        <div class="mentor-wc-desc">Structured learning path, interactive roadmap, AI mentor chat and quizzes — built for complete beginners.</div>
+        <div class="mentor-wc-pills">
+          <span class="mentor-wc-pill">Roadmap</span>
+          <span class="mentor-wc-pill">AI Mentor</span>
+          <span class="mentor-wc-pill">Quizzes</span>
+          <span class="mentor-wc-pill">Resources</span>
+          <span class="mentor-wc-pill">Progress Tracker</span>
+        </div>
+      </div>
+      <svg class="mentor-wc-arrow" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+    </div>`;
   return `
     <div id="welcome">
       <div class="welcome-shield">
@@ -641,7 +665,7 @@ function _buildWelcomeHTML() {
         <div class="welcome-sub">Your AI-powered cybersecurity learning assistant. Ask about threats, attacks, defenses, and security best practices.</div>
       </div>
       <div class="welcome-caps"><span class="new-dot" aria-hidden="true"></span><span class="new-label">New:</span>${caps}</div>
-      <div class="suggest-grid">${cards}</div>
+      <div class="suggest-grid">${mentorCard}${cards}</div>
     </div>`;
 }
 
@@ -649,12 +673,37 @@ function _initStaticWelcome() {
   // Populate the welcome screen already in the HTML (initial page load)
   const caps = document.getElementById('welcome-caps');
   const grid = document.getElementById('suggest-grid');
-  if (caps) caps.innerHTML = `<span class="new-dot" aria-hidden="true"></span><span class="new-label">New:</span>${WELCOME_CAPS.map(c => `<span>${c.replace(/^.*?(Quiz|CTF|Threat Pulse).*$/, '$1')}</span>`).join('')}`;
-  if (grid) grid.innerHTML = WELCOME_CARDS.map(c => `
-    <div class="suggest-card" onclick="(${c.action.toString()})()">
-      <span class="sc-icon" aria-hidden="true">${WELCOME_CARD_ICONS[c.icon]}</span>
-      <span class="sc-copy"><span class="sc-label">${c.label}</span>${c.text}</span>
-    </div>`).join('');
+  if (caps) caps.innerHTML = `<span class="new-dot" aria-hidden="true"></span><span class="new-label">New:</span>${WELCOME_CAPS.map(c => `<span>${c.replace(/^.*?(Quiz|CTF|Threat Pulse|Cyber Mentor).*$/, '$1')}</span>`).join('')}`;
+  if (grid) {
+    const mentorCard = `
+      <div class="mentor-welcome-card" onclick="openMentorOverlay()" style="opacity:0;animation:cardFadeUp .4s ease .4s forwards">
+        <div class="mentor-wc-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+          </svg>
+        </div>
+        <div class="mentor-wc-body">
+          <div class="mentor-wc-label">New — Beginner Mode</div>
+          <div class="mentor-wc-title">Cyber Mentor</div>
+          <div class="mentor-wc-desc">Structured learning path, interactive roadmap, AI mentor chat and quizzes — built for complete beginners.</div>
+          <div class="mentor-wc-pills">
+            <span class="mentor-wc-pill">Roadmap</span>
+            <span class="mentor-wc-pill">AI Mentor</span>
+            <span class="mentor-wc-pill">Quizzes</span>
+            <span class="mentor-wc-pill">Resources</span>
+            <span class="mentor-wc-pill">Progress Tracker</span>
+          </div>
+        </div>
+        <svg class="mentor-wc-arrow" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+      </div>`;
+    grid.innerHTML = mentorCard + WELCOME_CARDS.map(c => `
+      <div class="suggest-card" onclick="(${c.action.toString()})()">
+        <span class="sc-icon" aria-hidden="true">${WELCOME_CARD_ICONS[c.icon]}</span>
+        <span class="sc-copy"><span class="sc-label">${c.label}</span>${c.text}</span>
+      </div>`).join('');
+  }
 }
 
 function showWelcome() {
@@ -1212,6 +1261,13 @@ async function sendToBackend() {
             // ── Model state transitions ──
             if(payload.status === 'searching') {
               setTypingState('searching');
+            }
+
+            // ── Model auto-switch (rate-limit fallback) ──
+            if(payload.model_switch) {
+              const labels = { gemini:'Gemini Flash', groq:'Groq Llama3', lite:'Flash Lite' };
+              const labelEl = document.getElementById('typing-label');
+              if(labelEl) labelEl.textContent = `⚡ Switching to ${labels[payload.model_switch] || payload.model_switch}...`;
             }
 
             if(payload.error) {

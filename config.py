@@ -19,7 +19,7 @@ API_URL_STREAM = (
     f"{MODEL}:streamGenerateContent?alt=sse"
 )
 
-FLASH_LITE_MODEL = "gemini-3.1-flash-lite"
+FLASH_LITE_MODEL = "gemini-2.0-flash-lite"
 FLASH_LITE_API_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/"
     f"{FLASH_LITE_MODEL}:generateContent"

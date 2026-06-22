@@ -668,7 +668,28 @@ function _buildWelcomeHTML() {
       <div class="suggest-grid">${mentorCard}${cards}</div>
     </div>`;
 }
+// Mark a tool item active while its panel is open
+function setActiveToolItem(id) {
+  document.querySelectorAll('.tools-menu-item').forEach(el => el.classList.remove('active'));
+  if (id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
+  }
+}
 
+// Call setActiveToolItem('tool-quiz') inside openQuizModal(), etc.
+// Call setActiveToolItem(null) when a modal/panel closes.
+
+// Keyboard navigation for the tools dropdown
+document.getElementById('tools-menu-dropdown')?.addEventListener('keydown', e => {
+  const items = [...document.querySelectorAll('#tools-menu-dropdown .tools-menu-item')];
+  const idx = items.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown') { e.preventDefault(); items[(idx + 1) % items.length]?.focus(); }
+  if (e.key === 'ArrowUp')   { e.preventDefault(); items[(idx - 1 + items.length) % items.length]?.focus(); }
+  if (e.key === 'Home')      { e.preventDefault(); items[0]?.focus(); }
+  if (e.key === 'End')       { e.preventDefault(); items[items.length - 1]?.focus(); }
+  if (e.key === 'Escape')    { closeToolsMenu(); document.getElementById('tools-menu-trigger')?.focus(); }
+});
 function _initStaticWelcome() {
   // Populate the welcome screen already in the HTML (initial page load)
   const caps = document.getElementById('welcome-caps');

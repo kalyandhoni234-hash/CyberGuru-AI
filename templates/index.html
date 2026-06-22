@@ -17,10 +17,6 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-<!-- TODO(security): add integrity="sha384-..." here. cdnjs builds this bundle itself (it isn't
-     published as a single file on npm), so generate the hash from the live cdnjs URL — paste
-     https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js into
-     https://www.srihash.org/ (or your browser devtools) rather than trusting a guessed value. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}?v=2">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
@@ -45,8 +41,9 @@
   </div>
 </div>
 
-<!-- Sidebar -->
-
+<!-- ═══════════════════════════════════
+     SIDEBAR
+     ═══════════════════════════════════ -->
 <aside id="sidebar" role="navigation" aria-label="Sidebar">
 
   <div class="sidebar-logo">
@@ -127,7 +124,6 @@
 
   <div class="sidebar-footer">
 
-    <!-- Status row -->
     <div class="sidebar-footer-top">
       <div class="status-row">
         <div class="status-dot"></div>
@@ -144,7 +140,6 @@
         <div id="user-email" class="user-profile-email"></div>
       </div>
 
-      <!-- Three-dots button -->
       <div class="user-menu-wrap" id="user-menu-wrap">
         <button class="user-menu-btn" id="user-menu-trigger" onclick="toggleUserMenu(event)" title="More options" aria-haspopup="true" aria-expanded="false">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
@@ -154,7 +149,6 @@
           </svg>
         </button>
 
-        <!-- Dropdown menu -->
         <div class="user-menu-dropdown" id="user-menu-dropdown" role="menu">
           <button class="user-menu-item" onclick="openSettings(); closeUserMenu();" role="menuitem">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -175,13 +169,14 @@
     </div>
 
   </div>
-
 </aside>
 
-<!-- Main -->
+<!-- ═══════════════════════════════════
+     MAIN
+     ═══════════════════════════════════ -->
 <main id="main">
 
-  <!-- Rate-limit banner: in-flow so it pushes topbar down, not over it -->
+  <!-- Rate-limit banner -->
   <div id="rate-limit-banner" role="alert" aria-live="polite">
     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0">
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
@@ -198,7 +193,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
     </button>
-     <button id="sidebar-toggle" onclick="toggleSidebarCollapse()" title="Toggle sidebar">
+    <button id="sidebar-toggle" onclick="toggleSidebarCollapse()" title="Toggle sidebar">
       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
@@ -261,9 +256,7 @@
       </div>
       <div class="typing-body">
         <div class="typing-state-row">
-          <!-- Icon swaps per state via JS -->
           <svg class="typing-state-icon" id="typing-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <!-- default: thinking brain / cpu chip -->
             <rect x="7" y="7" width="10" height="10" rx="1" stroke-linecap="round"/>
             <path stroke-linecap="round" d="M7 9H5M7 12H4M7 15H5M17 9h2M17 12h3M17 15h2M9 7V5M12 7V4M15 7V5M9 17v2M12 17v3M15 17v2"/>
           </svg>
@@ -276,106 +269,148 @@
     </div>
   </div>
 
-  <!-- Input area -->
+  <!-- ═══════════════════════════════════
+       INPUT AREA  (fixed)
+       ═══════════════════════════════════ -->
   <div id="input-area">
+
     <div id="suggestions-box"></div>
 
     <div class="input-wrapper">
 
-      <!-- Model switcher inside the card -->
-      <div class="model-switcher">
-        <button class="model-btn active" data-model="gemini" onclick="setModel('gemini')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      <!-- + button with popover -->
+      <div class="plus-menu-wrap" id="plus-menu-wrap">
+        <button class="plus-btn" id="plus-btn" onclick="togglePlusMenu()" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"/>
           </svg>
-          Gemini Flash
         </button>
-        <button class="model-btn" data-model="groq" onclick="setModel('groq')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8v4l3 3"/>
-          </svg>
-          Groq Llama3
-        </button>
-        <button class="model-btn" data-model="lite" onclick="setModel('lite')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-          </svg>
-          Flash Lite
-        </button>
-        <span class="model-switcher-sep"></span>
-        <span class="model-active-label" id="model-active-label">Gemini 2.5 Flash · Smart</span>
-      </div>
 
-      <!-- Bottom row: attach + textarea + controls -->
-      <div class="input-row">
-      <label for="fileInput" class="upload-btn" id="upload-label" title="Attach file (.txt, .log, .pdf)" aria-label="Attach file">
-        <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828L18 9.828a4 4 0 00-5.657-5.657L5.757 10.757a6 6 0 108.486 8.486L19 14"/>
-        </svg>
-        <span class="sr-only">Attach file</span>
-      </label>
-      <input type="file" id="fileInput" hidden accept=".txt,.log,.pdf">
+        <div class="plus-menu-dropdown" id="plus-menu-dropdown" role="menu">
 
-      <div class="file-indicator" id="file-indicator">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/>
-        </svg>
-        <span class="file-indicator-name" id="file-name"></span>
-        <button class="file-clear-btn" onclick="clearFile()" title="Remove file">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
-      </div>
+          <!-- Attach File -->
+          <label class="plus-menu-item" for="fileInput" role="menuitem" onclick="closePlusMenu()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+            </svg>
+            Attach File
+            <span class="plus-menu-hint">.txt .log .pdf</span>
+          </label>
+          <input type="file" id="fileInput" hidden accept=".txt,.log,.pdf">
+
+          <div class="plus-menu-divider"></div>
+
+          <!-- Models submenu trigger -->
+          <button class="plus-menu-item" onclick="toggleModelsSubmenu(event)" role="menuitem">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
+            </svg>
+            Model
+            <span class="plus-menu-hint" id="plus-active-model">Gemini Flash</span>
+            <svg class="plus-menu-chevron" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+
+          <!-- Models submenu -->
+          <div class="plus-submenu" id="models-submenu">
+            <button class="plus-menu-item plus-submenu-item" onclick="setModel('gemini'); updatePlusModelLabel('Gemini Flash'); closePlusMenu()">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Gemini 2.5 Flash
+            </button>
+            <button class="plus-menu-item plus-submenu-item" onclick="setModel('lite'); updatePlusModelLabel('Flash Lite'); closePlusMenu()">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Flash Lite
+            </button>
+            <button class="plus-menu-item plus-submenu-item" onclick="setModel('groq'); updatePlusModelLabel('Groq Llama 3.1 8B'); closePlusMenu()">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8v4l3 3"/></svg>
+              Groq Llama 3.1 8B
+            </button>
+          </div>
+
+          <div class="plus-menu-divider"></div>
+
+          <!-- Investigate -->
+          <button class="plus-menu-item plus-menu-item--accent" onclick="openInvestigatePanel(); closePlusMenu();" role="menuitem">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M11 8v6M8 11h6"/>
+            </svg>
+            Investigate
+            <span class="plus-menu-badge">AI</span>
+          </button>
+
+        </div><!-- /.plus-menu-dropdown -->
+      </div><!-- /.plus-menu-wrap -->
+
       <textarea
         id="user-input"
         rows="1"
         placeholder="Ask CyberGuru anything about threats, attacks, defenses..."
         aria-label="Message input"
       ></textarea>
+
       <button id="mic-btn" onclick="if(typeof toggleVoice==='function') toggleVoice()" title="Voice input" aria-label="Start voice input">
-        <!-- idle: microphone -->
         <svg id="mic-icon-idle" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
           <rect x="9" y="2" width="6" height="11" rx="3" stroke-linejoin="round"/>
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
         </svg>
-        <!-- listening: filled stop square -->
         <svg id="mic-icon-stop" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
           <rect x="4" y="4" width="16" height="16" rx="3"/>
         </svg>
       </button>
+
       <div id="voice-visualizer" class="voice-visualizer" aria-hidden="true">
         <span></span>
         <span></span>
         <span></span>
       </div>
+
       <span id="char-count"></span>
+
       <button id="stop-btn" onclick="stopGeneration()" title="Stop generating">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
       </button>
+
       <button id="send-btn" onclick="sendToBackend()" title="Send message" aria-label="Send message">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
         </svg>
       </button>
-      </div><!-- /.input-row -->
+
+    </div><!-- /.input-wrapper -->
+
+    <div class="input-hint">
+      <span>Enter to send</span>
+      <span>Shift+Enter for new line</span>
+      <span>.txt .log .pdf supported</span>
     </div>
-    <div class="input-hint"><span>Enter to send</span><span>Shift+Enter for new line</span><span>.txt .log .pdf supported</span></div>
-  </div>
+
+  </div><!-- /#input-area -->
+
+</main>
+
+<!-- ═══════════════════════════════════
+     QUIZ MODAL
+     ═══════════════════════════════════ -->
 <div id="quiz-modal" class="quiz-modal">
   <div class="quiz-modal-content ctf-modal-content" id="quiz-modal-body">
     <!-- populated dynamically by static/js/quiz.js -->
   </div>
 </div>
 
-<!-- CTF Challenge Mode modal -->
+<!-- ═══════════════════════════════════
+     CTF CHALLENGE MODAL
+     ═══════════════════════════════════ -->
 <div id="ctf-modal" class="quiz-modal">
   <div class="quiz-modal-content ctf-modal-content" id="ctf-modal-body">
     <!-- populated dynamically by static/js/ctf.js -->
   </div>
 </div>
 
-<!-- Threat Pulse dashboard modal -->
+<!-- ═══════════════════════════════════
+     THREAT PULSE MODAL
+     ═══════════════════════════════════ -->
 <div id="tp-modal" class="quiz-modal">
   <div class="quiz-modal-content tp-modal-content">
     <div class="tp-hdr">
@@ -398,11 +433,9 @@
   </div>
 </div>
 
-</main>
-
-
-
-<!-- Login overlay -->
+<!-- ═══════════════════════════════════
+     LOGIN OVERLAY
+     ═══════════════════════════════════ -->
 <div id="login-overlay" style="
   display:none; position:fixed; inset:0; z-index:9999;
   background:var(--bg-base); align-items:center; justify-content:center;
@@ -412,22 +445,19 @@
     border-radius:var(--r-xl); padding:48px 40px; max-width:400px; width:90%;
     text-align:center; box-shadow:var(--shadow-md);
   ">
-    <!-- Logo -->
     <div style="margin-bottom:28px;">
       <div style="display:inline-flex; align-items:center; justify-content:center;
         width:56px; height:56px; border-radius:var(--r-lg);
         background:linear-gradient(135deg,#1e40af,#0891b2);
         margin-bottom:16px;">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
       </div>
       <h1 style="font-size:22px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">CyberGuru AI</h1>
       <p style="font-size:14px; color:var(--text-secondary);">Your cybersecurity learning assistant</p>
     </div>
 
-    <!-- Sign in button -->
     <button onclick="window.location.href='/auth/login'" style="
       display:flex; align-items:center; justify-content:center; gap:12px;
       width:100%; padding:12px 20px; cursor:pointer;
@@ -435,9 +465,9 @@
       border-radius:var(--r-md); color:var(--text-primary);
       font-size:14px; font-weight:500; font-family:var(--font-ui);
       transition:all .2s; margin-bottom:16px;
-    " onmouseover="this.style.borderColor='var(--border-strong)';this.style.background='var(--bg-hover)'"
-       onmouseout="this.style.borderColor='var(--border-default)';this.style.background='var(--bg-surface)'">
-      <!-- Google G icon -->
+    "
+    onmouseover="this.style.borderColor='var(--border-strong)';this.style.background='var(--bg-hover)'"
+    onmouseout="this.style.borderColor='var(--border-default)';this.style.background='var(--bg-surface)'">
       <svg width="18" height="18" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -454,8 +484,9 @@
   </div>
 </div>
 
-<!-- Auth scripts -->
-
+<!-- ═══════════════════════════════════
+     SCRIPTS
+     ═══════════════════════════════════ -->
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ctf.js') }}"></script>
 <script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
@@ -463,7 +494,10 @@
 <script src="{{ url_for('static', filename='js/investigation_badge.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mentor.js') }}"></script>
 <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
-<!-- Settings Panel -->
+
+<!-- ═══════════════════════════════════
+     SETTINGS PANEL
+     ═══════════════════════════════════ -->
 <div id="settings-overlay" onclick="closeSettings()"></div>
 
 <div id="settings-panel">
@@ -476,7 +510,6 @@
     </button>
   </div>
 
-  <!-- Tabs -->
   <div class="sp-tabs">
     <button class="sp-tab active" onclick="switchTab('account')">Account</button>
     <button class="sp-tab" onclick="switchTab('appearance')">Appearance</button>
@@ -594,19 +627,19 @@
       <svg class="sp-link-arrow" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M7 7h10v10"/></svg>
     </a>
   </div>
-</div>
+</div><!-- /#settings-panel -->
 
-<!-- ═══════════════════════════════════════════════════════════
-      CYBER MENTOR — PREMIUM OVERLAY
-     ═══════════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════
+     CYBER MENTOR OVERLAY
+     ═══════════════════════════════════ -->
 <div id="mentor-overlay" role="dialog" aria-modal="true" aria-label="Cyber Mentor">
 
-  <!-- ══ LANDING PAGE ══ -->
+  <!-- LANDING PAGE -->
   <div class="mentor-landing" id="mentor-landing">
     <canvas class="ml-bg-canvas" id="ml-bg-canvas"></canvas>
 
     <div class="ml-scroll">
-      <!-- ── Hero ── -->
+      <!-- Hero -->
       <section class="ml-hero">
         <div class="ml-hero-content">
           <div class="ml-hero-badge">AI-POWERED CYBERSECURITY TRAINING</div>
@@ -631,7 +664,7 @@
         </div>
       </section>
 
-      <!-- ── Continue Learning ── -->
+      <!-- Continue Learning -->
       <section class="ml-section" id="ml-continue-section" style="display:none">
         <div class="ml-continue-card" id="ml-continue-card">
           <div class="ml-continue-icon" id="ml-continue-icon">👋</div>
@@ -646,7 +679,7 @@
         </div>
       </section>
 
-      <!-- ── Learning Paths ── -->
+      <!-- Learning Paths -->
       <section class="ml-section">
         <div class="ml-section-header">
           <h2 class="ml-section-title">Learning Paths</h2>
@@ -655,7 +688,7 @@
         <div class="ml-paths-grid" id="ml-paths-grid"></div>
       </section>
 
-      <!-- ── Why Learn With Cyber Mentor ── -->
+      <!-- Why Learn -->
       <section class="ml-section">
         <div class="ml-section-header">
           <h2 class="ml-section-title">Why Learn With Cyber Mentor</h2>
@@ -680,7 +713,7 @@
         </div>
       </section>
 
-      <!-- ── Learning Journey Timeline ── -->
+      <!-- Learning Journey Timeline -->
       <section class="ml-section">
         <div class="ml-section-header">
           <h2 class="ml-section-title">Your Learning Journey</h2>
@@ -689,7 +722,7 @@
         <div class="ml-timeline" id="ml-timeline"></div>
       </section>
 
-      <!-- ── Stats ── -->
+      <!-- Stats -->
       <section class="ml-section ml-stats-section">
         <div class="ml-stats-grid">
           <div class="ml-stat-card"><span class="ml-stat-number">40+</span><span class="ml-stat-label">Topics Available</span></div>
@@ -699,7 +732,7 @@
         </div>
       </section>
 
-      <!-- ── Achievement Preview ── -->
+      <!-- Achievement Preview -->
       <section class="ml-section">
         <div class="ml-section-header">
           <h2 class="ml-section-title">Achievements</h2>
@@ -708,7 +741,7 @@
         <div class="ml-badges-grid" id="ml-badges-grid"></div>
       </section>
 
-      <!-- ── Final CTA ── -->
+      <!-- Final CTA -->
       <section class="ml-cta-section">
         <div class="ml-cta-card">
           <h2 class="ml-cta-title">Ready to Become a Cybersecurity Professional?</h2>
@@ -720,15 +753,14 @@
         </div>
       </section>
 
-      <!-- ── Footer ── -->
       <div class="ml-footer">
         <span>CyberGuru AI — Mentor Mode</span>
         <span>Master Cybersecurity. One Lesson at a Time.</span>
       </div>
-    </div>
-  </div>
+    </div><!-- /.ml-scroll -->
+  </div><!-- /.mentor-landing -->
 
-  <!-- Topbar -->
+  <!-- Mentor Topbar -->
   <div class="mentor-topbar">
     <div class="mentor-topbar-logo">
       <div class="mentor-topbar-logo-icon">
@@ -754,10 +786,10 @@
     </button>
   </div>
 
-  <!-- Body: sidebar + content -->
+  <!-- Mentor Body -->
   <div class="mentor-body">
 
-    <!-- ── SIDEBAR ── -->
+    <!-- Sidebar Nav -->
     <nav class="mentor-nav" role="tablist" aria-label="Mentor sections">
       <button class="mentor-nav-item active" id="tab-dashboard" onclick="switchMentorTab('dashboard')" role="tab" aria-selected="true">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
@@ -786,9 +818,7 @@
       </button>
     </nav>
 
-    <!-- ── CONTENT PANELS ── -->
-
-    <!-- DASHBOARD -->
+    <!-- DASHBOARD panel -->
     <div class="mentor-panel active" id="panel-dashboard">
       <div class="mdash-wrap">
         <div class="mdash-grid">
@@ -825,8 +855,8 @@
             </div>
           </div>
         </div>
-
       </div>
+
       <!-- Analytics cards -->
       <div class="mdash-analytics-grid">
         <div class="mdash-analytics-card" id="activity-chart-card">
@@ -849,6 +879,7 @@
           <div class="mdash-heatmap-legend" id="mdash-heatmap-legend"></div>
         </div>
       </div>
+
       <!-- Most Active Domains -->
       <div class="mdash-domains-card">
         <div class="mdash-analytics-header">
@@ -857,13 +888,12 @@
         </div>
         <div class="mdash-domains-bars" id="mdash-domains-bars"></div>
       </div>
-    </div>
+    </div><!-- /#panel-dashboard -->
 
-    <!-- ROADMAP -->
+    <!-- ROADMAP panel -->
     <div class="mentor-panel" id="panel-roadmap">
       <div class="roadmap-container">
 
-        <!-- ── Domain selector (shown when no domain is active) ── -->
         <div id="domain-selector">
           <div class="mentor-section-title">Choose Your Learning Path</div>
           <div class="domain-ai-prompt">
@@ -873,9 +903,7 @@
               Ask AI to Recommend
             </button>
           </div>
-          <div class="domain-grid" id="domain-grid">
-            <!-- injected by JS -->
-          </div>
+          <div class="domain-grid" id="domain-grid"></div>
           <div class="domain-ai-widget" id="domain-ai-widget" style="display:none">
             <div class="domain-ai-header">
               <span>Tell AI About Yourself</span>
@@ -888,7 +916,6 @@
           </div>
         </div>
 
-        <!-- ── Active domain roadmap (shown when a domain is selected) ── -->
         <div id="domain-roadmap-view" style="display:none">
           <div class="domain-header" id="domain-header">
             <div class="domain-header-info">
@@ -915,9 +942,9 @@
         </div>
 
       </div>
-    </div>
+    </div><!-- /#panel-roadmap -->
 
-    <!-- ── Switch Path Confirmation Modal ── -->
+    <!-- Switch Path Confirmation Modal -->
     <div class="switch-modal" id="switch-modal" style="display:none" onclick="if(event.target===this) cancelSwitchDomain()">
       <div class="switch-modal-content">
         <div class="switch-modal-icon">⚠️</div>
@@ -931,11 +958,9 @@
       </div>
     </div>
 
-    <!-- ══ AI CHAT — Learning Workspace ══ -->
+    <!-- AI CHAT panel -->
     <div class="mentor-panel" id="panel-chat">
       <div class="mchat-layout">
-
-        <!-- ── Left Sidebar: History ── -->
         <aside class="mchat-sidebar" id="mchat-sidebar">
           <div class="mchat-sidebar-header">
             <div class="mchat-sidebar-title">History</div>
@@ -948,7 +973,6 @@
           <div class="mchat-history-list" id="mchat-history-list"></div>
         </aside>
 
-        <!-- ── Chat Area ── -->
         <div class="mchat-main" id="mchat-main">
           <div class="mentor-chat-msgs" id="mentor-chat-msgs">
             <div class="mentor-msg">
@@ -964,9 +988,9 @@
           </div>
         </div>
       </div>
-    </div>
+    </div><!-- /#panel-chat -->
 
-    <!-- QUIZ -->
+    <!-- QUIZ panel -->
     <div class="mentor-panel" id="panel-quiz">
       <div class="mentor-quiz-wrap">
         <div id="quiz-selector">
@@ -990,9 +1014,9 @@
           </div>
         </div>
       </div>
-    </div>
+    </div><!-- /#panel-quiz -->
 
-    <!-- TERMINAL -->
+    <!-- TERMINAL panel -->
     <div class="mentor-panel" id="panel-terminal">
       <div class="mterm-wrap">
         <div class="mentor-section-title">Terminal Simulator</div>
@@ -1007,21 +1031,50 @@
           <input type="text" id="mterm-input" class="mterm-input" placeholder="type a command..." autofocus onkeydown="mtermKeydown(event)">
         </div>
       </div>
-    </div>
+    </div><!-- /#panel-terminal -->
 
-    <!-- BADGES -->
+    <!-- BADGES panel -->
     <div class="mentor-panel" id="panel-badges">
       <div class="mbadge-wrap">
         <div class="mentor-section-title">Achievements & Badges</div>
-        <div class="mbadge-grid" id="mbadge-grid">
-          <!-- injected by JS -->
-        </div>
+        <div class="mbadge-grid" id="mbadge-grid"></div>
       </div>
-    </div>
+    </div><!-- /#panel-badges -->
 
   </div><!-- /.mentor-body -->
 </div><!-- /#mentor-overlay -->
 
-</body>
+<!-- ═══════════════════════════════════
+     INVESTIGATE / TRIAGE PANEL
+     ═══════════════════════════════════ -->
+<div class="investigate-overlay" id="investigate-overlay" onclick="closeInvestigatePanel()"></div>
+<div class="investigate-panel" id="investigate-panel" role="dialog" aria-label="Investigate artifact">
+  <div class="investigate-header">
+    <div class="investigate-title">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      Investigate
+    </div>
+    <div class="investigate-type-row">
+      <button class="inv-type-btn active" data-type="auto" onclick="setInvType(this,'auto')">Auto</button>
+      <button class="inv-type-btn" data-type="log" onclick="setInvType(this,'log')">Log</button>
+      <button class="inv-type-btn" data-type="phishing_email" onclick="setInvType(this,'phishing_email')">Email</button>
+      <button class="inv-type-btn" data-type="malware" onclick="setInvType(this,'malware')">Malware</button>
+      <button class="inv-type-btn" data-type="url" onclick="setInvType(this,'url')">URL</button>
+    </div>
+    <button class="investigate-close" onclick="closeInvestigatePanel()" aria-label="Close">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <textarea class="investigate-textarea" id="investigate-input" placeholder="Paste a log, phishing email, malware report, or URL…" rows="8"></textarea>
+  <div class="investigate-actions">
+    <span class="investigate-hint">Extracts IOCs · MITRE ATT&amp;CK · AbuseIPDB · VirusTotal</span>
+    <button class="investigate-run-btn" id="investigate-run-btn" onclick="runInvestigate()">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Analyze
+    </button>
+  </div>
+  <div class="investigate-result" id="investigate-result"></div>
+</div><!-- /.investigate-panel -->
 
+</body>
 </html>

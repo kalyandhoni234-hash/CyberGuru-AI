@@ -102,6 +102,17 @@
     </div>
   </div>
 
+  <!-- Cyber Mentor sidebar button -->
+  <button class="mentor-sidebar-btn" onclick="openMentorOverlay()" aria-label="Open Cyber Mentor">
+    <span class="mentor-sb-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+      </svg>
+    </span>
+    Cyber Mentor
+    <span class="mentor-sb-badge">NEW</span>
+  </button>
+
   <div class="history-section">
     <div class="history-label">Recent</div>
     <div class="history-list" id="history-list">
@@ -445,6 +456,7 @@
 <script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
 <script src="{{ url_for('static', filename='js/threat_pulse.js') }}"></script>
 <script src="{{ url_for('static', filename='js/investigation_badge.js') }}"></script>
+<script src="{{ url_for('static', filename='js/mentor.js') }}"></script>
 <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 <!-- Settings Panel -->
 <div id="settings-overlay" onclick="closeSettings()"></div>
@@ -578,6 +590,433 @@
     </a>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════════
+      CYBER MENTOR — PREMIUM OVERLAY
+     ═══════════════════════════════════════════════════════════ -->
+<div id="mentor-overlay" role="dialog" aria-modal="true" aria-label="Cyber Mentor">
+
+  <!-- ══ LANDING PAGE ══ -->
+  <div class="mentor-landing" id="mentor-landing">
+    <canvas class="ml-bg-canvas" id="ml-bg-canvas"></canvas>
+
+    <div class="ml-scroll">
+      <!-- ── Hero ── -->
+      <section class="ml-hero">
+        <div class="ml-hero-content">
+          <div class="ml-hero-badge">AI-POWERED CYBERSECURITY TRAINING</div>
+          <h1 class="ml-hero-title">Master Cybersecurity<br><span class="ml-hero-gradient">From Beginner to Security Engineer</span></h1>
+          <p class="ml-hero-sub">Learn networking, operating systems, ethical hacking, web security, threat analysis, and real-world cybersecurity through structured AI-guided learning.</p>
+          <div class="ml-hero-actions">
+            <button class="ml-btn ml-btn-primary" onclick="dismissLanding()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Start Learning
+            </button>
+            <button class="ml-btn ml-btn-secondary" onclick="dismissLanding('roadmap')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+              Explore Roadmap
+            </button>
+          </div>
+          <div class="ml-hero-metrics">
+            <div class="ml-hero-metric"><span class="ml-metric-val">40+</span><span class="ml-metric-lbl">Topics</span></div>
+            <div class="ml-hero-metric"><span class="ml-metric-val">20+</span><span class="ml-metric-lbl">Labs</span></div>
+            <div class="ml-hero-metric"><span class="ml-metric-val">100+</span><span class="ml-metric-lbl">Quizzes</span></div>
+            <div class="ml-hero-metric"><span class="ml-metric-val">8</span><span class="ml-metric-lbl">Domains</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Continue Learning ── -->
+      <section class="ml-section" id="ml-continue-section" style="display:none">
+        <div class="ml-continue-card" id="ml-continue-card">
+          <div class="ml-continue-icon" id="ml-continue-icon">👋</div>
+          <div class="ml-continue-info">
+            <div class="ml-continue-greeting" id="ml-continue-greeting">Welcome Back</div>
+            <div class="ml-continue-track"><span class="ml-continue-label">Current Track:</span> <span id="ml-continue-track">—</span></div>
+            <div class="ml-continue-lesson"><span class="ml-continue-label">Current Lesson:</span> <span id="ml-continue-lesson">—</span></div>
+            <div class="ml-continue-bar-wrap"><div class="ml-continue-bar-fill" id="ml-continue-bar-fill"></div></div>
+            <div class="ml-continue-pct" id="ml-continue-pct">0%</div>
+          </div>
+          <button class="ml-btn ml-btn-primary ml-continue-btn" onclick="dismissLanding()">Continue Journey</button>
+        </div>
+      </section>
+
+      <!-- ── Learning Paths ── -->
+      <section class="ml-section">
+        <div class="ml-section-header">
+          <h2 class="ml-section-title">Learning Paths</h2>
+          <p class="ml-section-desc">Choose your cybersecurity journey. Each path is curated with hands-on lessons, quizzes, and AI guidance.</p>
+        </div>
+        <div class="ml-paths-grid" id="ml-paths-grid"></div>
+      </section>
+
+      <!-- ── Why Learn With Cyber Mentor ── -->
+      <section class="ml-section">
+        <div class="ml-section-header">
+          <h2 class="ml-section-title">Why Learn With Cyber Mentor</h2>
+          <p class="ml-section-desc">Everything you need to go from beginner to security professional.</p>
+        </div>
+        <div class="ml-features-grid">
+          <div class="ml-feature-card">
+            <div class="ml-feature-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+            <h3 class="ml-feature-title">AI Mentor</h3>
+            <p class="ml-feature-desc">Personalized cybersecurity guidance powered by AI. Ask questions, get explanations, and receive real-time feedback on your learning journey.</p>
+          </div>
+          <div class="ml-feature-card">
+            <div class="ml-feature-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
+            <h3 class="ml-feature-title">Hands-On Practice</h3>
+            <p class="ml-feature-desc">Interactive quizzes, simulated terminal exercises, and practical labs that reinforce your learning with real-world cybersecurity scenarios.</p>
+          </div>
+          <div class="ml-feature-card">
+            <div class="ml-feature-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+            <h3 class="ml-feature-title">Structured Roadmap</h3>
+            <p class="ml-feature-desc">Follow a complete learning path from beginner to advanced. Each phase unlocks as you progress, ensuring you build a strong foundation first.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Learning Journey Timeline ── -->
+      <section class="ml-section">
+        <div class="ml-section-header">
+          <h2 class="ml-section-title">Your Learning Journey</h2>
+          <p class="ml-section-desc">A structured progression from foundation to mastery.</p>
+        </div>
+        <div class="ml-timeline" id="ml-timeline"></div>
+      </section>
+
+      <!-- ── Stats ── -->
+      <section class="ml-section ml-stats-section">
+        <div class="ml-stats-grid">
+          <div class="ml-stat-card"><span class="ml-stat-number">40+</span><span class="ml-stat-label">Topics Available</span></div>
+          <div class="ml-stat-card"><span class="ml-stat-number">20+</span><span class="ml-stat-label">Interactive Labs</span></div>
+          <div class="ml-stat-card"><span class="ml-stat-number">100+</span><span class="ml-stat-label">Quizzes</span></div>
+          <div class="ml-stat-card"><span class="ml-stat-number">8</span><span class="ml-stat-label">Learning Paths</span></div>
+        </div>
+      </section>
+
+      <!-- ── Achievement Preview ── -->
+      <section class="ml-section">
+        <div class="ml-section-header">
+          <h2 class="ml-section-title">Achievements</h2>
+          <p class="ml-section-desc">Earn badges as you master new skills.</p>
+        </div>
+        <div class="ml-badges-grid" id="ml-badges-grid"></div>
+      </section>
+
+      <!-- ── Final CTA ── -->
+      <section class="ml-cta-section">
+        <div class="ml-cta-card">
+          <h2 class="ml-cta-title">Ready to Become a Cybersecurity Professional?</h2>
+          <p class="ml-cta-desc">Join thousands of learners mastering cybersecurity with AI-guided training. Start your journey today.</p>
+          <button class="ml-btn ml-btn-primary ml-btn-lg" onclick="dismissLanding()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Launch Mentor Dashboard
+          </button>
+        </div>
+      </section>
+
+      <!-- ── Footer ── -->
+      <div class="ml-footer">
+        <span>CyberGuru AI — Mentor Mode</span>
+        <span>Master Cybersecurity. One Lesson at a Time.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Topbar -->
+  <div class="mentor-topbar">
+    <div class="mentor-topbar-logo">
+      <div class="mentor-topbar-logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+        </svg>
+      </div>
+      <div>
+        <div class="mentor-topbar-title">Cyber Mentor</div>
+        <div class="mentor-topbar-sub">Premium Learning Dashboard</div>
+      </div>
+    </div>
+    <div class="mentor-topbar-stats">
+      <div class="mentor-topbar-stat"><span class="mts-value" id="mts-dashboard-done">0</span><span class="mts-label">Done</span></div>
+      <div class="mentor-topbar-stat"><span class="mts-value" id="mts-dashboard-streak">0</span><span class="mts-label">Streak</span></div>
+      <div class="mentor-topbar-stat"><span class="mts-value" id="mts-dashboard-score">0</span><span class="mts-label">Quiz Score</span></div>
+    </div>
+    <button class="mentor-close-btn" onclick="closeMentorOverlay()">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+      Close
+    </button>
+  </div>
+
+  <!-- Body: sidebar + content -->
+  <div class="mentor-body">
+
+    <!-- ── SIDEBAR ── -->
+    <nav class="mentor-nav" role="tablist" aria-label="Mentor sections">
+      <button class="mentor-nav-item active" id="tab-dashboard" onclick="switchMentorTab('dashboard')" role="tab" aria-selected="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="mentor-nav-item" id="tab-roadmap" onclick="switchMentorTab('roadmap')" role="tab" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+        <span>Roadmap</span>
+      </button>
+      <button class="mentor-nav-item" id="tab-chat" onclick="switchMentorTab('chat')" role="tab" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <span>AI Chat</span>
+      </button>
+      <button class="mentor-nav-item" id="tab-quiz" onclick="switchMentorTab('quiz')" role="tab" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Quizzes</span>
+        <span class="mnav-badge" id="nav-quiz-badge">NEW</span>
+      </button>
+      <button class="mentor-nav-item" id="tab-terminal" onclick="switchMentorTab('terminal')" role="tab" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span>Terminal</span>
+      </button>
+      <button class="mentor-nav-item" id="tab-badges" onclick="switchMentorTab('badges')" role="tab" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+        <span>Badges</span>
+      </button>
+    </nav>
+
+    <!-- ── CONTENT PANELS ── -->
+
+    <!-- DASHBOARD -->
+    <div class="mentor-panel active" id="panel-dashboard">
+      <div class="mdash-wrap">
+        <div class="mdash-grid">
+          <div class="mdash-card mdash-card-primary">
+            <div class="mdash-card-icon">📊</div>
+            <div class="mdash-card-body">
+              <div class="mdash-card-value" id="mdash-progress-pct">0%</div>
+              <div class="mdash-card-label">Overall Progress</div>
+              <div class="mdash-card-bar"><div class="mdash-card-bar-fill" id="mdash-progress-fill" style="width:0%"></div></div>
+            </div>
+          </div>
+          <div class="mdash-card">
+            <div class="mdash-card-icon">✅</div>
+            <div class="mdash-card-body">
+              <div class="mdash-card-value" id="mdash-topics-done">0</div>
+              <div class="mdash-card-label">Topics Completed</div>
+              <div class="mdash-card-sub">of <span id="mdash-topics-total">0</span> total</div>
+            </div>
+          </div>
+          <div class="mdash-card">
+            <div class="mdash-card-icon">🔥</div>
+            <div class="mdash-card-body">
+              <div class="mdash-card-value" id="mdash-streak">0</div>
+              <div class="mdash-card-label">Day Streak</div>
+              <div class="mdash-card-sub">keep going!</div>
+            </div>
+          </div>
+          <div class="mdash-card">
+            <div class="mdash-card-icon">🏆</div>
+            <div class="mdash-card-body">
+              <div class="mdash-card-value" id="mdash-badges">0</div>
+              <div class="mdash-card-label">Badges Earned</div>
+              <div class="mdash-card-sub"><span id="mdash-badges-next">Complete first topic</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- Analytics cards -->
+      <div class="mdash-analytics-grid">
+        <div class="mdash-analytics-card" id="activity-chart-card">
+          <div class="mdash-analytics-header">
+            <div class="mdash-analytics-title">Learning Activity</div>
+            <div class="mdash-analytics-sub">Track your cybersecurity learning journey</div>
+          </div>
+          <div class="mdash-chart-wrap" id="mdash-chart-wrap">
+            <svg class="mdash-chart-svg" id="mdash-chart-svg" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+          <div class="mdash-chart-legend" id="mdash-chart-legend"></div>
+          <div class="mdash-chart-tooltip" id="mdash-chart-tooltip" style="display:none"></div>
+        </div>
+        <div class="mdash-analytics-card" id="heatmap-card">
+          <div class="mdash-analytics-header">
+            <div class="mdash-analytics-title">Learning Consistency</div>
+            <div class="mdash-analytics-sub">Daily activity over the last 30 days</div>
+          </div>
+          <div class="mdash-heatmap-wrap" id="mdash-heatmap-wrap"></div>
+          <div class="mdash-heatmap-legend" id="mdash-heatmap-legend"></div>
+        </div>
+      </div>
+      <!-- Most Active Domains -->
+      <div class="mdash-domains-card">
+        <div class="mdash-analytics-header">
+          <div class="mdash-analytics-title">Most Active Domains</div>
+          <div class="mdash-analytics-sub">Completion progress across learning paths</div>
+        </div>
+        <div class="mdash-domains-bars" id="mdash-domains-bars"></div>
+      </div>
+    </div>
+
+    <!-- ROADMAP -->
+    <div class="mentor-panel" id="panel-roadmap">
+      <div class="roadmap-container">
+
+        <!-- ── Domain selector (shown when no domain is active) ── -->
+        <div id="domain-selector">
+          <div class="mentor-section-title">Choose Your Learning Path</div>
+          <div class="domain-ai-prompt">
+            <span>Not sure which path fits you?</span>
+            <button class="domain-ask-ai-btn" onclick="openDomainAI()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Ask AI to Recommend
+            </button>
+          </div>
+          <div class="domain-grid" id="domain-grid">
+            <!-- injected by JS -->
+          </div>
+          <div class="domain-ai-widget" id="domain-ai-widget" style="display:none">
+            <div class="domain-ai-header">
+              <span>Tell AI About Yourself</span>
+              <button class="domain-ai-close" onclick="closeDomainAI()">✕</button>
+            </div>
+            <p class="domain-ai-hint">Describe your background, interests, and goals — the AI will recommend the best path.</p>
+            <textarea id="domain-ai-input" class="domain-ai-textarea" rows="3" placeholder="e.g. I have basic IT knowledge and I'm interested in finding vulnerabilities and hacking. I enjoy hands-on challenges..."></textarea>
+            <button class="domain-ai-submit" onclick="askAIRoadmap()">Get Recommendation</button>
+            <div id="domain-ai-result" class="domain-ai-result"></div>
+          </div>
+        </div>
+
+        <!-- ── Active domain roadmap (shown when a domain is selected) ── -->
+        <div id="domain-roadmap-view" style="display:none">
+          <div class="domain-header" id="domain-header">
+            <div class="domain-header-info">
+              <span class="domain-header-icon" id="domain-header-icon">🛡️</span>
+              <div>
+                <div class="domain-header-name" id="domain-header-name">Domain Name</div>
+                <div class="domain-header-desc" id="domain-header-desc">Domain description</div>
+              </div>
+            </div>
+            <button class="domain-change-btn" onclick="showSwitchWarning()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+              Change Path
+            </button>
+          </div>
+          <div class="domain-core-section" id="domain-core-section">
+            <div class="domain-core-toggle" onclick="toggleCoreSection()">
+              <span>📚 Core Foundations</span>
+              <span class="domain-core-count" id="domain-core-count">0/0</span>
+              <svg class="domain-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
+            </div>
+            <div class="domain-core-body" id="domain-core-body"></div>
+          </div>
+          <div id="roadmap-phases"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Switch Path Confirmation Modal ── -->
+    <div class="switch-modal" id="switch-modal" style="display:none" onclick="if(event.target===this) cancelSwitchDomain()">
+      <div class="switch-modal-content">
+        <div class="switch-modal-icon">⚠️</div>
+        <div class="switch-modal-title" id="switch-modal-title">Change Learning Path?</div>
+        <p id="switch-modal-body">Switching to <strong id="switch-target-name">another path</strong> will reset domain-specific progress.</p>
+        <p class="switch-modal-note">✅ Core foundation topics will be kept.</p>
+        <div class="switch-modal-actions">
+          <button class="quiz-btn-primary" id="switch-confirm-btn" onclick="confirmSwitchDomain()">Switch Path</button>
+          <button class="quiz-btn-secondary" onclick="cancelSwitchDomain()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AI CHAT — Learning Workspace ══ -->
+    <div class="mentor-panel" id="panel-chat">
+      <div class="mchat-layout">
+
+        <!-- ── Left Sidebar: History ── -->
+        <aside class="mchat-sidebar" id="mchat-sidebar">
+          <div class="mchat-sidebar-header">
+            <div class="mchat-sidebar-title">History</div>
+            <button class="mchat-new-btn" onclick="createNewConversation()" title="New conversation">+</button>
+          </div>
+          <div class="mchat-search-wrap" id="mchat-search-wrap">
+            <svg class="mchat-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="mchat-search-input" id="mchat-search-input" type="text" placeholder="Search conversations..." oninput="filterMentorHistory()">
+          </div>
+          <div class="mchat-history-list" id="mchat-history-list"></div>
+        </aside>
+
+        <!-- ── Chat Area ── -->
+        <div class="mchat-main" id="mchat-main">
+          <div class="mentor-chat-msgs" id="mentor-chat-msgs">
+            <div class="mentor-msg">
+              <div class="mentor-msg-avatar">🛡️</div>
+              <div class="mentor-msg-bubble">Hey! I'm your Cyber Mentor. Ask me anything about cybersecurity.</div>
+            </div>
+          </div>
+          <div class="mentor-chat-input-wrap">
+            <textarea id="mentor-chat-input" class="mentor-chat-input" placeholder="Ask your mentor anything..." rows="1" onkeydown="mentorChatKeydown(event)"></textarea>
+            <button class="mentor-chat-send" id="mentor-send-btn" onclick="mentorSendMessage()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUIZ -->
+    <div class="mentor-panel" id="panel-quiz">
+      <div class="mentor-quiz-wrap">
+        <div id="quiz-selector">
+          <div class="mentor-section-title">Choose a Topic</div>
+          <div class="quiz-topic-grid" id="quiz-topic-grid"></div>
+          <button class="quiz-btn-primary" id="start-quiz-btn" onclick="startMentorQuiz()" disabled>Start Quiz</button>
+        </div>
+        <div class="mentor-quiz-question-area" id="quiz-question-area">
+          <div class="quiz-q-header"><span class="quiz-q-num" id="quiz-q-num">Q 1 / 5</span><span class="quiz-q-score" id="quiz-q-score">Score: 0</span></div>
+          <div class="quiz-q-text" id="quiz-q-text"></div>
+          <div class="quiz-q-options" id="quiz-q-options"></div>
+          <div class="quiz-feedback" id="quiz-feedback"></div>
+          <button class="quiz-btn-primary" id="quiz-next-btn" onclick="mentorQuizNext()" style="display:none">Next Question →</button>
+        </div>
+        <div class="quiz-result-card" id="quiz-result-card">
+          <div class="quiz-result-emoji" id="quiz-result-emoji">🎉</div>
+          <div class="quiz-result-score" id="quiz-result-score">0 / 5</div>
+          <div class="quiz-result-msg" id="quiz-result-msg"></div>
+          <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap">
+            <button class="quiz-btn-primary" onclick="resetMentorQuiz()">Try Another</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TERMINAL -->
+    <div class="mentor-panel" id="panel-terminal">
+      <div class="mterm-wrap">
+        <div class="mentor-section-title">Terminal Simulator</div>
+        <div class="mterm-desc">Type Linux commands below. Try: <code>help</code>, <code>ls</code>, <code>ping</code>, <code>nmap</code>, <code>ifconfig</code></div>
+        <div class="mterm-screen" id="mterm-screen">
+          <div class="mterm-line"><span class="mterm-prompt">mentor@cyberguru:~$</span> <span class="mterm-cmd">echo "Welcome to Cyber Mentor Terminal"</span></div>
+          <div class="mterm-line mterm-output">Welcome to Cyber Mentor Terminal</div>
+          <div class="mterm-line"><span class="mterm-prompt">mentor@cyberguru:~$</span> <span class="mterm-cmd">type help to see available commands</span></div>
+        </div>
+        <div class="mterm-input-line">
+          <span class="mterm-prompt-sm">$</span>
+          <input type="text" id="mterm-input" class="mterm-input" placeholder="type a command..." autofocus onkeydown="mtermKeydown(event)">
+        </div>
+      </div>
+    </div>
+
+    <!-- BADGES -->
+    <div class="mentor-panel" id="panel-badges">
+      <div class="mbadge-wrap">
+        <div class="mentor-section-title">Achievements & Badges</div>
+        <div class="mbadge-grid" id="mbadge-grid">
+          <!-- injected by JS -->
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.mentor-body -->
+</div><!-- /#mentor-overlay -->
+
 </body>
 
 </html>

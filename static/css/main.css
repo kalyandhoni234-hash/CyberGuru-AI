@@ -2019,7 +2019,7 @@ body.theme-oled .hljs-attr      { color: #c4b5fd; }
   padding: 14px 20px 22px;
   position: relative;
   z-index: 2;
-  background: linear-gradient(0deg, rgba(10,14,38,.96) 68%, rgba(10,14,38,.82) 100%);
+  background: linear-gradient(0deg, rgba(10,14,38,.90) 0%, rgba(10,14,38,.72) 58%, transparent 100%);
   border-top: 1px solid rgba(130,150,255,.1);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -3910,6 +3910,13 @@ body.theme-light .input-wrapper {
 body.theme-light .input-wrapper:focus-within {
   border-color: var(--blue-vivid);
   box-shadow: 0 0 0 3px rgba(67,56,202,.1), 0 1px 4px rgba(30,20,80,.07);
+}
+
+body.theme-light #input-area {
+  background: linear-gradient(0deg, rgba(245,244,240,.98) 0%, rgba(245,244,240,.92) 58%, rgba(245,244,240,.72) 100%);
+  border-top-color: rgba(80,70,120,.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 /* Send button */

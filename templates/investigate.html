@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Investigation Center | CyberGuru AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}?v=2">
+<style>
+:root {
+  --ic-bg: #07070E;
+  --ic-surface: #0C0C18;
+  --ic-panel: rgba(14,14,26,.92);
+  --ic-card: rgba(255,255,255,.03);
+  --ic-border: rgba(255,255,255,.07);
+  --ic-border-strong: rgba(139,92,246,.2);
+  --ic-hover: rgba(255,255,255,.05);
+  --ic-primary: #8B5CF6;
+  --ic-secondary: #00E5FF;
+  --ic-success: #00FF88;
+  --ic-danger: #FF4757;
+  --ic-warning: #FFA502;
+  --ic-text: #EAEAF0;
+  --ic-text-secondary: #9090AA;
+  --ic-text-muted: #555570;
+  --ic-radius: 16px;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-ui: 'Inter', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+body {
+  background: var(--ic-bg); color: var(--ic-text);
+  font-family: var(--font-ui); font-size:14px;
+}
+
+/* ── Focus visible for keyboard nav ── */
+:focus-visible { outline:2px solid var(--ic-primary); outline-offset:2px; }
+button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid var(--ic-primary); outline-offset:2px; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--ic-border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.12); }
+
+/* ── App Shell ── */
+.ic-app { display:flex; flex-direction:column; height:100vh; }
+
+/* ── Topbar ── */
+.ic-topbar {
+  display:flex; align-items:center; gap:16px;
+  padding:0 24px; height:52px;
+  background:rgba(7,7,14,.95);
+  border-bottom:1px solid var(--ic-border);
+  flex-shrink:0; z-index:20;
+  backdrop-filter:blur(16px);
+}
+.ic-topbar-logo {
+  display:flex; align-items:center; gap:10px;
+  font-weight:700; font-size:15px; letter-spacing:-.01em;
+}
+.ic-topbar-logo svg { width:20px; height:20px; }
+.ic-topbar-nav { display:flex; gap:4px; margin-left:20px; }
+.ic-topbar-nav a {
+  padding:6px 14px; border-radius:8px; font-size:12px; font-weight:500;
+  color:var(--ic-text-secondary); text-decoration:none;
+  transition:all .18s;
+}
+.ic-topbar-nav a:hover { color:var(--ic-text); background:var(--ic-hover); }
+.ic-topbar-nav a.active { color:var(--ic-primary); background:rgba(139,92,246,.1); }
+.ic-topbar-right { margin-left:auto; display:flex; align-items:center; gap:14px; }
+.ic-topbar-back {
+  font-size:12px; font-weight:500; color:var(--ic-text-muted);
+  text-decoration:none; display:flex; align-items:center; gap:5px;
+  transition:color .15s;
+}
+.ic-topbar-back:hover { color:var(--ic-text); }
+.ic-topbar-user { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--ic-primary),var(--ic-secondary)); }
+
+/* ── Grid ── */
+.ic-grid { display:grid; grid-template-columns:240px minmax(720px,1fr) 360px; flex:1; overflow:hidden; }
+
+/* ── Left Panel ── */
+.ic-left {
+  background: var(--ic-panel); border-right:1px solid var(--ic-border);
+  overflow-y:auto; padding:16px;
+}
+.ic-section-title {
+  font-size:10px; font-weight:600; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--ic-text-muted); margin-bottom:10px;
+}
+.ic-type-list { display:flex; flex-direction:column; gap:2px; }
+.ic-type-item {
+  display:flex; align-items:center; gap:10px; padding:8px 10px;
+  border-radius:8px; cursor:pointer; transition:all .18s;
+  border:1px solid transparent; font-size:12.5px; color:var(--ic-text-secondary);
+  text-decoration:none;
+}
+.ic-type-item:hover { background:var(--ic-hover); color:var(--ic-text); }
+.ic-type-item.active {
+  background:rgba(139,92,246,.08); border-color:rgba(139,92,246,.18);
+  color:var(--ic-text); box-shadow:inset 2px 0 0 var(--ic-primary);
+  transition:all .18s ease-out;
+}
+.ic-type-icon { font-size:16px; flex-shrink:0; width:24px; text-align:center; }
+.ic-type-label { font-weight:500; }
+.ic-type-desc { font-size:10.5px; color:var(--ic-text-muted); margin-top:1px; line-height:1.3; }
+
+/* History section */
+.ic-hist-section { margin-top:20px; padding-top:16px; border-top:1px solid var(--ic-border); }
+.ic-hist-list { display:flex; flex-direction:column; gap:2px; }
+.ic-hist-empty {
+  font-size:11px; color:var(--ic-text-muted); padding:20px 0; text-align:center;
+  line-height:1.5;
+}
+.ic-hist-item {
+  display:flex; align-items:center; gap:8px; padding:7px 9px;
+  border-radius:7px; cursor:pointer; transition:all .15s;
+  border:1px solid transparent;
+}
+.ic-hist-item:hover { background:var(--ic-hover); border-color:var(--ic-border); }
+.ic-hist-item .h-sev {
+  width:3px; height:22px; border-radius:2px; flex-shrink:0;
+}
+.ic-hist-item .h-sev.critical { background:var(--ic-danger); }
+.ic-hist-item .h-sev.high { background:#FF6348; }
+.ic-hist-item .h-sev.medium { background:var(--ic-warning); }
+.ic-hist-item .h-sev.low { background:var(--ic-success); }
+.ic-hist-item .h-info { flex:1; min-width:0; }
+.ic-hist-item .h-verdict {
+  font-size:11.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.ic-hist-item .h-meta {
+  font-size:10px; color:var(--ic-text-muted); display:flex; gap:6px; margin-top:1px;
+}
+.ic-hist-delete {
+  opacity:0; background:none; border:none; color:var(--ic-text-muted);
+  cursor:pointer; padding:2px; border-radius:4px; transition:all .15s; font-size:10px;
+}
+.ic-hist-item:hover .ic-hist-delete { opacity:1; }
+.ic-hist-delete:hover { color:var(--ic-danger); background:rgba(255,71,87,.1); }
+
+/* ── Center Panel ── */
+.ic-center {
+  display:flex; flex-direction:column; overflow:hidden;
+  background: rgba(7,7,14,.3);
+}
+.ic-center-hdr {
+  padding:14px 20px; border-bottom:1px solid var(--ic-border); flex-shrink:0;
+}
+.ic-center-hdr h1 { font-size:16px; font-weight:600; letter-spacing:-.01em; }
+.ic-center-hdr p { font-size:12px; color:var(--ic-text-secondary); margin-top:3px; line-height:1.45; }
+
+.ic-work-area {
+  flex:1; padding:14px 20px 16px;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.ic-editor-wrap {
+  flex:1; position:relative;
+  border-radius:var(--ic-radius);
+  border:1px solid var(--ic-border);
+  overflow:hidden; display:flex; flex-direction:column;
+  background:var(--ic-surface);
+  transition:border-color .2s;
+}
+.ic-editor-wrap:focus-within {
+  border-color:rgba(139,92,246,.25);
+  box-shadow:0 0 0 3px rgba(139,92,246,.04);
+}
+.ic-dropzone {
+  position:absolute; inset:0; z-index:5;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(139,92,246,.06);
+  border:2px dashed rgba(139,92,246,.25);
+  border-radius:var(--ic-radius);
+  opacity:0; pointer-events:none;
+  transition:all .3s;
+  font-size:14px; color:var(--ic-primary); font-weight:500;
+  gap:8px;
+}
+.ic-dropzone .dz-icon { font-size:32px; opacity:.7; }
+.ic-dropzone.active { opacity:1; pointer-events:auto; }
+.ic-textarea {
+  flex:1; width:100%; padding:16px; border:none; outline:none; resize:none;
+  background:transparent; color:var(--ic-text);
+  font-family:var(--font-mono); font-size:13px; line-height:1.7;
+  min-height:160px;
+}
+.ic-textarea::placeholder { color:var(--ic-text-muted); }
+
+.ic-editor-actions {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 14px;
+  border-top:1px solid var(--ic-border);
+  background:rgba(0,0,0,.15);
+}
+.ic-editor-actions label, .ic-editor-actions button {
+  padding:6px 12px; border-radius:7px; font-size:11px; font-weight:500; cursor:pointer;
+  border:1px solid var(--ic-border); background:var(--ic-card);
+  color:var(--ic-text-secondary);
+  transition:all .18s; font-family:var(--font-ui);
+  display:inline-flex; align-items:center; gap:5px;
+}
+.ic-editor-actions button:hover { background:var(--ic-hover); color:var(--ic-text); }
+.ic-analyze-btn {
+  margin-left:auto;
+  padding:7px 22px !important;
+  background:linear-gradient(135deg,var(--ic-primary),var(--ic-secondary)) !important;
+  border-color:transparent !important; color:#fff !important; font-weight:600 !important;
+  font-size:12px !important;
+}
+.ic-analyze-btn:disabled { opacity:.9; cursor:not-allowed; }
+.ic-analyze-btn .ic-btn-loading { display:flex; align-items:center; gap:4px; }
+.ic-analyze-btn .ic-btn-loading .ic-dots { display:inline-flex; width:16px; }
+.ic-analyze-btn .ic-btn-loading .ic-dots::after { content:'...'; animation:ic-dots 1.2s steps(4,end) infinite; overflow:hidden; }
+@keyframes ic-dots { 0% { content:''; } 33% { content:'.'; } 66% { content:'..'; } 100% { content:'...'; } }
+.ic-analyze-btn .ic-btn-progress { display:block; width:100%; height:3px; background:rgba(255,255,255,.15); border-radius:2px; margin-top:4px; overflow:hidden; }
+.ic-analyze-btn .ic-btn-bar { display:block; height:100%; width:0%; background:var(--ic-secondary); border-radius:2px; transition:width .4s ease; }
+.ic-editor-actions .ic-file-label { position:relative; overflow:hidden; }
+.ic-editor-actions .ic-file-label input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.ic-char-count { font-size:10px; color:var(--ic-text-muted); font-family:var(--font-mono); }
+
+/* ── Right Panel ── */
+.ic-right {
+  background: var(--ic-panel); border-left:1px solid var(--ic-border);
+  overflow-y:auto; padding:14px;
+  display:flex; flex-direction:column; gap:10px;
+  position:sticky; top:0; align-self:start; max-height:100vh;
+}
+
+/* ── Pipeline ── */
+.ic-pipeline {
+  background:var(--ic-card); border:1px solid var(--ic-border);
+  border-radius:var(--ic-radius); padding:12px 14px;
+}
+.ic-pipeline-hdr {
+  font-size:10px; font-weight:600; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--ic-text-muted); margin-bottom:8px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.ic-pipeline-steps { display:flex; flex-direction:column; gap:3px; }
+.ic-step {
+  display:flex; align-items:center; gap:9px; padding:5px 0;
+  font-size:11.5px; color:var(--ic-text-muted); transition:all .3s;
+}
+.ic-step-icon {
+  width:18px; height:18px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:8px; font-weight:700;
+  border:1.5px solid var(--ic-text-muted); color:var(--ic-text-muted);
+  transition:all .3s;
+}
+.ic-step.done .ic-step-icon { border-color:var(--ic-success); background:var(--ic-success); color:#000; }
+.ic-step.done { color:var(--ic-success); }
+.ic-step.running .ic-step-icon { border-color:var(--ic-secondary); color:var(--ic-secondary); animation:ic-spin .8s linear infinite; box-shadow:0 0 8px rgba(0,229,255,.3); }
+.ic-step.running { color:var(--ic-secondary); animation:ic-pulse-glow .8s ease-in-out infinite alternate; }
+@keyframes ic-spin { 100% { transform:rotate(360deg); } }
+@keyframes ic-pulse-glow {
+  from { text-shadow:0 0 4px rgba(0,229,255,.1); }
+  to { text-shadow:0 0 12px rgba(0,229,255,.3); }
+}
+
+/* ── Result Cards ── */
+.ic-card {
+  background:var(--ic-card); border:1px solid var(--ic-border);
+  border-radius:var(--ic-radius); overflow:hidden;
+  animation:ic-card-in .35s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes ic-card-in {
+  from { opacity:0; transform:translateY(8px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.ic-card-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:9px 13px; border-bottom:1px solid var(--ic-border);
+  font-size:10px; font-weight:600; text-transform:uppercase;
+  letter-spacing:.08em; color:var(--ic-text-muted);
+}
+.ic-card-hdr .badge {
+  font-size:9px; padding:2px 7px; border-radius:5px; font-weight:600; text-transform:none; letter-spacing:0;
+}
+.ic-card-hdr .badge.critical { background:rgba(255,71,87,.15); color:var(--ic-danger); }
+.ic-card-hdr .badge.high { background:rgba(255,99,72,.15); color:#FF6348; }
+.ic-card-hdr .badge.medium { background:rgba(255,165,2,.15); color:var(--ic-warning); }
+.ic-card-hdr .badge.low { background:rgba(0,255,136,.1); color:var(--ic-success); }
+.ic-card-hdr .badge.info { background:rgba(139,92,246,.12); color:var(--ic-primary); }
+.ic-card-body { padding:12px 13px; }
+
+/* Risk Score */
+.ic-risk-score { text-align:center; padding:6px 0; }
+.ic-risk-ring { position:relative; width:72px; height:72px; margin:0 auto; }
+.ic-risk-ring svg { transform:rotate(-90deg); }
+.ic-risk-ring .rbg { fill:none; stroke:var(--ic-border); stroke-width:5; }
+.ic-risk-ring .rfg { fill:none; stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 1s ease; }
+.ic-risk-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; }
+.ic-risk-label { font-size:11px; color:var(--ic-text-secondary); margin-top:4px; font-weight:600; }
+.ic-risk-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
+.ic-risk-cell { text-align:center; padding:6px; border-radius:7px; background:rgba(255,255,255,.015); }
+.ic-risk-cell .lbl { font-size:9px; color:var(--ic-text-muted); text-transform:uppercase; letter-spacing:.06em; }
+.ic-risk-cell .val { font-size:13px; font-weight:600; margin-top:1px; }
+
+/* IOC Dashboard */
+.ic-ioc-group { margin-bottom:8px; }
+.ic-ioc-group:last-child { margin-bottom:0; }
+.ic-ioc-hdr {
+  font-size:11px; font-weight:600; color:var(--ic-text-secondary);
+  margin-bottom:5px; display:flex; align-items:center; gap:5px;
+}
+.ic-ioc-hdr .cnt { font-size:10px; color:var(--ic-text-muted); font-weight:400; }
+.ic-ioc-chips { display:flex; flex-wrap:wrap; gap:4px; }
+.ic-ioc-chip {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 9px; border-radius:5px;
+  font-size:11px; font-family:var(--font-mono);
+  background:rgba(255,255,255,.03); border:1px solid var(--ic-border);
+  cursor:pointer; transition:all .15s;
+  color:var(--ic-text-secondary); max-width:100%;
+  word-break:break-all;
+}
+.ic-ioc-chip:hover {
+  background:rgba(139,92,246,.08); border-color:rgba(139,92,246,.2);
+  color:var(--ic-text); box-shadow:0 2px 8px rgba(139,92,246,.1);
+}
+.ic-ioc-chip .copy-icon { font-size:8px; opacity:0; transition:opacity .15s; }
+.ic-ioc-chip:hover .copy-icon { opacity:.6; }
+.ic-ioc-empty {
+  text-align:center; padding:12px; color:var(--ic-text-muted); font-size:12px;
+}
+
+/* MITRE Cards */
+.ic-mitre-grid { display:flex; flex-direction:column; gap:5px; }
+.ic-mitre-card {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; border-radius:7px;
+  background:rgba(255,255,255,.015); border:1px solid var(--ic-border);
+  transition:border-color .15s;
+}
+.ic-mitre-card:hover { border-color:rgba(139,92,246,.15); }
+.ic-mitre-tactic {
+  font-size:9px; color:var(--ic-text-muted); text-transform:uppercase;
+  letter-spacing:.05em; margin-bottom:1px;
+}
+.ic-mitre-tech { font-size:12px; color:var(--ic-text); font-weight:500; }
+.ic-mitre-id {
+  font-size:10px; font-weight:600; font-family:var(--font-mono);
+  padding:2px 6px; border-radius:4px; flex-shrink:0; margin-left:auto;
+  background:rgba(139,92,246,.08); color:var(--ic-primary);
+}
+
+/* Threat Intel */
+.ic-ti-entry {
+  padding:7px 0; border-bottom:1px solid var(--ic-border);
+}
+.ic-ti-entry:last-child { border-bottom:none; padding-bottom:0; }
+.ic-ti-source { font-family:var(--font-mono); font-size:11px; font-weight:500; }
+.ic-ti-stats { display:flex; gap:8px; margin-top:3px; flex-wrap:wrap; }
+.ic-ti-stat { font-size:10px; display:flex; align-items:center; gap:3px; color:var(--ic-text-muted); }
+
+/* Report / Raw Findings */
+.ic-report-body {
+  font-size:12px; line-height:1.7; color:var(--ic-text-secondary);
+  white-space:pre-wrap; font-family:var(--font-mono);
+  max-height:260px; overflow-y:auto;
+}
+.ic-report-body::-webkit-scrollbar { width:4px; }
+.ic-report-body::-webkit-scrollbar-thumb { background:var(--ic-border); border-radius:2px; }
+.ic-empty-state {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  height:100%; color:var(--ic-text-muted); text-align:center; padding:30px;
+  animation:ic-card-in .35s cubic-bezier(.16,1,.3,1) both;
+}
+.ic-empty-state .icon { font-size:40px; margin-bottom:12px; opacity:.5; }
+.ic-empty-state h3 { font-size:15px; font-weight:600; margin-bottom:4px; color:var(--ic-text-secondary); }
+.ic-empty-state p { font-size:12px; max-width:320px; line-height:1.55; color:var(--ic-text-muted); }
+.ic-empty-state .actions { display:flex; gap:8px; margin-top:14px; }
+.ic-empty-state .actions button {
+  padding:8px 16px; border-radius:8px; font-size:12px; font-weight:500;
+  border:1px solid var(--ic-border); background:var(--ic-card);
+  color:var(--ic-text-secondary); cursor:pointer; font-family:var(--font-ui);
+  transition:all .15s;
+}
+.ic-empty-state .actions button:hover { background:var(--ic-hover); color:var(--ic-text); }
+.ic-empty-state .actions button.primary {
+  background:linear-gradient(135deg,var(--ic-primary),var(--ic-secondary));
+  border-color:transparent; color:#fff;
+}
+
+/* Export bar */
+.ic-export-bar {
+  display:flex; gap:5px; margin-top:8px; flex-wrap:wrap;
+  padding-top:8px; border-top:1px solid var(--ic-border);
+}
+.ic-export-btn {
+  padding:4px 10px; border-radius:5px; font-size:10px; font-weight:500;
+  border:1px solid var(--ic-border); background:var(--ic-card);
+  color:var(--ic-text-secondary); cursor:pointer;
+  transition:all .15s; font-family:var(--font-ui);
+  text-decoration:none; display:inline-flex; align-items:center; gap:4px;
+}
+.ic-export-btn:hover { background:var(--ic-hover); color:var(--ic-text); }
+
+/* Toast */
+.ic-toast {
+  position:fixed; bottom:24px; right:24px; z-index:9999;
+  padding:10px 18px; border-radius:9px; font-size:12px; font-weight:500;
+  background:rgba(0,0,0,.92); border:1px solid var(--ic-border);
+  backdrop-filter:blur(10px);
+  transform:translateY(16px); opacity:0; transition:all .3s;
+  pointer-events:none;
+}
+.ic-toast.show { transform:translateY(0); opacity:1; pointer-events:auto; }
+.ic-toast.success { border-color:rgba(0,255,136,.25); color:var(--ic-success); }
+.ic-toast.error { border-color:rgba(255,71,87,.25); color:var(--ic-danger); }
+
+/* Timeline */
+.ic-timeline { position:relative; padding-left:18px; }
+.ic-timeline::before {
+  content:''; position:absolute; left:4px; top:4px; bottom:4px;
+  width:1.5px; background:var(--ic-border);
+}
+.ic-tl-item { position:relative; padding:0 0 10px 10px; }
+.ic-tl-item:last-child { padding-bottom:0; }
+.ic-tl-item::before {
+  content:''; position:absolute; left:-15px; top:5px;
+  width:7px; height:7px; border-radius:50%;
+  background:var(--ic-primary); border:2px solid var(--ic-bg);
+}
+.ic-tl-time { font-size:9px; color:var(--ic-text-muted); font-family:var(--font-mono); }
+.ic-tl-text { font-size:11.5px; color:var(--ic-text-secondary); margin-top:1px; line-height:1.4; }
+
+/* Recommendation pills */
+.ic-rec { display:flex; gap:5px; padding:5px 0; align-items:flex-start; }
+.ic-rec-num {
+  width:18px; height:18px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:9px; font-weight:700;
+  background:rgba(139,92,246,.12); color:var(--ic-primary);
+}
+.ic-rec-text { font-size:12px; color:var(--ic-text-secondary); line-height:1.45; }
+
+/* ── Center Results Dashboard ── */
+.ic-dashboard {
+  flex:1; overflow-y:auto; padding:14px 20px 20px;
+  display:flex; flex-direction:column; gap:10px;
+}
+
+/* Evidence bar */
+.ic-evidence-bar {
+  display:flex; align-items:center; gap:8px; cursor:pointer;
+  padding:8px 12px; border-radius:8px;
+  background:var(--ic-card); border:1px solid var(--ic-border);
+  font-size:12px; transition:all .15s; flex-shrink:0;
+}
+.ic-evidence-bar:hover { border-color:rgba(139,92,246,.2); background:rgba(139,92,246,.04); }
+.ic-evidence-icon { font-size:13px; flex-shrink:0; }
+.ic-evidence-label { font-weight:500; color:var(--ic-text-secondary); flex-shrink:0; }
+.ic-evidence-preview {
+  color:var(--ic-text-muted); overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; flex:1; font-family:var(--font-mono); font-size:11px;
+}
+.ic-evidence-toggle { font-size:10px; color:var(--ic-text-muted); flex-shrink:0; }
+.ic-evidence-expanded {
+  background:var(--ic-surface); border:1px solid var(--ic-border);
+  border-radius:8px; padding:12px; margin-top:-2px;
+  transition:opacity .2s ease;
+}
+.ic-evidence-expanded pre {
+  font-family:var(--font-mono); font-size:11.5px; line-height:1.6;
+  color:var(--ic-text-secondary); white-space:pre-wrap; word-break:break-all;
+  max-height:200px; overflow-y:auto; margin:0;
+}
+
+/* Verdict Banner */
+.ic-verdict-banner {
+  position:relative; overflow:hidden;
+  border-radius:var(--ic-radius); padding:20px 24px;
+  background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(0,229,255,.04));
+  border:1px solid rgba(139,92,246,.15);
+  flex-shrink:0;
+  animation:ic-card-in .35s cubic-bezier(.16,1,.3,1) both;
+}
+.ic-vb-glow {
+  position:absolute; top:-50%; right:-20%;
+  width:180px; height:180px;
+  background:radial-gradient(circle,rgba(139,92,246,.1) 0%,transparent 70%);
+  pointer-events:none;
+}
+.ic-vb-row { display:flex; align-items:center; gap:14px; position:relative; z-index:1; }
+.ic-vb-badge {
+  padding:5px 14px; border-radius:6px;
+  font-size:12px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.06em; line-height:1.3;
+}
+.ic-vb-badge.severity-critical { background:rgba(255,71,87,.2); color:#FF4757; }
+.ic-vb-badge.severity-high { background:rgba(255,99,72,.2); color:#FF6348; }
+.ic-vb-badge.severity-medium { background:rgba(255,165,2,.2); color:#FFA502; }
+.ic-vb-badge.severity-low { background:rgba(0,255,136,.15); color:#00FF88; }
+.ic-vb-badge.severity-unknown { background:rgba(85,85,112,.2); color:#555570; }
+.ic-vb-verdict {
+  font-size:20px; font-weight:700; letter-spacing:-.01em;
+  color:var(--ic-text);
+}
+.ic-vb-meta {
+  display:flex; gap:20px; margin-top:10px; position:relative; z-index:1;
+}
+.ic-vb-stat { display:flex; flex-direction:column; gap:1px; }
+.ic-vb-stat-lbl { font-size:9px; color:var(--ic-text-muted); text-transform:uppercase; letter-spacing:.08em; }
+.ic-vb-stat span:last-child { font-size:13px; font-weight:600; color:var(--ic-text-secondary); }
+
+/* Raw Findings toggle */
+.ic-dash-hdr-right { display:flex; align-items:center; gap:8px; }
+.ic-raw-toggle { font-size:10px; color:var(--ic-text-muted); transition:transform .25s cubic-bezier(.16,1,.3,1); }
+
+/* Summary grid (kept for backward compat, hidden by default) */
+.ic-summary-grid { display:none; display:grid; grid-template-columns:repeat(4,1fr); gap:8px; flex-shrink:0; }
+.ic-summary-card {
+  padding:12px; border-radius:10px; text-align:center;
+  background:var(--ic-card); border:1px solid var(--ic-border);
+  transition:border-color .15s;
+}
+.ic-summary-card .sc-label {
+  font-size:8px; font-weight:600; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--ic-text-muted); margin-bottom:5px;
+}
+.ic-summary-card .sc-value {
+  font-size:16px; font-weight:700; line-height:1.2;
+}
+.ic-summary-card .sc-sub {
+  font-size:10px; color:var(--ic-text-muted); margin-top:2px;
+}
+.ic-summary-card.severity-critical { border-color:rgba(255,71,87,.3); }
+.ic-summary-card.severity-high { border-color:rgba(255,99,72,.3); }
+.ic-summary-card.severity-medium { border-color:rgba(255,165,2,.3); }
+.ic-summary-card.severity-low { border-color:rgba(0,255,136,.2); }
+
+/* Dashboard cards */
+.ic-dash-card {
+  background:var(--ic-card); border:1px solid var(--ic-border);
+  border-radius:var(--ic-radius); overflow:hidden; flex-shrink:0;
+  animation:ic-card-in .4s cubic-bezier(.16,1,.3,1) both;
+  transition:transform .2s ease, border-color .2s ease;
+}
+.ic-dash-card:hover { transform:translateY(-1px); border-color:rgba(139,92,246,.12); }
+
+/* Skeleton loading for dashboard */
+.ic-dashboard[aria-busy="true"] .ic-dash-card:not(.ic-verdict-banner):not(.ic-evidence-bar) .ic-dash-body {
+  position:relative; overflow:hidden;
+}
+.ic-dashboard[aria-busy="true"] .ic-dash-card:not(.ic-verdict-banner):not(.ic-evidence-bar) .ic-dash-body::after {
+  content:''; position:absolute; inset:0; z-index:1;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.02),transparent);
+  animation:ic-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes ic-shimmer {
+  0% { transform:translateX(-100%); }
+  100% { transform:translateX(100%); }
+}
+.ic-dash-card:nth-child(1) { animation-delay:0.05s; }
+.ic-dash-card:nth-child(2) { animation-delay:0.10s; }
+.ic-dash-card:nth-child(3) { animation-delay:0.15s; }
+.ic-dash-card:nth-child(4) { animation-delay:0.20s; }
+.ic-dash-card:nth-child(5) { animation-delay:0.25s; }
+.ic-dash-card:nth-child(6) { animation-delay:0.30s; }
+.ic-dash-card:nth-child(7) { animation-delay:0.35s; }
+.ic-dash-card:nth-child(8) { animation-delay:0.40s; }
+.ic-dash-hdr {
+  padding:10px 14px; border-bottom:1px solid var(--ic-border);
+  font-size:10px; font-weight:600; text-transform:uppercase;
+  letter-spacing:.08em; color:var(--ic-text-muted);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.ic-dash-hdr .badge {
+  font-size:9px; padding:2px 7px; border-radius:5px; font-weight:600; text-transform:none; letter-spacing:0;
+}
+.ic-dash-hdr .badge.critical { background:rgba(255,71,87,.15); color:var(--ic-danger); }
+.ic-dash-hdr .badge.high { background:rgba(255,99,72,.15); color:#FF6348; }
+.ic-dash-hdr .badge.medium { background:rgba(255,165,2,.15); color:var(--ic-warning); }
+.ic-dash-hdr .badge.low { background:rgba(0,255,136,.1); color:var(--ic-success); }
+.ic-dash-body { padding:12px 14px; }
+.ic-dash-body p { font-size:12.5px; line-height:1.6; color:var(--ic-text-secondary); margin:0; }
+
+/* Summary IOC counters */
+.ic-ioc-summary-grid {
+  display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:10px;
+}
+.ic-ioc-summary-card {
+  padding:8px 6px; border-radius:7px; text-align:center;
+  background:rgba(255,255,255,.015); border:1px solid var(--ic-border);
+}
+.ic-ioc-summary-card .isc-icon { font-size:18px; }
+.ic-ioc-summary-card .isc-count { font-size:18px; font-weight:700; color:var(--ic-text); margin-top:2px; }
+.ic-ioc-summary-card .isc-label { font-size:9px; color:var(--ic-text-muted); text-transform:uppercase; letter-spacing:.05em; margin-top:1px; }
+.ic-ioc-summary-card:hover { border-color:rgba(139,92,246,.15); }
+
+/* MITRE grid in dashboard */
+.ic-dash-mitre-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:6px; }
+.ic-dash-mitre-card {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; border-radius:7px;
+  background:rgba(255,255,255,.015); border:1px solid var(--ic-border);
+  transition:border-color .15s;
+}
+.ic-dash-mitre-card:hover { border-color:rgba(139,92,246,.15); }
+.ic-dash-mitre-card .dmt-tactic {
+  font-size:9px; color:var(--ic-text-muted); text-transform:uppercase;
+  letter-spacing:.05em; margin-bottom:1px;
+}
+.ic-dash-mitre-card .dmt-tech { font-size:11.5px; color:var(--ic-text); font-weight:500; }
+.ic-dash-mitre-card .dmt-id {
+  font-size:9px; font-weight:600; font-family:var(--font-mono);
+  padding:2px 6px; border-radius:4px; flex-shrink:0; margin-left:auto;
+  background:rgba(139,92,246,.08); color:var(--ic-primary);
+}
+
+/* Recommendations numbered */
+.ic-dash-recs { display:flex; flex-direction:column; gap:4px; }
+.ic-dash-rec {
+  display:flex; gap:8px; padding:6px 0; align-items:flex-start;
+  border-bottom:1px solid var(--ic-border);
+}
+.ic-dash-rec:last-child { border-bottom:none; }
+.ic-dash-rec-num {
+  width:20px; height:20px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:9px; font-weight:700;
+  background:rgba(139,92,246,.12); color:var(--ic-primary);
+  margin-top:1px;
+}
+.ic-dash-rec-text { font-size:12px; color:var(--ic-text-secondary); line-height:1.5; flex:1; }
+
+/* Timeline visual */
+.ic-dash-timeline { position:relative; padding-left:20px; }
+.ic-dash-timeline::before {
+  content:''; position:absolute; left:5px; top:4px; bottom:4px;
+  width:1.5px; background:var(--ic-border);
+}
+.ic-dash-tl-item { position:relative; padding:0 0 8px 10px; }
+.ic-dash-tl-item:last-child { padding-bottom:0; }
+.ic-dash-tl-item::before {
+  content:''; position:absolute; left:-16px; top:5px;
+  width:8px; height:8px; border-radius:50%;
+  background:var(--ic-primary); border:2px solid var(--ic-bg);
+}
+.ic-dash-tl-item.malicious::before { background:var(--ic-danger); }
+.ic-dash-tl-item.suspicious::before { background:var(--ic-warning); }
+.ic-dash-tl-item.benign::before { background:var(--ic-success); }
+.ic-dash-tl-time { font-size:9px; color:var(--ic-text-muted); font-family:var(--font-mono); }
+.ic-dash-tl-text { font-size:11.5px; color:var(--ic-text-secondary); margin-top:1px; line-height:1.4; }
+
+/* Raw findings scroll */
+.ic-dash-raw-body {
+  font-size:12px; line-height:1.7; color:var(--ic-text-secondary);
+  white-space:pre-wrap; font-family:var(--font-mono);
+  max-height:200px; overflow-y:auto;
+}
+.ic-dash-raw-body::-webkit-scrollbar { width:4px; }
+.ic-dash-raw-body::-webkit-scrollbar-thumb { background:var(--ic-border); border-radius:2px; }
+
+/* ── New analysis button ── */
+.ic-new-analysis {
+  margin-top:12px; text-align:center;
+}
+.ic-new-analysis button {
+  padding:8px 18px; border-radius:8px; font-size:12px; font-weight:500;
+  border:1px solid var(--ic-border); background:var(--ic-card);
+  color:var(--ic-text-secondary); cursor:pointer; font-family:var(--font-ui);
+  transition:all .15s;
+}
+.ic-new-analysis button:hover { background:var(--ic-hover); color:var(--ic-text); }
+
+/* ── Mobile category tabs (hidden by default) ── */
+.ic-mobile-types-wrap {
+  display:none; position:relative;
+}
+.ic-mobile-types {
+  display:flex; gap:6px; overflow-x:auto;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  scroll-snap-type:x mandatory;
+}
+.ic-mobile-types::-webkit-scrollbar { display:none; }
+
+/* ── Responsive ── */
+@media (max-width:1200px) {
+  .ic-grid { grid-template-columns:240px 1fr 320px; }
+}
+@media (max-width:1024px) {
+  .ic-grid { grid-template-columns:1fr; grid-template-rows:auto 1fr auto; }
+  .ic-left { display:none; }
+  .ic-right { border-left:none; border-top:1px solid var(--ic-border); max-height:45vh; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE — Fully separate product experience (< 768px)
+   The desktop .ic-app grid is HIDDEN on mobile.
+   Two dedicated screens (#mob-input-screen, #mob-report-screen)
+   take over the full viewport. No desktop styles are reused.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Mobile screens hidden on desktop by default */
+#mob-input-screen,
+#mob-report-screen { display: none; }
+
+@media (max-width: 767px) {
+
+  /* 1. Kill the desktop shell */
+  .ic-app { display: none !important; }
+  html, body { overflow: hidden; height: 100%; }
+
+  /* 2. Mobile screen base — each screen is a fixed full-viewport panel */
+  #mob-input-screen,
+  #mob-report-screen {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background: var(--ic-bg);
+    color: var(--ic-text);
+    font-family: var(--font-ui);
+    overflow: hidden;
+    /* GPU-accelerated slide transition */
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity   0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+    /* hidden by default; JS adds .mob-screen--visible */
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Input screen starts on-screen */
+  #mob-input-screen {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Active screen */
+  .mob-screen--visible {
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* 3. Shared top bar */
+  .mob-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    min-height: 48px;
+    flex-shrink: 0;
+    padding: 0 16px;
+    background: rgba(7,7,14,0.98);
+    border-bottom: 1px solid var(--ic-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .mob-topbar-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ic-text);
+    white-space: nowrap;
+  }
+  .mob-topbar-title svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .mob-topbar-back-link {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ic-text-muted);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 8px 0;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s;
+  }
+  .mob-topbar-back-link:active { color: var(--ic-text); }
+
+  /* 4. Type tab row — single scrollable row, never wraps */
+  .mob-tabs-wrap {
+    position: relative;
+    flex-shrink: 0;
+    background: rgba(7,7,14,0.95);
+    border-bottom: 1px solid var(--ic-border);
+    /* Fade-out on right to hint at more tabs */
+    overflow: hidden;
+  }
+  .mob-tabs-wrap::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 32px;
+    background: linear-gradient(to right, transparent, rgba(7,7,14,0.95));
+    pointer-events: none;
+    z-index: 2;
+  }
+  .mob-tabs-row {
+    display: flex;
+    flex-wrap: nowrap;           /* NEVER wraps — single row always */
+    gap: 6px;
+    padding: 8px 12px 8px 12px;
+    padding-right: 36px;         /* room for fade */
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+  }
+  .mob-tabs-row::-webkit-scrollbar { display: none; }
+
+  .mob-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 13px;
+    border-radius: 20px;
+    border: 1px solid var(--ic-border);
+    background: transparent;
+    color: var(--ic-text-secondary);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+    scroll-snap-align: start;
+    min-height: 34px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .mob-tab:active { transform: scale(0.96); }
+  .mob-tab--active {
+    background: rgba(139,92,246,0.14);
+    border-color: rgba(139,92,246,0.45);
+    color: var(--ic-primary);
+  }
+  .mob-tab-icon { font-size: 13px; line-height: 1; }
+
+  /* 5. Workspace — fills remaining space, flex column */
+  .mob-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 10px 12px 0;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  /* 6. Suggestion chips — max 2 rows, wrap, no horizontal overflow */
+  .mob-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    /* 2 row cap: chip ~28px tall + 6px gap = 62px */
+    max-height: 62px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .mob-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 14px;
+    border: 1px solid var(--ic-border);
+    background: var(--ic-card);
+    color: var(--ic-text-secondary);
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    min-height: 28px;
+    max-width: calc(100vw - 24px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background 0.15s;
+  }
+  .mob-chip:active { background: rgba(139,92,246,0.1); border-color: rgba(139,92,246,0.3); }
+
+  /* 7. Editor box */
+  .mob-editor-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--ic-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--ic-surface);
+    min-height: 0;
+    transition: border-color 0.2s;
+  }
+  .mob-editor-box:focus-within {
+    border-color: rgba(139,92,246,0.3);
+    box-shadow: 0 0 0 3px rgba(139,92,246,0.06);
+  }
+
+  /* 8. Textarea — 120px default, auto-grows to 220px then scrolls internally */
+  #mob-textarea {
+    flex: 1;
+    display: block;
+    width: 100%;
+    min-height: 120px;
+    max-height: 220px;
+    padding: 12px;
+    border: none;
+    outline: none;
+    resize: none;
+    background: transparent;
+    color: var(--ic-text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.65;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+  }
+  #mob-textarea::placeholder { color: var(--ic-text-muted); }
+
+  /* 9. Action bar — always visible at bottom, two-row layout */
+  .mob-action-bar {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 10px 12px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    background: rgba(7,7,14,0.97);
+    border-top: 1px solid rgba(139,92,246,0.12);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  /* Row 1: Upload + Clear + char count */
+  .mob-action-row1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mob-btn-sec {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 14px;
+    min-height: 38px;
+    border-radius: 8px;
+    border: 1px solid var(--ic-border);
+    background: var(--ic-card);
+    color: var(--ic-text-secondary);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background 0.15s, color 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .mob-btn-sec input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    font-size: 0;
+  }
+  .mob-btn-sec:active { background: var(--ic-hover); color: var(--ic-text); }
+  .mob-char-count {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--ic-text-muted);
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  /* Row 2: Analyze — full width, primary CTA */
+  #mob-analyze-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 48px;
+    padding: 13px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, var(--ic-primary), var(--ic-secondary));
+    color: #fff;
+    font-family: var(--font-ui);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  #mob-analyze-btn:active { opacity: 0.88; transform: scale(0.99); }
+  #mob-analyze-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+  .mob-dots::after {
+    content: '...';
+    display: inline-block;
+    width: 20px;
+    text-align: left;
+    animation: mob-dots-anim 1.2s steps(4, end) infinite;
+    overflow: hidden;
+  }
+  @keyframes mob-dots-anim {
+    0%   { content: ''; }
+    33%  { content: '.'; }
+    66%  { content: '..'; }
+    100% { content: '...'; }
+  }
+
+  /* ── REPORT SCREEN ── */
+
+  /* 10. Report top bar */
+  .mob-report-topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 48px;
+    min-height: 48px;
+    flex-shrink: 0;
+    padding: 0 14px 0 12px;
+    background: rgba(7,7,14,0.98);
+    border-bottom: 1px solid var(--ic-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .mob-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ic-primary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px 0;
+    flex-shrink: 0;
+    font-family: var(--font-ui);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    white-space: nowrap;
+  }
+  .mob-report-title-text {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ic-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mob-new-btn {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ic-secondary);
+    background: rgba(0,229,255,0.07);
+    border: 1px solid rgba(0,229,255,0.18);
+    border-radius: 8px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    white-space: nowrap;
+  }
+
+  /* 11. Pipeline strip — horizontal scrolling row of steps */
+  .mob-pipeline-strip {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 8px 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--ic-border);
+    background: rgba(12,12,24,0.9);
+  }
+  .mob-pipeline-strip::-webkit-scrollbar { display: none; }
+  .mob-pipe-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--ic-text-muted);
+    flex-shrink: 0;
+    transition: color 0.3s;
+  }
+  .mob-pipe-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .mob-pipe-step--running {
+    color: var(--ic-secondary);
+    animation: mob-glow 0.8s ease-in-out infinite alternate;
+  }
+  .mob-pipe-step--running .mob-pipe-dot {
+    border-color: var(--ic-secondary);
+    color: var(--ic-secondary);
+    animation: mob-spin 0.8s linear infinite;
+    box-shadow: 0 0 6px rgba(0,229,255,0.35);
+  }
+  .mob-pipe-step--done { color: var(--ic-success); }
+  .mob-pipe-step--done .mob-pipe-dot {
+    background: var(--ic-success);
+    border-color: var(--ic-success);
+    color: #000;
+  }
+  .mob-pipe-sep {
+    font-size: 9px;
+    color: var(--ic-text-muted);
+    opacity: 0.35;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+  @keyframes mob-spin { 100% { transform: rotate(360deg); } }
+  @keyframes mob-glow {
+    from { text-shadow: 0 0 4px rgba(0,229,255,0.1); }
+    to   { text-shadow: 0 0 12px rgba(0,229,255,0.35); }
+  }
+
+  /* 12. Scrollable report content area */
+  .mob-report-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 12px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  /* 13. Verdict banner */
+  .mob-verdict-banner {
+    flex-shrink: 0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(0,229,255,0.05));
+    border: 1px solid rgba(139,92,246,0.2);
+  }
+  .mob-verdict-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .mob-vb-badge {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    background: rgba(85,85,112,0.2);
+    color: #888899;
+  }
+  .mob-vb-badge--critical { background: rgba(255,71,87,0.2);  color: #FF4757; }
+  .mob-vb-badge--high     { background: rgba(255,99,72,0.2);  color: #FF6348; }
+  .mob-vb-badge--medium   { background: rgba(255,165,2,0.2);  color: #FFA502; }
+  .mob-vb-badge--low      { background: rgba(0,255,136,0.15); color: #00FF88; }
+  .mob-vb-verdict {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mob-verdict-meta {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .mob-verdict-stat { display: flex; flex-direction: column; gap: 1px; }
+  .mob-verdict-stat-lbl {
+    font-size: 9px;
+    color: var(--ic-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .mob-verdict-stat-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ic-text-secondary);
+  }
+
+  /* 14. Report cards */
+  .mob-card {
+    flex-shrink: 0;
+    background: var(--ic-card);
+    border: 1px solid var(--ic-border);
+    border-radius: 10px;
+    overflow: hidden;
+    animation: mob-card-in 0.3s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @keyframes mob-card-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .mob-card-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--ic-border);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ic-text-muted);
+  }
+  .mob-card-body {
+    padding: 10px 12px;
+  }
+  .mob-card-body p {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ic-text-secondary);
+    margin: 0;
+  }
+  .mob-card-badge {
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-weight: 600;
+    background: rgba(139,92,246,0.12);
+    color: var(--ic-primary);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  /* 15. Evidence peek */
+  .mob-evidence-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--ic-card);
+    border: 1px solid var(--ic-border);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .mob-evidence-preview-text {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--ic-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mob-evidence-toggle-icon { font-size: 10px; color: var(--ic-text-muted); flex-shrink: 0; }
+  .mob-evidence-full {
+    flex-shrink: 0;
+    display: none;
+    background: var(--ic-surface);
+    border: 1px solid var(--ic-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .mob-evidence-full--open { display: block; }
+  .mob-evidence-full pre {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--ic-text-secondary);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 160px;
+    overflow-y: auto;
+    margin: 0;
+  }
+
+  /* 16. IOC section */
+  .mob-ioc-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  .mob-ioc-cell {
+    padding: 8px 4px;
+    border-radius: 8px;
+    text-align: center;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--ic-border);
+  }
+  .mob-ioc-cell-icon  { font-size: 14px; }
+  .mob-ioc-cell-count { font-size: 14px; font-weight: 700; color: var(--ic-text); margin-top: 2px; }
+  .mob-ioc-cell-label { font-size: 8px; color: var(--ic-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1px; }
+  .mob-ioc-group { margin-bottom: 8px; }
+  .mob-ioc-group:last-child { margin-bottom: 0; }
+  .mob-ioc-group-hdr {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ic-text-secondary);
+    margin-bottom: 5px;
+  }
+  .mob-ioc-cnt { font-size: 10px; color: var(--ic-text-muted); font-weight: 400; }
+  .mob-ioc-chips-wrap { display: flex; flex-wrap: wrap; gap: 4px; }
+  .mob-ioc-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--ic-border);
+    color: var(--ic-text-secondary);
+    cursor: pointer;
+    word-break: break-all;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .mob-ioc-chip:active { background: rgba(139,92,246,0.1); }
+
+  /* 17. MITRE */
+  .mob-mitre-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--ic-border);
+  }
+  .mob-mitre-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .mob-mitre-info { flex: 1; min-width: 0; }
+  .mob-mitre-tactic { font-size: 9px; color: var(--ic-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .mob-mitre-tech   { font-size: 11.5px; color: var(--ic-text); font-weight: 500; }
+  .mob-mitre-id {
+    flex-shrink: 0;
+    font-size: 9px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(139,92,246,0.08);
+    color: var(--ic-primary);
+  }
+
+  /* 18. Recommendations */
+  .mob-rec {
+    display: flex;
+    gap: 8px;
+    padding: 6px 0;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--ic-border);
+  }
+  .mob-rec:last-child { border-bottom: none; padding-bottom: 0; }
+  .mob-rec-num {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    background: rgba(139,92,246,0.12);
+    color: var(--ic-primary);
+    margin-top: 1px;
+  }
+  .mob-rec-text { font-size: 11.5px; color: var(--ic-text-secondary); line-height: 1.5; flex: 1; }
+
+  /* 19. Timeline */
+  .mob-timeline { position: relative; padding-left: 20px; }
+  .mob-timeline::before {
+    content: '';
+    position: absolute;
+    left: 5px; top: 4px; bottom: 4px;
+    width: 1.5px;
+    background: var(--ic-border);
+  }
+  .mob-tl-item { position: relative; padding: 0 0 8px 10px; }
+  .mob-tl-item:last-child { padding-bottom: 0; }
+  .mob-tl-item::before {
+    content: '';
+    position: absolute;
+    left: -16px; top: 5px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--ic-primary);
+    border: 2px solid var(--ic-bg);
+  }
+  .mob-tl-item--malicious::before { background: var(--ic-danger); }
+  .mob-tl-item--suspicious::before { background: var(--ic-warning); }
+  .mob-tl-item--benign::before { background: var(--ic-success); }
+  .mob-tl-time { font-size: 9px; color: var(--ic-text-muted); font-family: var(--font-mono); }
+  .mob-tl-text { font-size: 11.5px; color: var(--ic-text-secondary); margin-top: 1px; line-height: 1.4; }
+
+  /* 20. Threat Intel */
+  .mob-ti-entry { padding: 7px 0; border-bottom: 1px solid var(--ic-border); }
+  .mob-ti-entry:last-child { border-bottom: none; }
+  .mob-ti-source { font-family: var(--font-mono); font-size: 11px; font-weight: 500; }
+  .mob-ti-row { display: flex; gap: 10px; margin-top: 3px; flex-wrap: wrap; }
+  .mob-ti-row span { font-size: 10px; color: var(--ic-text-muted); }
+
+  /* 21. Raw findings */
+  .mob-raw-hdr { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .mob-raw-body {
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--ic-text-secondary);
+    white-space: pre-wrap;
+    font-family: var(--font-mono);
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .mob-raw-body::-webkit-scrollbar { width: 3px; }
+  .mob-raw-body::-webkit-scrollbar-thumb { background: var(--ic-border); border-radius: 2px; }
+
+  /* 22. Toast override for mobile */
+  .ic-toast {
+    bottom: max(20px, env(safe-area-inset-bottom)) !important;
+    right: 14px !important;
+    left: 14px !important;
+    text-align: center;
+    font-size: 12px;
+  }
+}
+
+/* ── Old mobile overrides (now unused — kept so desktop 1024px still works) ── */
+@media (max-width:768px) {
+  /* ── Layout ── */
+  .ic-app { height:100dvh; }
+  .ic-topbar { padding:0 12px; height:44px; gap:8px; }
+  .ic-topbar-logo { font-size:13px; gap:6px; }
+  .ic-topbar-nav { display:none; }
+  .ic-topbar-back { font-size:11px; }
+
+  /* ── Step 1: Compact Investigation Type Pills ── */
+  .ic-mobile-types-wrap { display:block; }
+  .ic-mobile-types-wrap::after {
+    content:''; position:absolute; right:0; top:0; bottom:0; width:24px;
+    background:linear-gradient(to right, transparent, rgba(7,7,14,.95));
+    pointer-events:none; z-index:2;
+  }
+  .ic-mobile-types {
+    display:flex; gap:5px; overflow-x:auto;
+    padding:6px 10px; flex-shrink:0;
+    background:rgba(7,7,14,.95);
+    border-bottom:1px solid var(--ic-border);
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;
+    scroll-snap-type:x mandatory;
+  }
+  .ic-mobile-types::-webkit-scrollbar { display:none; }
+  .ic-mobile-types .ic-type-item {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:4px 11px; border-radius:14px;
+    font-size:11px; white-space:nowrap; flex-shrink:0;
+    border:1px solid var(--ic-border);
+    color:var(--ic-text-secondary); text-decoration:none;
+    cursor:pointer; transition:all .18s;
+    scroll-snap-align:start; min-height:30px;
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  }
+  .ic-mobile-types .ic-type-item:hover { background:var(--ic-hover); color:var(--ic-text); }
+  .ic-mobile-types .ic-type-item.active {
+    background:rgba(139,92,246,.12); border-color:rgba(139,92,246,.35);
+    color:var(--ic-primary);
+    transition:all .18s ease-out;
+  }
+  .ic-mobile-types .ic-type-icon { font-size:12px; line-height:1; }
+  .ic-mobile-types .ic-type-label { font-size:10.5px; }
+
+  /* ── Grid - single column ── */
+  .ic-grid { grid-template-columns:1fr; grid-template-rows:1fr auto; }
+  .ic-left { display:none; }
+
+  /* ── Center panel header ── */
+  .ic-center-hdr { padding:6px 10px; }
+  .ic-center-hdr h1 { font-size:12px; }
+  .ic-center-hdr p { font-size:10px; }
+
+  .ic-work-area { padding:4px 8px 8px; }
+
+  /* ── Suggestion chips – wrap correctly, max 2 rows ── */
+  .ic-suggest-wrap {
+    display:flex; flex-wrap:wrap; gap:5px;
+    margin-bottom:5px !important;
+    max-height:62px; overflow:hidden;
+  }
+  .ic-suggest-wrap .dyn-suggest-chip {
+    font-size:10px; padding:4px 9px; white-space:nowrap;
+    line-height:1.3; min-height:26px; display:inline-flex;
+    align-items:center; border-radius:12px;
+    border:1px solid var(--ic-border); cursor:pointer;
+  }
+
+  /* ── Step 2: Evidence Input – 120px default, auto-grow, max 250px ── */
+  .ic-textarea {
+    min-height:120px; max-height:250px; font-size:13px; padding:8px 10px;
+    width:100%; resize:none;
+  }
+
+  /* ── Step 3: Two-row action bar – row1=Upload/Clear, row2=full-width Analyze ── */
+  .ic-editor-actions {
+    display:flex; flex-wrap:wrap; gap:5px;
+    padding:6px 8px;
+    position:sticky; bottom:0;
+    background:rgba(0,0,0,.35);
+    backdrop-filter:blur(10px);
+    border-top:1px solid rgba(139,92,246,.15);
+    z-index:10;
+  }
+  .ic-editor-actions label, .ic-editor-actions button:not(.ic-analyze-btn) {
+    font-size:10px; padding:4px 8px; min-height:30px; display:inline-flex;
+    align-items:center; border-radius:6px; cursor:pointer;
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  }
+  .ic-char-count { font-size:10px; padding:4px 0; flex-shrink:0; }
+  .ic-analyze-btn {
+    order:2; flex:0 0 100% !important; width:100% !important;
+    justify-content:center !important;
+    padding:10px 16px !important; font-size:13px !important;
+    font-weight:700 !important; letter-spacing:.02em;
+    border-radius:8px !important; min-height:40px;
+  }
+
+  /* ── Step 4: After analysis – hide chips, editor, upload ── */
+  .ic-editor-wrap.ic-hidden-mobile { display:none; }
+
+  /* ── Right panel ── */
+  .ic-right {
+    border-left:none; border-top:1px solid var(--ic-border);
+    max-height:40vh; padding:10px;
+  }
+  .ic-empty-state { padding:20px; }
+  .ic-empty-state .icon { font-size:30px; }
+  .ic-empty-state h3 { font-size:13px; }
+  .ic-empty-state p { font-size:11px; }
+
+  /* ── Pipeline ── */
+  .ic-pipeline { padding:8px 10px; }
+  .ic-step { font-size:10.5px; padding:4px 0; }
+
+  /* ── Dashboard - mobile-first ── */
+  .ic-dashboard {
+    padding:8px 10px 12px; gap:6px;
+    display:flex; flex-direction:column;
+  }
+  /* Reorder dashboard sections for mobile report layout */
+  .ic-verdict-banner { order:1; }
+  #ic-dash-exec       { order:2; }
+  #ic-dash-recs       { order:3; }
+  #ic-dash-ioc        { order:4; }
+  #ic-dash-mitre      { order:5; }
+  #ic-dash-tl         { order:6; }
+  #ic-dash-ti         { order:7; }
+  #ic-dash-raw        { order:8; }
+
+  /* ── Verdict Banner - compact ── */
+  .ic-verdict-banner { padding:10px 12px; margin-bottom:0; }
+  .ic-vb-row { gap:8px; }
+  .ic-vb-badge { font-size:10px; padding:3px 8px; }
+  .ic-vb-verdict { font-size:15px; }
+  .ic-vb-meta { gap:10px; margin-top:5px; flex-wrap:wrap; }
+  .ic-vb-stat span:last-child { font-size:11px; }
+
+  /* ── Dashboard cards ── */
+  .ic-dash-card { border-radius:8px; }
+  .ic-dash-hdr { padding:7px 10px; font-size:9px; }
+  .ic-dash-body { padding:8px 10px; }
+  .ic-dash-body p { font-size:12px; }
+
+  /* ── IOC summary - 3 cols ── */
+  .ic-ioc-summary-grid { grid-template-columns:repeat(3,1fr); gap:4px; }
+  .ic-ioc-summary-card .isc-icon { font-size:14px; }
+  .ic-ioc-summary-card .isc-count { font-size:14px; }
+  .ic-ioc-summary-card .isc-label { font-size:8px; }
+
+  /* ── MITRE - single col ── */
+  .ic-dash-mitre-grid { grid-template-columns:1fr; gap:4px; }
+  .ic-dash-mitre-card { padding:6px 8px; }
+  .ic-dash-mitre-card .dmt-tech { font-size:11px; }
+
+  /* ── Recommendations ── */
+  .ic-dash-rec-text { font-size:11px; }
+
+  /* ── Timeline ── */
+  .ic-dash-tl-text { font-size:11px; }
+
+  /* ── Evidence bar ── */
+  .ic-evidence-bar { padding:6px 10px; font-size:11px; }
+
+  /* ── Risk score ── */
+  .ic-risk-score { padding:2px 0; }
+  .ic-risk-ring { width:56px; height:56px; }
+  .ic-risk-num { font-size:15px; }
+  .ic-risk-grid { gap:4px; }
+  .ic-risk-cell { padding:4px; }
+  .ic-risk-cell .val { font-size:11px; }
+
+  /* ── Threat intel ── */
+  .ic-ti-source { font-size:10px; }
+  .ic-ti-stats { gap:4px; }
+  .ic-ti-stat { font-size:9px; }
+
+  /* ── Export bar ── */
+  .ic-export-bar { gap:4px; }
+  .ic-export-btn { font-size:9px; padding:3px 8px; }
+
+  /* ── Toast - bottom center ── */
+  .ic-toast { bottom:16px; right:16px; left:16px; text-align:center; font-size:11px; }
+
+  /* ── Mobile hint ── */
+  .ic-mobile-hint {
+    display:flex; align-items:center; gap:8px;
+    background:rgba(139,92,246,.08); border:1px solid rgba(139,92,246,.12);
+    border-radius:8px; padding:8px 10px; margin-bottom:8px;
+  }
+  .ic-mobile-hint-icon { font-size:18px; line-height:1; }
+  .ic-mobile-hint-text { font-size:10.5px; color:var(--ic-text-muted); line-height:1.4; }
+}
+
+/* ── 360px viewport edge case ── */
+@media (max-width:360px) {
+  .ic-app { --ic-grid-gap:2px; }
+  .ic-mobile-types-wrap { margin:0; }
+  .ic-mobile-types { gap:3px; padding:4px 6px; }
+  .ic-mobile-types .ic-type-item { padding:3px 8px; font-size:10px; min-height:28px; gap:3px; }
+  .ic-mobile-types .ic-type-icon { font-size:11px; }
+  .ic-mobile-types .ic-type-label { font-size:9.5px; }
+  .ic-topbar { padding:0 6px; }
+  .ic-topbar-logo { font-size:10px; }
+  .ic-topbar-logo svg { width:14px; height:14px; }
+  .ic-topbar-nav a { font-size:9px; padding:4px 8px; }
+  .ic-center-hdr { padding:4px 8px; }
+  .ic-center-hdr h1 { font-size:11px; }
+  .ic-center-hdr p { font-size:9px; }
+  .ic-textarea { min-height:100px; max-height:220px; font-size:12px; padding:6px 8px; }
+  .ic-work-area { padding:4px 6px 8px; }
+  .ic-analyze-btn { padding:8px 10px !important; font-size:12px !important; min-height:36px; }
+  .ic-editor-actions { padding:5px 6px; gap:4px; }
+  .ic-editor-actions label, .ic-editor-actions button:not(.ic-analyze-btn) { font-size:9px; padding:4px 6px; min-height:26px; }
+  .ic-right { max-height:30vh; padding:6px; }
+  .ic-empty-state { padding:12px; }
+  .ic-empty-state .icon { font-size:24px; }
+  .ic-empty-state h3 { font-size:11px; }
+  .ic-empty-state p { font-size:10px; }
+  .ic-pipeline { padding:6px 8px; }
+  .ic-dashboard { padding:6px 8px 10px; gap:5px; }
+  .ic-verdict-banner { padding:8px 10px; }
+  .ic-vb-verdict { font-size:13px; }
+  .ic-vb-badge { font-size:9px; padding:2px 7px; }
+  .ic-hist-item { padding:6px 8px; font-size:10px; }
+  .ic-sidebar { padding:6px; }
+  .ic-dash-card { border-radius:6px; }
+  .ic-ioc-summary-grid { grid-template-columns:repeat(3,1fr); gap:3px; }
+  .ic-dash-hdr { padding:6px 8px; font-size:8px; }
+  .ic-dash-body { padding:7px 8px; }
+  .ic-mobile-hint { padding:6px 8px; }
+  .ic-mobile-hint-icon { font-size:15px; }
+  .ic-mobile-hint-text { font-size:9.5px; }
+}
+</style>
+</head>
+<body>
+<div class="ic-app">
+
+  <!-- ── Topbar ── -->
+  <header class="ic-topbar">
+    <div class="ic-topbar-logo">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(139,92,246,.2)" stroke="#8B5CF6" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M9 12l2 2 4-4" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Investigation Center
+    </div>
+    <nav class="ic-topbar-nav">
+      <a href="/">Chat</a>
+      <a href="#" class="active">Investigate</a>
+      <a href="/">Mentor</a>
+    </nav>
+    <div class="ic-topbar-right">
+      <a href="/" class="ic-topbar-back">← Back to Chat</a>
+      <div class="ic-topbar-user"></div>
+    </div>
+  </header>
+
+  <!-- ── Mobile category tabs (shown <768px) ── -->
+  <div class="ic-mobile-types-wrap">
+    <div class="ic-mobile-types" id="ic-mobile-types">
+      {% set mobile_labels = {'auto':'Auto','url':'URL','phishing_email':'Email','log':'Log','malware':'Malware','ioc':'IOC','domain':'Domain','ip':'IP'} %}
+      {% for t in types %}
+      <a class="ic-type-item {% if loop.first %}active{% endif %}" data-type="{{ t.id }}" href="#" onclick="return selectType('{{ t.id }}', this)" role="tab" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+        <span class="ic-type-icon" aria-hidden="true">{{ t.icon }}</span>
+        <span class="ic-type-label">{{ mobile_labels.get(t.id, t.id) }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Main Grid ── -->
+  <div class="ic-grid">
+
+    <!-- ═══ LEFT SIDEBAR ═══ -->
+    <aside class="ic-left">
+
+      <div class="ic-section-title">Investigation Types</div>
+      <div class="ic-type-list" id="ic-type-list">
+        {% for t in types %}
+        <a class="ic-type-item {% if loop.first %}active{% endif %}" data-type="{{ t.id }}" href="#" onclick="return selectType('{{ t.id }}', this)" role="tab" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+          <span class="ic-type-icon" aria-hidden="true">{{ t.icon }}</span>
+          <div>
+            <div class="ic-type-label">{{ t.label }}</div>
+            <div class="ic-type-desc">{{ t.desc }}</div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+
+      <div class="ic-hist-section">
+        <div class="ic-section-title">History</div>
+        <div class="ic-hist-list" id="ic-hist-list">
+          <div class="ic-hist-empty">No investigations yet.<br>Run your first analysis above.</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══ CENTER PANEL ═══ -->
+    <main class="ic-center">
+      <div class="ic-center-hdr" id="ic-center-hdr">
+        <h1 id="ic-center-title">Evidence Workspace</h1>
+        <p id="ic-center-subtitle">Paste an artifact, upload a file, or drag &amp; drop evidence for analysis.</p>
+      </div>
+
+      <div class="ic-work-area" id="ic-work-area">
+        <div class="ic-mobile-hint" id="ic-mobile-hint">
+          <div class="ic-mobile-hint-icon">🔬</div>
+          <div class="ic-mobile-hint-text">Select a category, paste evidence, and tap <strong>Analyze</strong></div>
+        </div>
+        <div id="ic-suggest-chips" class="dyn-suggest-wrap ic-suggest-wrap" style="margin-bottom:8px;"></div>
+
+        <div class="ic-editor-wrap" id="ic-editor-wrap">
+          <div class="ic-dropzone" id="ic-dropzone">
+            <span class="dz-icon">📁</span>
+            <span>Drop your file here</span>
+          </div>
+          <textarea class="ic-textarea" id="ic-editor"
+            placeholder="Paste a URL, IP address, domain, email headers, security log, malware report, hash, or any security indicator here..."
+            data-mob-placeholder="Paste evidence..."
+            spellcheck="false" oninput="onEditorInput()"></textarea>
+          <div class="ic-editor-actions">
+            <label class="ic-file-label" aria-label="Upload a file">📎 Upload File
+              <input type="file" id="ic-file-input" hidden accept=".txt,.log,.pdf,.eml,.csv,.json,.md">
+            </label>
+            <button onclick="clearEditor()" aria-label="Clear editor">🗑️ Clear</button>
+            <span class="ic-char-count" id="ic-char-count" aria-live="polite"></span>
+            <button class="ic-analyze-btn" id="ic-analyze-btn" onclick="runInvestigation()" aria-label="Run analysis">🔍 Analyze</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Results Dashboard (hidden initially) ═══ -->
+      <div class="ic-dashboard" id="ic-dashboard" style="display:none;">
+
+        <!-- Collapsed evidence bar -->
+        <div class="ic-evidence-bar" id="ic-evidence-bar" onclick="toggleEvidence()" role="button" tabindex="0" aria-label="Toggle evidence view" aria-expanded="false" onkeydown="if(event.key==='Enter')toggleEvidence()">
+          <span class="ic-evidence-icon" aria-hidden="true">📄</span>
+          <span class="ic-evidence-label">Original Evidence</span>
+          <span class="ic-evidence-preview" id="ic-evidence-preview"></span>
+          <span class="ic-evidence-toggle" id="ic-evidence-toggle">▶</span>
+        </div>
+        <div class="ic-evidence-expanded" id="ic-evidence-expanded" style="display:none;">
+          <pre id="ic-evidence-content"></pre>
+        </div>
+
+        <!-- Verdict Banner -->
+        <div class="ic-verdict-banner" id="ic-verdict-banner">
+          <div class="ic-vb-glow"></div>
+          <div class="ic-vb-row">
+            <div class="ic-vb-badge" id="ic-vb-severity">—</div>
+            <div class="ic-vb-verdict" id="ic-vb-verdict">Awaiting Analysis</div>
+          </div>
+          <div class="ic-vb-meta" id="ic-vb-meta">
+            <span class="ic-vb-stat"><span class="ic-vb-stat-lbl">Confidence</span><span id="ic-vb-confidence">—</span></span>
+            <span class="ic-vb-stat"><span class="ic-vb-stat-lbl">Threat Type</span><span id="ic-vb-threat">—</span></span>
+            <span class="ic-vb-stat"><span class="ic-vb-stat-lbl">IOCs Found</span><span id="ic-vb-ioc-count">0</span></span>
+          </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="ic-dash-card" id="ic-dash-exec">
+          <div class="ic-dash-hdr">Executive Summary</div>
+          <div class="ic-dash-body" id="ic-dash-exec-body">
+            <p style="color:var(--ic-text-muted);font-style:italic;">Analysis results will appear here.</p>
+          </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="ic-dash-card" id="ic-dash-recs">
+          <div class="ic-dash-hdr">Recommendations</div>
+          <div class="ic-dash-body">
+            <div class="ic-dash-recs" id="ic-dash-recs-body"></div>
+          </div>
+        </div>
+
+        <!-- IOC Dashboard -->
+        <div class="ic-dash-card" id="ic-dash-ioc">
+          <div class="ic-dash-hdr">
+            <span>Indicators of Compromise</span>
+            <span class="badge info" id="ic-dash-ioc-badge">0</span>
+          </div>
+          <div class="ic-dash-body">
+            <div class="ic-ioc-summary-grid" id="ic-dash-ioc-summary"></div>
+            <div class="ic-ioc-chips" id="ic-dash-ioc-chips"></div>
+          </div>
+        </div>
+
+        <!-- MITRE ATT&CK -->
+        <div class="ic-dash-card" id="ic-dash-mitre">
+          <div class="ic-dash-hdr">
+            <span>MITRE ATT&amp;CK Mapping</span>
+            <span class="badge info" id="ic-dash-mitre-badge">0</span>
+          </div>
+          <div class="ic-dash-body">
+            <div class="ic-dash-mitre-grid" id="ic-dash-mitre-grid"></div>
+          </div>
+        </div>
+
+        <!-- Threat Intelligence -->
+        <div class="ic-dash-card" id="ic-dash-ti">
+          <div class="ic-dash-hdr">
+            <span>Threat Intelligence</span>
+            <span class="badge info" id="ic-dash-ti-badge">0</span>
+          </div>
+          <div class="ic-dash-body" id="ic-dash-ti-body"></div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="ic-dash-card" id="ic-dash-tl">
+          <div class="ic-dash-hdr">Investigation Timeline</div>
+          <div class="ic-dash-body">
+            <div class="ic-dash-timeline" id="ic-dash-timeline"></div>
+          </div>
+        </div>
+
+        <!-- Raw Findings (collapsed by default) -->
+        <div class="ic-dash-card" id="ic-dash-raw">
+          <div class="ic-dash-hdr" onclick="toggleRawFindings()" role="button" tabindex="0" aria-label="Toggle raw findings" aria-expanded="false" onkeydown="if(event.key==='Enter')toggleRawFindings()" style="cursor:pointer;">
+            <span>Raw Findings</span>
+            <span class="ic-dash-hdr-right">
+              <span class="badge info" id="ic-dash-verdict-badge">Inconclusive</span>
+              <span class="ic-raw-toggle" id="ic-raw-toggle">▶</span>
+            </span>
+          </div>
+          <div class="ic-dash-body" id="ic-dash-raw-body-wrap">
+            <div class="ic-dash-raw-body" id="ic-dash-raw-body"></div>
+            <div class="ic-export-bar" id="ic-dash-export-bar" style="display:none;margin-top:8px;">
+              <a class="ic-export-btn" id="ic-dash-export-md" target="_blank">📄 Markdown</a>
+              <a class="ic-export-btn" id="ic-dash-export-json" target="_blank">📋 JSON</a>
+              <button class="ic-export-btn" onclick="printReport()">🖨️ Print</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="ic-new-analysis" id="ic-new-analysis" style="display:none;">
+        <button onclick="newAnalysis()">➕ New Investigation</button>
+      </div>
+    </main>
+
+    <!-- ═══ RIGHT PANEL ═══ -->
+    <aside class="ic-right" id="ic-right-panel">
+
+      <!-- Empty state -->
+      <div id="ic-empty-state" class="ic-empty-state">
+        <div class="icon">🔬</div>
+        <h3>Ready to Investigate</h3>
+        <p>Select an investigation type from the sidebar, paste or upload your evidence, and click <strong>Analyze</strong>.</p>
+      </div>
+
+      <!-- Pipeline -->
+      <div id="ic-pipeline" class="ic-pipeline" style="display:none;">
+        <div class="ic-pipeline-hdr">
+          <span>Investigation Pipeline</span>
+          <span id="ic-pipeline-status" style="font-size:10px;color:var(--ic-text-muted);font-weight:400;">Running…</span>
+        </div>
+        <div class="ic-pipeline-steps" id="ic-pipeline-steps"></div>
+      </div>
+
+      <!-- Risk Assessment -->
+      <div id="ic-risk-card" class="ic-card" style="display:none;">
+        <div class="ic-card-hdr">
+          <span>Risk Assessment</span>
+          <span class="badge info" id="ic-risk-badge">—</span>
+        </div>
+        <div class="ic-card-body" id="ic-risk-body"></div>
+      </div>
+
+    </aside>
+  </div>
+
+</div>
+
+<!-- Dedicated mobile experience -->
+<div id="mob-input-screen" aria-hidden="false">
+  <header class="mob-topbar">
+    <div class="mob-topbar-title">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(139,92,246,.2)" stroke="#8B5CF6" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M9 12l2 2 4-4" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Investigation Center
+    </div>
+    <a href="/" class="mob-topbar-back-link">Back to Chat</a>
+  </header>
+
+  <div class="mob-tabs-wrap">
+    <div class="mob-tabs-row" id="mob-tabs-row" role="tablist" aria-label="Investigation types">
+      {% set mobile_labels = {'auto':'Auto','url':'URL','phishing_email':'Email','log':'Log','malware':'Malware','ioc':'IOC','domain':'Domain','ip':'IP'} %}
+      {% for t in types %}
+      <button class="mob-tab {% if loop.first %}mob-tab--active{% endif %}" type="button" data-type="{{ t.id }}" onclick="mobSelectType('{{ t.id }}', this)" role="tab" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+        <span class="mob-tab-icon" aria-hidden="true">{{ t.icon }}</span>
+        <span class="mob-tab-label">{{ mobile_labels.get(t.id, t.id) }}</span>
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <main class="mob-workspace">
+    <div class="mob-chips-wrap" id="mob-chips" aria-label="Suggested evidence"></div>
+
+    <div class="mob-editor-box" id="mob-editor-box">
+      <textarea
+        id="mob-textarea"
+        placeholder="Paste evidence..."
+        spellcheck="false"
+        oninput="mobOnInput()"
+        data-mob-placeholder="Paste evidence..."
+        aria-label="Evidence input"></textarea>
+    </div>
+  </main>
+
+  <footer class="mob-action-bar">
+    <div class="mob-action-row1">
+      <label class="mob-btn-sec" aria-label="Upload a file">
+        Upload File
+        <input type="file" id="mob-file-input" accept=".txt,.log,.pdf,.eml,.csv,.json,.md" onchange="mobFileLoad(event)">
+      </label>
+      <button class="mob-btn-sec" type="button" onclick="mobClear()">Clear</button>
+      <span class="mob-char-count" id="mob-char-count" aria-live="polite"></span>
+    </div>
+    <button id="mob-analyze-btn" type="button" onclick="mobRunInvestigation()">Analyze</button>
+  </footer>
+</div>
+
+<div id="mob-report-screen" aria-hidden="true">
+  <header class="mob-report-topbar">
+    <button class="mob-back-btn" type="button" onclick="mobBackToInput()">Back</button>
+    <div class="mob-report-title-text">Investigation Report</div>
+    <button class="mob-new-btn" type="button" onclick="mobNewAnalysis()">New</button>
+  </header>
+
+  <div class="mob-pipeline-strip" id="mob-pipeline-strip" aria-label="Investigation pipeline"></div>
+
+  <div class="mob-report-scroll" id="mob-report-scroll">
+    <section class="mob-card">
+      <div class="mob-card-hdr mob-evidence-bar" id="mob-evidence-bar" onclick="mobToggleEvidence()" role="button" tabindex="0" aria-label="Toggle evidence view" aria-expanded="false" onkeydown="if(event.key==='Enter')mobToggleEvidence()">
+        <span>Original Evidence</span>
+        <span class="mob-evidence-preview-text" id="mob-evidence-preview"></span>
+        <span class="mob-evidence-toggle-icon" id="mob-evidence-toggle">▶</span>
+      </div>
+      <div class="mob-evidence-full" id="mob-evidence-full">
+        <pre id="mob-evidence-content"></pre>
+      </div>
+    </section>
+
+    <section class="mob-verdict-banner">
+      <div class="mob-verdict-row">
+        <div class="mob-vb-badge" id="mob-vb-sev">—</div>
+        <div class="mob-vb-verdict" id="mob-vb-verdict">Analyzing…</div>
+      </div>
+      <div class="mob-verdict-meta">
+        <div class="mob-verdict-stat">
+          <div class="mob-verdict-stat-lbl">Confidence</div>
+          <div class="mob-verdict-stat-val" id="mob-vb-conf">—</div>
+        </div>
+        <div class="mob-verdict-stat">
+          <div class="mob-verdict-stat-lbl">Threat Type</div>
+          <div class="mob-verdict-stat-val" id="mob-vb-threat">—</div>
+        </div>
+        <div class="mob-verdict-stat">
+          <div class="mob-verdict-stat-lbl">IOCs Found</div>
+          <div class="mob-verdict-stat-val" id="mob-vb-iocs">0</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mob-card">
+      <div class="mob-card-hdr">
+        <span>Executive Summary</span>
+      </div>
+      <div class="mob-card-body" id="mob-exec-body">
+        <p style="color:var(--ic-text-muted);font-style:italic;">Analysis results will appear here.</p>
+      </div>
+    </section>
+
+    <section class="mob-card">
+      <div class="mob-card-hdr">
+        <span>Recommendations</span>
+      </div>
+      <div class="mob-card-body" id="mob-recs-body"></div>
+    </section>
+
+    <section class="mob-card">
+      <div class="mob-card-hdr">
+        <span>Indicators of Compromise</span>
+        <span class="mob-card-badge" id="mob-ioc-badge">0</span>
+      </div>
+      <div class="mob-card-body">
+        <div class="mob-ioc-summary-grid" id="mob-ioc-summary"></div>
+        <div class="mob-ioc-chips-wrap" id="mob-ioc-chips"></div>
+      </div>
+    </section>
+
+    <section class="mob-card">
+      <div class="mob-card-hdr">
+        <span>MITRE ATT&amp;CK Mapping</span>
+        <span class="mob-card-badge" id="mob-mitre-badge">0</span>
+      </div>
+      <div class="mob-card-body" id="mob-mitre-body"></div>
+    </section>
+
+    <section class="mob-card">
+      <div class="mob-card-hdr">
+        <span>Threat Intelligence</span>
+        <span class="mob-card-badge" id="mob-ti-badge">0</span>
+      </div>
+      <div class="mob-card-body" id="mob-ti-body"></div>
+    </section>
+
+    <section class="mob-card">
+      <div class="mob-card-hdr">
+        <span>Investigation Timeline</span>
+      </div>
+      <div class="mob-card-body">
+        <div class="mob-timeline" id="mob-timeline"></div>
+      </div>
+    </section>
+
+    <section class="mob-card">
+      <div class="mob-card-hdr mob-raw-hdr" id="mob-raw-hdr" onclick="mobToggleRaw()" role="button" tabindex="0" aria-label="Toggle raw findings" aria-expanded="false" onkeydown="if(event.key==='Enter')mobToggleRaw()">
+        <span>Raw Findings</span>
+        <span class="mob-card-badge" id="mob-raw-toggle">▶</span>
+      </div>
+      <div class="mob-card-body" id="mob-raw-wrap" style="display:none;">
+        <div class="mob-raw-body" id="mob-raw-body"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="ic-toast" id="ic-toast" aria-live="polite" role="status"></div>
+
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+<script src="{{ url_for('static', filename='js/investigate.js') }}"></script>
+</body>
+</html>

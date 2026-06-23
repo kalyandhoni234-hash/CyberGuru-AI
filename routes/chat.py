@@ -36,6 +36,25 @@ from utils.quiz import sanitize_quiz_topic, build_quiz_prompt
 logger = logging.getLogger(__name__)
 
 from services.groq_service import groq_chat, groq_stream, build_groq_messages
+from services.skill_profile_service import SkillProfileService
+
+
+def _get_adaptive_system_prompt(user_message: str = "") -> str:
+    """Return the base system instruction augmented with the user's skill profile.
+
+    If no authenticated user is present, falls back to the plain SYSTEM_INSTRUCTION.
+    The returned prompt is safe to pass to any model (Gemini, Groq, Lite).
+    """
+    from extensions import get_user_id_int
+    user_id = get_user_id_int()
+    if user_id is None:
+        return SYSTEM_INSTRUCTION
+    try:
+        svc = SkillProfileService(user_id)
+        return svc.build_adaptive_system_prompt(SYSTEM_INSTRUCTION)
+    except Exception:
+        logger.debug("Could not build adaptive prompt (profile may not exist yet), using base prompt")
+        return SYSTEM_INSTRUCTION
 
 
 # ── Fallback chains ────────────────────────────────────────────────────────────
@@ -48,10 +67,14 @@ _FALLBACK_CHAINS = {
 
 
 def _call_model(model_name: str, history: list, user_message: str) -> str:
-    """Call a single model and return the reply text. Raises on failure."""
+    """Call a single model and return the reply text. Raises on failure.
+
+    Uses the adaptive system prompt (skill-profile-aware) when available.
+    """
+    adaptive_prompt = _get_adaptive_system_prompt(user_message)
     if model_name == "gemini":
         payload = {
-            "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+            "system_instruction": {"parts": [{"text": adaptive_prompt}]},
             "contents": build_contents(history, user_message),
             "generationConfig": GENERATION_CONFIG,
         }
@@ -61,7 +84,7 @@ def _call_model(model_name: str, history: list, user_message: str) -> str:
         return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
     if model_name == "groq":
-        messages = build_groq_messages(SYSTEM_INSTRUCTION, history, user_message)
+        messages = build_groq_messages(adaptive_prompt, history, user_message)
         return groq_chat(messages)
 
     if model_name == "lite":
@@ -180,10 +203,12 @@ def chat_stream():
             user_message = build_quiz_prompt(safe_topic)
 
         # ── Single streaming generator with fallback chain ─────────
+        adaptive_prompt = _get_adaptive_system_prompt(user_message)
+
         def _stream_gemini_tokens():
             """Yield text tokens from Gemini 2.5 Flash."""
             payload = {
-                "system_instruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+                "system_instruction": {"parts": [{"text": adaptive_prompt}]},
                 "contents": build_contents(history, user_message),
                 "generationConfig": GENERATION_CONFIG,
             }
@@ -252,7 +277,7 @@ def chat_stream():
                 bot_reply_parts = []
                 try:
                     if m == "groq":
-                        messages = build_groq_messages(SYSTEM_INSTRUCTION, history, user_message)
+                        messages = build_groq_messages(adaptive_prompt, history, user_message)
                         for chunk in groq_stream(messages):
                             bot_reply_parts.append(chunk)
                             yield f"data: {jdump({'token': chunk})}\n\n"

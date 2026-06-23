@@ -23,6 +23,9 @@ const WELCOME_CARDS = [
   { icon: 'shield',   label: 'Framework',           text: 'OWASP Top 10 Guide',                           action: () => fillAndSend('What is OWASP Top 10 and why does it matter?') },
 ];
 
+/* ─── Dynamic Prompt Suggestions ──────────────────────────────────
+   Fetched from backend API every time; no hardcoded prompts here. */
+
 /* ─── THEME ──────────────────────────────────────────────────── */
 function setTheme(theme) {
   document.body.classList.remove('theme-cyber','theme-light','theme-oled');
@@ -568,10 +571,17 @@ const SUGGESTION_BANK = [
   "What is pretexting?",
 ];
 
-function getLocalSuggestions(query) {
+async function getContextualSuggestions(query) {
   if(!query || query.length < 2) return [];
+  try {
+    const res = await fetch(`/api/prompt-suggestions?module=chat&count=5&q=${encodeURIComponent(query)}`, { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.suggestions && data.suggestions.length) return data.suggestions;
+    }
+  } catch (_) {}
+  // Fallback to local bank if API fails
   const q = query.toLowerCase();
-  // Score: starts-with scores higher than contains
   return SUGGESTION_BANK
     .map(s => ({ s, score: s.toLowerCase().startsWith(q) ? 2 : s.toLowerCase().includes(q) ? 1 : 0 }))
     .filter(x => x.score > 0)
@@ -589,10 +599,15 @@ userInput.addEventListener("input", () => {
     document.getElementById("suggestions-box").style.display = "none";
     return;
   }
-  // Debounce purely for render performance — no network call
-  suggestionTimer = setTimeout(() => {
-    renderSuggestions(getLocalSuggestions(text));
-  }, 120);
+  suggestionTimer = setTimeout(async () => {
+    renderSuggestions(await getContextualSuggestions(text));
+  }, 180);
+});
+
+userInput.addEventListener("blur", () => {
+  setTimeout(() => {
+    document.getElementById("suggestions-box").style.display = "none";
+  }, 200);
 });
 
 function renderSuggestions(suggestions) {
@@ -616,7 +631,7 @@ function renderSuggestions(suggestions) {
   box.style.display = "block";
 }
 // ── Welcome screen config ──────────────────────────────────────────────────
-// Add new capabilities and suggest cards here — the welcome screen updates automatically.
+// Suggestions loaded dynamically from backend API based on user skill level.
 
 function _buildWelcomeHTML() {
   const caps = WELCOME_CAPS
@@ -665,7 +680,9 @@ function _buildWelcomeHTML() {
         <div class="welcome-sub">Your AI-powered cybersecurity learning assistant. Ask about threats, attacks, defenses, and security best practices.</div>
       </div>
       <div class="welcome-caps"><span class="new-dot" aria-hidden="true"></span><span class="new-label">New:</span>${caps}</div>
+
       <div class="suggest-grid">${mentorCard}${cards}</div>
+
     </div>`;
 }
 // Mark a tool item active while its panel is open
@@ -690,12 +707,18 @@ document.getElementById('tools-menu-dropdown')?.addEventListener('keydown', e =>
   if (e.key === 'End')       { e.preventDefault(); items[items.length - 1]?.focus(); }
   if (e.key === 'Escape')    { closeToolsMenu(); document.getElementById('tools-menu-trigger')?.focus(); }
 });
-function _initStaticWelcome() {
-  // Populate the welcome screen already in the HTML (initial page load)
+async function _initStaticWelcome() {
   const caps = document.getElementById('welcome-caps');
-  const grid = document.getElementById('suggest-grid');
   if (caps) caps.innerHTML = `<span class="new-dot" aria-hidden="true"></span><span class="new-label">New:</span>${WELCOME_CAPS.map(c => `<span>${c.replace(/^.*?(Quiz|CTF|Threat Pulse|Cyber Mentor).*$/, '$1')}</span>`).join('')}`;
+  const grid = document.getElementById('suggest-grid');
   if (grid) {
+    const cards = WELCOME_CARDS
+      .map(c => `
+        <div class="suggest-card" onclick="(${c.action.toString()})()">
+          <span class="sc-icon" aria-hidden="true">${WELCOME_CARD_ICONS[c.icon]}</span>
+          <span class="sc-copy"><span class="sc-label">${c.label}</span>${c.text}</span>
+        </div>`)
+      .join('');
     const mentorCard = `
       <div class="mentor-welcome-card" onclick="openMentorOverlay()" style="opacity:0;animation:cardFadeUp .4s ease .4s forwards">
         <div class="mentor-wc-icon">
@@ -719,15 +742,11 @@ function _initStaticWelcome() {
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
         </svg>
       </div>`;
-    grid.innerHTML = mentorCard + WELCOME_CARDS.map(c => `
-      <div class="suggest-card" onclick="(${c.action.toString()})()">
-        <span class="sc-icon" aria-hidden="true">${WELCOME_CARD_ICONS[c.icon]}</span>
-        <span class="sc-copy"><span class="sc-label">${c.label}</span>${c.text}</span>
-      </div>`).join('');
+    grid.innerHTML = mentorCard + cards;
   }
 }
 
-function showWelcome() {
+async function showWelcome() {
   const box = document.getElementById('chat-box');
   box.innerHTML = _buildWelcomeHTML();
 }
@@ -1088,6 +1107,7 @@ async function sendToBackend() {
   autoResize(inputEl);
   updateCharCount(0);
   updateSendBtn();
+  document.getElementById("suggestions-box").style.display = "none";
   isThinking = true;
 
   /* ── FILE UPLOAD PATH (streaming) ── */
@@ -2238,6 +2258,7 @@ function togglePlusMenu() {
   const open = menu.classList.toggle('open');
   btn.setAttribute('aria-expanded', open);
   if (open) {
+    prefetchInvestigatePage();
     document.addEventListener('click', closePlusOnOutside, { once: true, capture: true });
   }
 }
@@ -2263,84 +2284,37 @@ function updatePlusModelLabel(label) {
   if (el) el.textContent = label;
 }
 
-// ── Investigate panel ──
-let _invType = 'auto';
+let investigatePrefetchStarted = false;
+function prefetchInvestigatePage() {
+  if (investigatePrefetchStarted) return;
+  investigatePrefetchStarted = true;
 
+  if (!document.querySelector('link[data-prefetch-investigate="true"]')) {
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.as = 'document';
+    link.href = '/investigate';
+    link.setAttribute('data-prefetch-investigate', 'true');
+    document.head.appendChild(link);
+  }
+
+  if (!document.querySelector('link[data-prefetch-investigate-js="true"]')) {
+    const script = document.createElement('link');
+    script.rel = 'prefetch';
+    script.as = 'script';
+    script.href = '/static/js/investigate.js';
+    script.setAttribute('data-prefetch-investigate-js', 'true');
+    document.head.appendChild(script);
+  }
+
+  fetch('/investigate', { credentials: 'include', cache: 'force-cache' }).catch(() => {});
+}
+
+/* Investigation Center is now a dedicated page at /investigate */
 function openInvestigatePanel() {
-  document.getElementById('investigate-panel')?.classList.add('open');
-  document.getElementById('investigate-overlay')?.classList.add('open');
-  setTimeout(() => document.getElementById('investigate-input')?.focus(), 150);
-}
-function closeInvestigatePanel() {
-  document.getElementById('investigate-panel')?.classList.remove('open');
-  document.getElementById('investigate-overlay')?.classList.remove('open');
-}
-function setInvType(btn, type) {
-  _invType = type;
-  document.querySelectorAll('.inv-type-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  window.location.href = '/investigate';
 }
 
-async function runInvestigate() {
-  const artifact = document.getElementById('investigate-input')?.value?.trim();
-  if (!artifact) return;
-
-  const runBtn = document.getElementById('investigate-run-btn');
-  const resultEl = document.getElementById('investigate-result');
-
-  runBtn.disabled = true;
-  runBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Analyzing…`;
-  resultEl.innerHTML = '';
-
-  try {
-    const res = await fetch('/api/triage/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ artifact, type: _invType }),
-    });
-    const data = await res.json();
-
-    if (!res.ok || data.error) {
-      resultEl.innerHTML = `<span style="color:var(--red)">${data.error || data.message || 'Analysis failed'}</span>`;
-      return;
-    }
-
-    resultEl.innerHTML = renderInvestigateResult(data);
-  } catch (err) {
-    resultEl.innerHTML = `<span style="color:var(--red)">Network error — ${err.message}</span>`;
-  } finally {
-    runBtn.disabled = false;
-    runBtn.innerHTML = `<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Analyze`;
-  }
-}
-
-function renderInvestigateResult(d) {
-  const sev = (d.severity || 'unknown').toLowerCase();
-  const iocs = d.iocs || {};
-  const mitre = d.mitre_techniques || [];
-  const summary = d.summary || d.message || '';
-
-  let html = `<div class="inv-severity ${sev}">⚠ Severity: ${sev.toUpperCase()}</div>`;
-  if (summary) html += `<div style="margin-bottom:8px">${summary}</div>`;
-
-  const allIocs = [
-    ...(iocs.ips || []).map(x => ({ v: x, t: 'IP' })),
-    ...(iocs.domains || []).map(x => ({ v: x, t: 'Domain' })),
-    ...(iocs.hashes || []).map(x => ({ v: x, t: 'Hash' })),
-    ...(iocs.urls || []).map(x => ({ v: x, t: 'URL' })),
-  ];
-  if (allIocs.length) {
-    html += `<div class="inv-section-label">IOCs (${allIocs.length})</div>`;
-    html += allIocs.map(i => `<span class="inv-tag" title="${i.t}">${i.v}</span>`).join('');
-  }
-  if (mitre.length) {
-    html += `<div class="inv-section-label">MITRE ATT&CK</div>`;
-    html += mitre.map(t => `<span class="inv-tag">${t.id || t} · ${t.name || ''}</span>`).join('');
-  }
-  return html;
-}
-
-// Keyboard shortcut — Escape closes investigate panel
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeInvestigatePanel();
+document.addEventListener('DOMContentLoaded', function () {
+  prefetchInvestigatePage();
 });

@@ -171,6 +171,40 @@ def init_db():
                 CREATE INDEX IF NOT EXISTS idx_messages_session
                 ON messages (session_id, created_at ASC)
             """)
+
+            # ── User Profiles (Skill Intelligence) ──
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS user_profiles (
+                    id                   SERIAL PRIMARY KEY,
+                    user_id              INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    skill_level          TEXT NOT NULL DEFAULT 'beginner'
+                                         CHECK (skill_level IN ('beginner', 'intermediate', 'advanced')),
+                    career_path          TEXT,
+                    onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at           TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at           TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS learning_progress (
+                    id                   SERIAL PRIMARY KEY,
+                    user_id              INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    completed_lessons    INTEGER NOT NULL DEFAULT 0,
+                    completed_quizzes    INTEGER NOT NULL DEFAULT 0,
+                    completed_labs       INTEGER NOT NULL DEFAULT 0,
+                    current_topic        TEXT,
+                    progress_percentage  NUMERIC(5,2) DEFAULT 0.00,
+                    updated_at           TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_user_profiles_user
+                ON user_profiles (user_id)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_learning_progress_user
+                ON learning_progress (user_id)
+            """)
         conn.commit()
 
 
@@ -284,6 +318,19 @@ def get_investigation_by_id(investigation_id, user_id):
             return cur.fetchone()
 
 
+def delete_investigation(investigation_id, user_id):
+    """Delete an investigation scoped to the user. Returns True if deleted."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM investigations
+                WHERE id = %s AND user_id = %s
+                RETURNING id
+            """, (investigation_id, user_id))
+            conn.commit()
+            return cur.fetchone() is not None
+
+
 # ==========================
 # CHAT SESSION OPERATIONS  (FIX #7)
 # ==========================
@@ -395,3 +442,101 @@ def get_messages(session_id, user_id, limit=200):
                 LIMIT %s
             """, (session_id, user_id, limit))
             return cur.fetchall()
+
+
+# ==========================
+# PROFILE OPERATIONS
+# ==========================
+
+def get_or_create_profile(user_id):
+    """Return user profile, creating a default one if it doesn't exist."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM user_profiles WHERE user_id = %s", (user_id,))
+            profile = cur.fetchone()
+            if profile:
+                return profile
+            cur.execute("""
+                INSERT INTO user_profiles (user_id, skill_level)
+                VALUES (%s, 'beginner')
+                RETURNING *
+            """, (user_id,))
+            conn.commit()
+            return cur.fetchone()
+
+
+def update_profile(user_id, skill_level=None, career_path=None, onboarding_completed=None):
+    """Update profile fields. Only provided fields are updated."""
+    fields = []
+    values = []
+    if skill_level is not None:
+        fields.append("skill_level = %s")
+        values.append(skill_level)
+    if career_path is not None:
+        fields.append("career_path = %s")
+        values.append(career_path)
+    if onboarding_completed is not None:
+        fields.append("onboarding_completed = %s")
+        values.append(onboarding_completed)
+    if not fields:
+        return get_or_create_profile(user_id)
+    fields.append("updated_at = NOW()")
+    values.append(user_id)
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                UPDATE user_profiles
+                SET {', '.join(fields)}
+                WHERE user_id = %s
+                RETURNING *
+            """, values)
+            conn.commit()
+            row = cur.fetchone()
+            if row:
+                return row
+            return get_or_create_profile(user_id)
+
+
+def get_or_create_learning_progress(user_id):
+    """Return learning progress, creating default if it doesn't exist."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM learning_progress WHERE user_id = %s", (user_id,))
+            progress = cur.fetchone()
+            if progress:
+                return progress
+            cur.execute("""
+                INSERT INTO learning_progress (user_id)
+                VALUES (%s)
+                RETURNING *
+            """, (user_id,))
+            conn.commit()
+            return cur.fetchone()
+
+
+def update_learning_progress(user_id, **kwargs):
+    """Update learning progress fields. Keys: completed_lessons, completed_quizzes,
+    completed_labs, current_topic, progress_percentage."""
+    fields = []
+    values = []
+    for key in ('completed_lessons', 'completed_quizzes', 'completed_labs', 'current_topic', 'progress_percentage'):
+        if key in kwargs and kwargs[key] is not None:
+            fields.append(f"{key} = %s")
+            values.append(kwargs[key])
+    if not fields:
+        return get_or_create_learning_progress(user_id)
+    fields.append("updated_at = NOW()")
+    values.append(user_id)
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                UPDATE learning_progress
+                SET {', '.join(fields)}
+                WHERE user_id = %s
+                RETURNING *
+            """, values)
+            conn.commit()
+            row = cur.fetchone()
+            if row:
+                return row
+            return get_or_create_learning_progress(user_id)

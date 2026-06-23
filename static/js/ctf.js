@@ -22,10 +22,16 @@ function openCtfModal() {
   document.getElementById('ctf-modal').classList.add('show');
   _ctfSelectedCategory = '';
   _ctfRenderCategoryPicker();
+  if (typeof loadChatSuggestions === 'function') {
+    loadChatSuggestions('ctf');
+  }
 }
 
 function closeCtfModal() {
   document.getElementById('ctf-modal').classList.remove('show');
+  if (typeof loadChatSuggestions === 'function') {
+    loadChatSuggestions('chat');
+  }
 }
 
 function _ctfBody() {

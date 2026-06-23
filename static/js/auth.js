@@ -18,11 +18,13 @@
 })();
 
 function showLoginOverlay() {
-  document.getElementById('login-overlay').style.display = 'flex';
+  const el = document.getElementById('login-overlay');
+  if (el) el.style.display = 'flex';
 }
 
 function hideLoginOverlay() {
-  document.getElementById('login-overlay').style.display = 'none';
+  const el = document.getElementById('login-overlay');
+  if (el) el.style.display = 'none';
 }
 
 async function showUserProfile(user) {
@@ -34,12 +36,10 @@ async function showUserProfile(user) {
     STORAGE_KEY = `cybguru_chats_v1_${user.id}`;
     ACTIVE_KEY  = `cybguru_active_v1_${user.id}`;
 
-    // Load history for sidebar, but always open fresh new chat
-    chats = {};
-    activeChatId = null;
-    loadFromStorage();
-    renderHistoryList();
-    newChat();
+    // Load history for chat page (safe guard — only defined when chat.js is loaded)
+    if (typeof loadFromStorage === 'function') { chats = {}; activeChatId = null; loadFromStorage(); }
+    if (typeof renderHistoryList === 'function') renderHistoryList();
+    if (typeof newChat === 'function') newChat();
 
     const row = document.getElementById('user-profile-row');
     if (row) {
@@ -48,6 +48,24 @@ async function showUserProfile(user) {
       document.getElementById('user-name').textContent = user.name || user.email;
       document.getElementById('user-email').textContent = user.email;
       row.style.display = 'flex';
+    }
+
+    // ── Load profile & check onboarding ──
+    try {
+      const pRes = await fetch('/api/profile', { credentials: 'include' });
+      if (pRes.ok) {
+        const profileData = await pRes.json();
+        window.__userData = window.__userData || {};
+        window.__userData.profile = profileData.profile || profileData;
+        if (typeof loadProfileWidget === 'function') loadProfileWidget();
+        if (typeof loadSettingsProfile === 'function') loadSettingsProfile();
+        // Show onboarding if not completed
+        if (!window.__userData.profile.onboarding_completed) {
+          if (typeof showOnboarding === 'function') setTimeout(showOnboarding, 600);
+        }
+      }
+    } catch (pErr) {
+      console.warn('Could not load profile:', pErr);
     }
 
     if (typeof updateSendBtn === 'function') updateSendBtn();
@@ -64,7 +82,8 @@ async function showUserProfile(user) {
 async function logout() {
   await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
   showLoginOverlay();
-  document.getElementById('user-profile-row').style.display = 'none';
+  const row = document.getElementById('user-profile-row');
+  if (row) row.style.display = 'none';
 }
 
 // Intercept 401 from any fetch in the app (chat/analyze/etc.)

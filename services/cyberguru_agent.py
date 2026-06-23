@@ -84,8 +84,9 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
     )
 
     # Step 6: Persist
+    investigation_id = None
     if user_id is not None:
-        save_investigation(
+        row = save_investigation(
             user_id=user_id,
             artifact_hash=artifact_hash,
             artifact_text=artifact_text,
@@ -97,6 +98,7 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
             report=report,
             analysis_error=analysis_error
         )
+        investigation_id = row.get("id") if row else None
 
     return {
         "analysis": analysis,
@@ -106,6 +108,7 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
         "mitre_techniques": mitre_techniques,
         "report": report,
         "from_cache": False,
+        "investigation_id": investigation_id,
     }
 
 

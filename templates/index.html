@@ -485,6 +485,74 @@
 </div>
 
 <!-- ═══════════════════════════════════
+     ONBOARDING MODAL  (single-step skill selection)
+     ═══════════════════════════════════ -->
+<div id="onboarding-overlay" class="ob-overlay">
+  <div class="onboarding-modal">
+    <button class="ob-close" onclick="closeOnboarding()">✕</button>
+
+    <div class="ob-view" id="ob-view-select">
+      <div class="ob-header">
+        <div class="ob-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <h2 class="ob-title">Welcome to CyberGuru AI</h2>
+        <p class="ob-sub">Select your experience level so I can tailor every answer to you.</p>
+      </div>
+
+      <div class="ob-cards" id="ob-cards">
+        <label class="ob-card" data-level="beginner">
+          <input type="radio" name="skill_level" value="beginner" hidden>
+          <div class="ob-card-dot"></div>
+          <div class="ob-card-body">
+            <div class="ob-card-name">Beginner</div>
+            <div class="ob-card-desc">New to cybersecurity. No prior experience.</div>
+          </div>
+          <div class="ob-card-check">✓</div>
+        </label>
+        <label class="ob-card" data-level="intermediate">
+          <input type="radio" name="skill_level" value="intermediate" hidden>
+          <div class="ob-card-dot"></div>
+          <div class="ob-card-body">
+            <div class="ob-card-name">Intermediate</div>
+            <div class="ob-card-desc">Some experience. Basics of networks &amp; security.</div>
+          </div>
+          <div class="ob-card-check">✓</div>
+        </label>
+        <label class="ob-card" data-level="advanced">
+          <input type="radio" name="skill_level" value="advanced" hidden>
+          <div class="ob-card-dot"></div>
+          <div class="ob-card-body">
+            <div class="ob-card-name">Advanced</div>
+            <div class="ob-card-desc">Experienced. Want expert-level guidance.</div>
+          </div>
+          <div class="ob-card-check">✓</div>
+        </label>
+      </div>
+
+      <button class="ob-btn ob-btn-primary" id="ob-save-btn" onclick="saveOnboarding()" disabled>Save Preference</button>
+      <button class="ob-btn ob-btn-skip" onclick="skipOnboarding()">Skip for now</button>
+    </div>
+
+    <div class="ob-view" id="ob-view-processing" style="display:none">
+      <div class="ob-processing">
+        <div class="ob-pulse-ring"></div>
+        <div class="ob-spinner">
+          <svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke-width="4" stroke-linecap="round"/></svg>
+        </div>
+        <h2 class="ob-title" style="margin-top:20px;">Personalizing Your Experience</h2>
+        <div class="ob-status-steps">
+          <div class="ob-step-row" id="ob-step-1"><span class="ob-step-dot"></span>Saving your skill preference…</div>
+          <div class="ob-step-row" id="ob-step-2"><span class="ob-step-dot"></span>Setting up adaptive intelligence…</div>
+          <div class="ob-step-row" id="ob-step-3"><span class="ob-step-dot"></span>Almost ready…</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
      SCRIPTS
      ═══════════════════════════════════ -->
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
@@ -538,6 +606,13 @@
     <div class="sp-info-row">
       <span class="sp-info-key">Model</span>
       <span class="sp-info-val">Gemini 2.5 Flash</span>
+    </div>
+
+    <div class="sp-divider"></div>
+
+    <div class="sp-section-label">Learning Profile</div>
+    <div id="settings-profile-widget">
+      <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">Loading profile...</div>
     </div>
 
     <div class="sp-divider"></div>
@@ -980,6 +1055,7 @@
               <div class="mentor-msg-bubble">Hey! I'm your Cyber Mentor. Ask me anything about cybersecurity.</div>
             </div>
           </div>
+          <div id="mentor-suggest-chips" class="dyn-suggest-wrap mentor-suggest-wrap"></div>
           <div class="mentor-chat-input-wrap">
             <textarea id="mentor-chat-input" class="mentor-chat-input" placeholder="Ask your mentor anything..." rows="1" onkeydown="mentorChatKeydown(event)"></textarea>
             <button class="mentor-chat-send" id="mentor-send-btn" onclick="mentorSendMessage()">
@@ -1044,37 +1120,7 @@
   </div><!-- /.mentor-body -->
 </div><!-- /#mentor-overlay -->
 
-<!-- ═══════════════════════════════════
-     INVESTIGATE / TRIAGE PANEL
-     ═══════════════════════════════════ -->
-<div class="investigate-overlay" id="investigate-overlay" onclick="closeInvestigatePanel()"></div>
-<div class="investigate-panel" id="investigate-panel" role="dialog" aria-label="Investigate artifact">
-  <div class="investigate-header">
-    <div class="investigate-title">
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      Investigate
-    </div>
-    <div class="investigate-type-row">
-      <button class="inv-type-btn active" data-type="auto" onclick="setInvType(this,'auto')">Auto</button>
-      <button class="inv-type-btn" data-type="log" onclick="setInvType(this,'log')">Log</button>
-      <button class="inv-type-btn" data-type="phishing_email" onclick="setInvType(this,'phishing_email')">Email</button>
-      <button class="inv-type-btn" data-type="malware" onclick="setInvType(this,'malware')">Malware</button>
-      <button class="inv-type-btn" data-type="url" onclick="setInvType(this,'url')">URL</button>
-    </div>
-    <button class="investigate-close" onclick="closeInvestigatePanel()" aria-label="Close">
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-    </button>
-  </div>
-  <textarea class="investigate-textarea" id="investigate-input" placeholder="Paste a log, phishing email, malware report, or URL…" rows="8"></textarea>
-  <div class="investigate-actions">
-    <span class="investigate-hint">Extracts IOCs · MITRE ATT&amp;CK · AbuseIPDB · VirusTotal</span>
-    <button class="investigate-run-btn" id="investigate-run-btn" onclick="runInvestigate()">
-      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      Analyze
-    </button>
-  </div>
-  <div class="investigate-result" id="investigate-result"></div>
-</div><!-- /.investigate-panel -->
+<!-- Investigation Center is now a dedicated page at /investigate -->
 
 </body>
 </html>

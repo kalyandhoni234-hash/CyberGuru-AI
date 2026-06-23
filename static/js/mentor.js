@@ -300,12 +300,14 @@ async function openMentorOverlay() {
   document.getElementById('mentor-overlay').classList.add('show');
   document.body.style.overflow = 'hidden';
   initLanding();
+  if (typeof loadChatSuggestions === 'function') loadChatSuggestions('mentor');
 }
 
 function closeMentorOverlay() {
   document.getElementById('mentor-overlay').classList.remove('show');
   document.body.style.overflow = '';
   if (_mlAnimId) { cancelAnimationFrame(_mlAnimId); _mlAnimId = null; }
+  if (typeof loadChatSuggestions === 'function') loadChatSuggestions('chat');
 }
 
 document.addEventListener('keydown', e => {
@@ -1365,6 +1367,7 @@ async function mentorSendMessage() {
   } finally {
     mentorThinking = false;
     document.getElementById('mentor-send-btn').disabled = false;
+    loadMentorSuggestions();
   }
 }
 
@@ -1544,8 +1547,166 @@ function renderBadges() {
   }).join('');
 }
 
+// ══ PROFILE & ONBOARDING ══
+
+function showOnboarding() {
+  const overlay = document.getElementById('onboarding-overlay');
+  if (!overlay) return;
+  overlay.classList.add('active');
+  overlay.style.display = 'flex';
+  // Reset
+  document.getElementById('ob-view-select').style.display = '';
+  document.getElementById('ob-view-processing').style.display = 'none';
+  document.getElementById('ob-save-btn').disabled = true;
+  document.querySelectorAll('.ob-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector('input[name="skill_level"]:checked') && (document.querySelector('input[name="skill_level"]:checked').checked = false);
+}
+
+function closeOnboarding() {
+  const overlay = document.getElementById('onboarding-overlay');
+  if (overlay) { overlay.classList.remove('active'); overlay.style.display = 'none'; }
+}
+
+function skipOnboarding() {
+  closeOnboarding();
+}
+
+// Card selection via click
+document.addEventListener('click', function (e) {
+  const card = e.target.closest('.ob-card');
+  if (!card) return;
+  document.querySelectorAll('.ob-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  const radio = card.querySelector('input[type="radio"]');
+  if (radio) radio.checked = true;
+  const btn = document.getElementById('ob-save-btn');
+  if (btn) btn.disabled = false;
+});
+
+async function saveOnboarding() {
+  const level = document.querySelector('input[name="skill_level"]:checked')?.value;
+  if (!level) return;
+
+  // Show processing view
+  document.getElementById('ob-view-select').style.display = 'none';
+  document.getElementById('ob-view-processing').style.display = '';
+
+  const step1 = document.getElementById('ob-step-1');
+  const step2 = document.getElementById('ob-step-2');
+  const step3 = document.getElementById('ob-step-3');
+
+  // Animate steps
+  step1.classList.add('active');
+  await sleep(600);
+
+  try {
+    const csrf = window._csrfToken || '';
+    const res = await fetch('/api/profile/onboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+      credentials: 'include',
+      body: JSON.stringify({ skill_level: level }),
+    });
+
+    step1.classList.remove('active');
+    step1.classList.add('done');
+
+    step2.classList.add('active');
+    await sleep(500);
+
+    if (!res.ok) {
+      step2.classList.remove('active');
+      step2.querySelector('.ob-step-dot').style.background = '#ef4444';
+      step2.style.color = '#ef4444';
+      return;
+    }
+
+    step2.classList.remove('active');
+    step2.classList.add('done');
+
+    step3.classList.add('active');
+    await sleep(400);
+
+    const data = await res.json();
+    window.__userData = window.__userData || {};
+    window.__userData.profile = data.profile || {};
+
+    step3.classList.remove('active');
+    step3.classList.add('done');
+
+    await sleep(400);
+    closeOnboarding();
+    loadProfileWidget();
+    loadSettingsProfile();
+    if (typeof loadChatSuggestions === 'function') loadChatSuggestions('chat');
+
+  } catch (e) {
+    console.error('Onboarding error:', e);
+    const active = document.querySelector('.ob-step-row.active');
+    if (active) { active.querySelector('.ob-step-dot').style.background = '#ef4444'; active.style.color = '#ef4444'; }
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function loadProfileWidget() {
+  const profile = window.__userData?.profile;
+  const cont = document.getElementById('settings-profile-widget');
+  if (!cont) return;
+  if (!profile) {
+    cont.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">Complete onboarding to personalise your experience.</div>';
+    return;
+  }
+  const level = profile.skill_level || 'beginner';
+  const pct = profile.progress_percentage || 0;
+  const lessons = profile.completed_lessons || 0;
+  const quizzes = profile.completed_quizzes || 0;
+  const labs = profile.completed_labs || 0;
+  const topic = profile.current_topic || '—';
+  cont.innerHTML = `
+    <div class="prof-widget">
+      <div class="prof-row"><span class="prof-label">Skill Level</span><span class="prof-badge ${level}">${level.charAt(0).toUpperCase() + level.slice(1)}</span></div>
+      <div class="prof-row"><span class="prof-label">Progress</span><span class="prof-value">${pct}%</span></div>
+      <div class="prof-bar"><div class="prof-bar-fill" style="width:${pct}%"></div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;">
+        <div class="prof-stat"><div class="prof-stat-val">${lessons}</div><div class="prof-stat-lbl">Lessons</div></div>
+        <div class="prof-stat"><div class="prof-stat-val">${quizzes}</div><div class="prof-stat-lbl">Quizzes</div></div>
+        <div class="prof-stat"><div class="prof-stat-val">${labs}</div><div class="prof-stat-lbl">Labs</div></div>
+      </div>
+      <div class="prof-row"><span class="prof-label">Current Topic</span><span class="prof-value" style="font-size:12px;max-width:160px;text-align:right;">${topic}</span></div>
+    </div>
+  `;
+}
+
+function loadSettingsProfile() {
+  loadProfileWidget();
+}
+
+/* ── Dynamic Prompt Suggestions ─────────────────────────────────── */
+
+async function loadMentorSuggestions() {
+  var wrap = document.getElementById('mentor-suggest-chips');
+  if (!wrap) return;
+  try {
+    var res = await fetch('/api/prompt-suggestions?module=mentor&count=4', { credentials: 'include' });
+    if (!res.ok) { wrap.innerHTML = ''; return; }
+    var data = await res.json();
+    var items = data.suggestions || [];
+    if (!items.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = items.map(function (text, i) {
+      return '<span class="dyn-suggest-chip dsc-d' + (i + 1) + '" onclick="mentorFillSuggestion(' + JSON.stringify(text) + ')" title="' + escapeHtml(text) + '"><span class="dsc-icon">🎓</span>' + escapeHtml(text) + '</span>';
+    }).join('');
+  } catch (_) { wrap.innerHTML = ''; }
+}
+
+function mentorFillSuggestion(text) {
+  var input = document.getElementById('mentor-chat-input');
+  if (input) { input.value = text; input.focus(); }
+}
+
 // ══ INIT ══
 (async function mentorInit() {
   mentorLoad();
   await loadRoadmap();
+  setTimeout(loadMentorSuggestions, 300);
 })();

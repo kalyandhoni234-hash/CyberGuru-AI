@@ -63,7 +63,7 @@ function _ctfRenderCategoryPicker() {
   const cards = CTF_CATEGORY_OPTIONS.map((opt, i) => {
     const isChecked = (i === 0 && _ctfSelectedCategory === '') || _ctfSelectedCategory === opt.value;
     return `
-      <label class="ctf-cat-card ${isChecked ? 'selected' : ''}" data-value="${escapeHtml(opt.value)}" onclick="_ctfSelectCategory(this, '${escapeHtml(opt.value)}')">
+      <label class="ctf-cat-card ${isChecked ? 'selected' : ''}" data-value="${escapeHtml(opt.value)}" data-action="_ctfSelectCategory" data-value-id="${escapeHtml(opt.value)}">
         <input type="radio" name="ctf-category" value="${escapeHtml(opt.value)}" ${isChecked ? 'checked' : ''}>
         <span class="ctf-cat-icon">${opt.icon}</span>
         <span>${escapeHtml(opt.label)}</span>
@@ -79,8 +79,8 @@ function _ctfRenderCategoryPicker() {
       ${cards}
     </div>
     <div class="quiz-actions">
-      <button class="quiz-cancel" onclick="closeCtfModal()">Cancel</button>
-      <button class="start-btn" onclick="_ctfStartFromPicker()">Start Challenge →</button>
+      <button class="quiz-cancel" data-action="closeCtfModal">Cancel</button>
+      <button class="start-btn" data-action="_ctfStartFromPicker">Start Challenge →</button>
     </div>
   `;
 }
@@ -110,7 +110,7 @@ function _ctfRenderLoading(msg, sub) {
       </div>
     </div>
     <div class="quiz-actions">
-      <button class="quiz-cancel" onclick="closeCtfModal()">Cancel</button>
+      <button class="quiz-cancel" data-action="closeCtfModal">Cancel</button>
     </div>
   `;
 }
@@ -120,8 +120,8 @@ function _ctfRenderError(message, allowRetry) {
     ${_ctfHeader('CTF Challenge Mode', 0)}
     <div class="ctf-error">⚠️ ${escapeHtml(message || 'Something went wrong.')}</div>
     <div class="quiz-actions">
-      <button class="quiz-cancel" onclick="closeCtfModal()">Close</button>
-      ${allowRetry ? '<button class="start-btn" onclick="_ctfRenderCategoryPicker()">Choose Category</button>' : ''}
+      <button class="quiz-cancel" data-action="closeCtfModal">Close</button>
+      ${allowRetry ? '<button class="start-btn" data-action="_ctfRenderCategoryPicker">Choose Category</button>' : ''}
     </div>
   `;
 }
@@ -182,7 +182,7 @@ function _ctfRenderChallenge(c) {
       <div class="ctf-artifact-titlebar">
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         <span class="ctf-artifact-label">Evidence</span>
-        <button class="ctf-artifact-copy" onclick="_ctfCopyArtifact(this)">Copy</button>
+        <button class="ctf-artifact-copy" data-action="_ctfCopyArtifact">Copy</button>
       </div>
       <pre class="ctf-artifact" id="ctf-artifact-text">${escapeHtml(c.artifact)}</pre>
     </div>` : ''}
@@ -191,9 +191,9 @@ function _ctfRenderChallenge(c) {
     <textarea id="ctf-answer-input" class="ctf-answer-box" placeholder="Write your analysis and answer here..."></textarea>
     <div class="ctf-answer-hint">Explain your reasoning — partial credit is given for sound analysis even if your conclusion is off.</div>
     <div class="quiz-actions">
-      <button class="quiz-cancel" onclick="closeCtfModal()">Cancel</button>
-      <button class="quiz-cancel" onclick="_ctfRenderCategoryPicker()">↻ New Challenge</button>
-      <button class="start-btn" onclick="_ctfSubmitAnswer()">Submit Answer</button>
+      <button class="quiz-cancel" data-action="closeCtfModal">Cancel</button>
+      <button class="quiz-cancel" data-action="_ctfRenderCategoryPicker">↻ New Challenge</button>
+      <button class="start-btn" data-action="_ctfSubmitAnswer">Submit Answer</button>
     </div>
   `;
 
@@ -284,8 +284,8 @@ function _ctfRenderResult(r, title, category) {
     ${r.mitre_callout ? `<div class="ctf-section-label">🧭 MITRE ATT&CK</div><div class="ctf-reveal mitre">${escapeHtml(r.mitre_callout)}</div>` : ''}
 
     <div class="quiz-actions">
-      <button class="quiz-cancel" onclick="closeCtfModal()">Close</button>
-      <button class="start-btn" onclick="_ctfRenderCategoryPicker()">New Challenge</button>
+      <button class="quiz-cancel" data-action="closeCtfModal">Close</button>
+      <button class="start-btn" data-action="_ctfRenderCategoryPicker">New Challenge</button>
     </div>
   `;
 

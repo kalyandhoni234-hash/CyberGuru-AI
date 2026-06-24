@@ -1,5 +1,16 @@
 // ── Global declarations (must be first — referenced before their original positions) ──
-
+// ── Safe localStorage shim (Safari Private mode throws SecurityError) ──
+const safeStorage = (() => {
+  const mem = {};
+  try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return localStorage; }
+  catch(e) {
+    return {
+      getItem:    k    => mem[k] ?? null,
+      setItem:    (k,v)=> { mem[k] = String(v); },
+      removeItem: k    => { delete mem[k]; }
+    };
+  }
+})();
 let currentModel = 'gemini';
 
 const WELCOME_CAPS = [
@@ -28,20 +39,22 @@ const WELCOME_CARDS = [
 
 /* ─── THEME ──────────────────────────────────────────────────── */
 function setTheme(theme) {
-  document.body.classList.remove('theme-cyber','theme-light','theme-oled');
-  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+  document.body.classList.remove('theme-hacker','theme-light','theme-oled');
+  document.querySelectorAll('.sp-theme-card').forEach(b => b.classList.remove('active'));
  
+  if(theme === 'hacker') document.body.classList.add('theme-hacker');
   if(theme === 'light') document.body.classList.add('theme-light');
   else if(theme === 'oled') document.body.classList.add('theme-oled');
-  const btn = document.getElementById('btn-' + theme);
+  const btn = document.getElementById('tc-' + theme);
   if(btn) btn.classList.add('active');
-  localStorage.setItem('cyberguru_theme', theme);
+  safeStorage.setItem('cyberguru_theme', theme);
 }
 
 function loadTheme() {
-  const saved = localStorage.getItem('cyberguru_theme') || 'cyber';
-  const valid = ['cyber', 'light', 'oled'];
-  setTheme(valid.includes(saved) ? saved : 'cyber');
+  const saved = safeStorage.getItem('cyberguru_theme') || 'hacker';
+  const normalized = saved === 'cyber' ? 'hacker' : saved;
+  const valid = ['hacker', 'light', 'oled'];
+  setTheme(valid.includes(normalized) ? normalized : 'hacker');
 }
 
 /* ─── GLOBALS ────────────────────────────────────────────────── */
@@ -166,12 +179,12 @@ function toggleSidebarCollapse() {
   const sidebar = document.getElementById('sidebar');
   const isCollapsed = sidebar.classList.toggle('collapsed');
   document.body.classList.toggle('sidebar-collapsed', isCollapsed);
-  localStorage.setItem('sidebar_collapsed', isCollapsed);
+  safeStorage.setItem('sidebar_collapsed', isCollapsed);
 }
 
 // In your init/loadTheme area, add:
 function loadSidebarState() {
-  if (localStorage.getItem('sidebar_collapsed') === 'true') {
+  if (safeStorage.getItem('sidebar_collapsed') === 'true') {
     document.getElementById('sidebar').classList.add('collapsed');
     document.body.classList.add('sidebar-collapsed');
   }
@@ -453,7 +466,7 @@ function saveToStorage() {
       }
       console.warn('[CyberGuru] Storage near limit — oldest chats pruned.');
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+    safeStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
   } catch(e) {
     if(e && (e.name === 'QuotaExceededError' || e.code === 22)) {
       // Surface a non-blocking toast instead of silently dropping data
@@ -483,7 +496,7 @@ function showStorageWarning() {
 
 function loadFromStorage() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeStorage.getItem(STORAGE_KEY);
     if(raw) chats = JSON.parse(raw);
   } catch(e) { chats = {}; }
 }
@@ -491,7 +504,7 @@ function loadFromStorage() {
 /* ─── NEW CHAT ───────────────────────────────────────────────── */
 function newChat() {
   activeChatId = null;
-  localStorage.removeItem(ACTIVE_KEY);
+  safeStorage.removeItem(ACTIVE_KEY);
   showWelcome();
   renderHistoryList();
   document.getElementById('topbar-title').textContent = 'New Conversation';
@@ -639,13 +652,13 @@ function _buildWelcomeHTML() {
     .join('');
   const cards = WELCOME_CARDS
     .map(c => `
-      <div class="suggest-card" onclick="(${c.action.toString()})()">
+      <div class="suggest-card" data-welcome-action="prompt" data-text="${escapeHtml(c.text)}">
         <span class="sc-icon" aria-hidden="true">${WELCOME_CARD_ICONS[c.icon]}</span>
         <span class="sc-copy"><span class="sc-label">${c.label}</span>${c.text}</span>
       </div>`)
     .join('');
   const mentorCard = `
-    <div class="mentor-welcome-card" onclick="openMentorOverlay()" style="opacity:0;animation:cardFadeUp .4s ease .4s forwards">
+    <div class="mentor-welcome-card" data-welcome-action="mentor" style="opacity:0;animation:cardFadeUp .4s ease .4s forwards">
       <div class="mentor-wc-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
@@ -714,13 +727,13 @@ async function _initStaticWelcome() {
   if (grid) {
     const cards = WELCOME_CARDS
       .map(c => `
-        <div class="suggest-card" onclick="(${c.action.toString()})()">
+        <div class="suggest-card" data-welcome-action="prompt" data-text="${escapeHtml(c.text)}">
           <span class="sc-icon" aria-hidden="true">${WELCOME_CARD_ICONS[c.icon]}</span>
           <span class="sc-copy"><span class="sc-label">${c.label}</span>${c.text}</span>
         </div>`)
       .join('');
     const mentorCard = `
-      <div class="mentor-welcome-card" onclick="openMentorOverlay()" style="opacity:0;animation:cardFadeUp .4s ease .4s forwards">
+      <div class="mentor-welcome-card" data-welcome-action="mentor" style="opacity:0;animation:cardFadeUp .4s ease .4s forwards">
         <div class="mentor-wc-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
@@ -751,10 +764,24 @@ async function showWelcome() {
   box.innerHTML = _buildWelcomeHTML();
 }
 
+document.addEventListener('click', function (e) {
+  const el = e.target.closest('[data-welcome-action]');
+  if (!el) return;
+  e.preventDefault();
+  const action = el.dataset.welcomeAction;
+  if (action === 'mentor') {
+    openMentorOverlay();
+    return;
+  }
+  if (action === 'prompt') {
+    fillAndSend(el.dataset.text || el.textContent.trim());
+  }
+});
+
 
 function loadChat(id, closeMenu = true) {
   activeChatId = id;
-  localStorage.setItem(ACTIVE_KEY, id);
+  safeStorage.setItem(ACTIVE_KEY, id);
   renderHistoryList();
 
   const box = document.getElementById('chat-box');
@@ -815,14 +842,14 @@ function appendMessage(role, text, scroll = true) {
   const msgId = 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
   const botActions = role === 'bot' ? `
     <div class="msg-actions">
-      <button class="msg-action-btn" onclick="copyMessage('${msgId}')" title="Copy response">
+      <button class="msg-action-btn" data-action="copyMessage" data-msg-id="${msgId}" title="Copy response">
         <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
         Copy
       </button>
-      <button class="msg-action-btn" id="${msgId}-up" onclick="thumbs('${msgId}','up')" title="Good response">
+      <button class="msg-action-btn" id="${msgId}-up" data-action="thumbs" data-msg-id="${msgId}" data-dir="up" title="Good response">
         <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
       </button>
-      <button class="msg-action-btn" id="${msgId}-dn" onclick="thumbs('${msgId}','down')" title="Bad response">
+      <button class="msg-action-btn" id="${msgId}-dn" data-action="thumbs" data-msg-id="${msgId}" data-dir="down" title="Bad response">
         <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10zM17 2h2.67A2.31 2.31 0 0122 4v7a2.31 2.31 0 01-2.33 2H17"/></svg>
       </button>
     </div>` : '';
@@ -892,7 +919,7 @@ function renderMarkdown(text) {
     const html = `<div class="code-block-wrap">
       <div class="code-block-header">
         <span class="code-lang">${display}</span>
-        <button class="copy-btn" id="${id}" onclick="copyCode('${id}')">
+        <button class="copy-btn" id="${id}" data-action="copyCode" data-code-id="${id}">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
             <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
@@ -1042,7 +1069,7 @@ function renderHistoryList() {
       div.innerHTML = `
         ${chatIcon}
         <span class="hi-title">${escapeHtml(chat.title)}</span>
-        <button class="delete-chat-btn" aria-label="Delete chat" title="Delete conversation" onclick="deleteChat('${id}', event)">
+        <button class="delete-chat-btn" aria-label="Delete chat" title="Delete conversation" data-action="deleteChat" data-chat-id="${id}">
           ${deleteIcon}
         </button>`;
       div.onclick = () => loadChat(id);
@@ -1116,7 +1143,7 @@ async function sendToBackend() {
     if(!activeChatId) {
       activeChatId = 'chat_' + Date.now();
       chats[activeChatId] = { title: file.name.slice(0,40), msgs:[] };
-      localStorage.setItem(ACTIVE_KEY, activeChatId);
+      safeStorage.setItem(ACTIVE_KEY, activeChatId);
       document.getElementById('topbar-title').textContent = chats[activeChatId].title;
     }
     chats[activeChatId].msgs.push({ role:'user', text:userLabel });
@@ -1200,7 +1227,7 @@ async function sendToBackend() {
     // Generate title locally — no API call, no rate limit impact
     const title = generateSmartTitle(message) || message.slice(0, 42);
     chats[activeChatId] = { title, msgs:[] };
-    localStorage.setItem(ACTIVE_KEY, activeChatId);
+    safeStorage.setItem(ACTIVE_KEY, activeChatId);
     document.getElementById('topbar-title').textContent = title;
     renderHistoryList();
   }
@@ -1785,7 +1812,7 @@ async function fetchCyberNews() {
   if(!activeChatId) {
     activeChatId = 'chat_' + Date.now();
     chats[activeChatId] = { title: 'Cybersecurity News', msgs: [] };
-    localStorage.setItem(ACTIVE_KEY, activeChatId);
+    safeStorage.setItem(ACTIVE_KEY, activeChatId);
     document.getElementById('topbar-title').textContent = chats[activeChatId].title;
   }
 
@@ -1901,12 +1928,17 @@ function autoScrollIfNeeded() {
 
 /* ─── SIDEBAR TOGGLE (mobile) ────────────────────────────────── */
 function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebar-overlay').classList.toggle('show');
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebar-overlay');
+  const isOpen   = sidebar.classList.toggle('open');
+  overlay.style.display = isOpen ? 'block' : 'none';
+  overlay.style.pointerEvents = isOpen ? 'auto' : 'none';
 }
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebar-overlay').classList.remove('show');
+  const overlay = document.getElementById('sidebar-overlay');
+  overlay.style.display = 'none';
+  overlay.style.pointerEvents = 'none';
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -2191,9 +2223,10 @@ function switchTab(tab) {
 }
 
 function updateThemeCards() {
-  const saved = localStorage.getItem('cyberguru_theme') || 'cyber';
+  const saved = safeStorage.getItem('cyberguru_theme') || 'hacker';
+  const normalized = saved === 'cyber' ? 'hacker' : saved;
   document.querySelectorAll('.sp-theme-card').forEach(c => c.classList.remove('active'));
-  const el = document.getElementById('tc-' + saved);
+  const el = document.getElementById('tc-' + normalized);
   if (el) el.classList.add('active');
 }
 
@@ -2204,11 +2237,11 @@ function setFontSize(size) {
   document.querySelectorAll('.sp-font-btn').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('fs-' + size);
   if (el) el.classList.add('active');
-  localStorage.setItem('font_size', size);
+  safeStorage.setItem('font_size', size);
 }
 
 function updateFontButtons() {
-  const saved = localStorage.getItem('font_size') || 'default';
+  const saved = safeStorage.getItem('font_size') || 'default';
   document.querySelectorAll('.sp-font-btn').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('fs-' + saved);
   if (el) el.classList.add('active');
@@ -2216,14 +2249,14 @@ function updateFontButtons() {
 
 function toggleCompactSidebar(on) {
   document.documentElement.style.setProperty('--sidebar-w', on ? '200px' : '264px');
-  localStorage.setItem('compact_sidebar', on);
+  safeStorage.setItem('compact_sidebar', on);
 }
 
 // Load saved font size and sidebar on init
 function loadAppearanceSettings() {
-  const fs = localStorage.getItem('font_size') || 'default';
+  const fs = safeStorage.getItem('font_size') || 'default';
   setFontSize(fs);
-  const compact = localStorage.getItem('compact_sidebar') === 'true';
+  const compact = safeStorage.getItem('compact_sidebar') === 'true';
   if (compact) {
     document.getElementById('compact-sidebar-toggle').checked = true;
     toggleCompactSidebar(true);

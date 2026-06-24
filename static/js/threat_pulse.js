@@ -191,6 +191,6 @@ function _tpTmplError(msg) {
   return `
     <div class="tp-loading tp-loading--err">
       ⚠️ ${escapeHtml(msg)}
-      <button class="start-btn" style="margin-top:16px" onclick="_tpLoad()">Retry</button>
+      <button class="start-btn" style="margin-top:16px" data-action="_tpLoad">Retry</button>
     </div>`;
 }

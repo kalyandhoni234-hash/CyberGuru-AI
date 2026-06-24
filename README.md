@@ -210,7 +210,10 @@ CyberGuru-AI/
 
 1. **Clone the repository**
    ```bash
+   # HTTPS
    git clone https://github.com/kalyandhoni234-hash/CyberGuru-AI.git
+   # SSH (recommended if you have SSH keys configured)
+   git clone git@github.com:kalyandhoni234-hash/CyberGuru-AI.git
    cd CyberGuru-AI
    ```
 
@@ -304,7 +307,7 @@ Coverage includes: auth routes, chat persistence, file upload validation, IOC ex
 **Guru Sharan Kalyan**  
 B.Tech CSE (Cybersecurity) — Government Engineering College, Ajmer
 
-[![GitHub](https://img.shields.io/badge/GitHub-kalyandhoni234-hash-181717?style=flat&logo=github)](https://github.com/kalyandhoni234-hash)
+[![GitHub](https://img.shields.io/badge/GitHub-kalyandhoni234--hash-181717?style=flat&logo=github)](https://github.com/kalyandhoni234-hash)
 [![Live](https://img.shields.io/badge/Live_App-cyberguru--ai.onrender.com-46E3B7?style=flat&logo=render&logoColor=white)](https://cyberguru-ai.onrender.com)
 
 ---

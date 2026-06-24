@@ -11,11 +11,24 @@ from utils.grounding import needs_grounding
 logger = logging.getLogger(__name__)
 MAGIC_BYTES = {
     b'\x25\x50\x44\x46': 'pdf',
-    b'\x50\x4b\x03\x04': 'zip',   # block zip disguised as other types
-    b'\xff\xd8\xff':      'jpg',
-    b'\x89\x50\x4e\x47': 'png',
-    b'\x47\x49\x46\x38': 'gif',
-    b'\x4d\x5a':          'exe',   # block executables
+    b'\x50\x4b\x03\x04': 'zip',    # block zip/docx/xlsx disguised as other types
+    b'\xff\xd8\xff':      'jpg',    # block image uploads
+    b'\x89\x50\x4e\x47': 'png',    # block image uploads
+    b'\x47\x49\x46\x38': 'gif',    # block image uploads
+    b'\x4d\x5a':          'exe',    # block PE executables
+    b'\x7f\x45\x4c\x46': 'elf',    # block ELF binaries (Linux executables)
+    b'\xca\xfe\xba\xbe': 'class',  # block Java class files
+    b'\x1f\x8b':          'gzip',  # block gzip archives
+    b'\x52\x61\x72\x21': 'rar',    # block RAR archives
+}
+
+# Types that are never allowed regardless of declared extension
+_BLOCKED_MAGIC = {'zip', 'exe', 'elf', 'class', 'gzip', 'rar', 'jpg', 'png', 'gif'}
+
+# Allowed magic types mapped to the extensions they may appear as
+_MAGIC_EXTENSION_MAP = {
+    'pdf': {'pdf'},
+    # text/script files have no magic bytes — they fall through to None
 }
 
 def get_magic_type(data: bytes) -> str | None:
@@ -46,12 +59,22 @@ def analyze_file():
         file_bytes = uploaded_file.read()
 
         magic = get_magic_type(file_bytes)
-        if magic in ('exe', 'zip'):
+
+        # Block any file whose magic bytes identify it as a dangerous type
+        if magic in _BLOCKED_MAGIC:
             def blocked():
-                yield ("data: " + jdump({"error": "⚠️ Blocked: executable or archive files are not allowed."}) + "\n\n").encode("utf-8")
+                yield ("data: " + jdump({"error": f"⚠️ Blocked: '{magic}' files are not allowed."}) + "\n\n").encode("utf-8")
             return Response(stream_with_context(blocked()), content_type="text/event-stream; charset=utf-8")
 
-        if magic and magic not in ('pdf',) and ext == 'pdf':
+        # Block content/extension mismatch — e.g. a PE executable renamed to .txt
+        # If magic says it's a pdf, the extension must also be pdf.
+        if magic in _MAGIC_EXTENSION_MAP and ext not in _MAGIC_EXTENSION_MAP[magic]:
+            def mismatch():
+                yield ("data: " + jdump({"error": f"⚠️ File content does not match its extension (.{ext}). Upload rejected."}) + "\n\n").encode("utf-8")
+            return Response(stream_with_context(mismatch()), content_type="text/event-stream; charset=utf-8")
+
+        # If extension says pdf but magic bytes disagree, reject it
+        if ext == 'pdf' and magic != 'pdf':
             def fake_pdf():
                 yield ("data: " + jdump({"error": "⚠️ File does not appear to be a valid PDF."}) + "\n\n").encode("utf-8")
             return Response(stream_with_context(fake_pdf()), content_type="text/event-stream; charset=utf-8")

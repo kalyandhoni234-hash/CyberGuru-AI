@@ -344,6 +344,32 @@ function dismissLanding(tab) {
   switchMentorTab(tab || 'dashboard');
 }
 
+function handleLandingAction(action, el) {
+  if (action === 'roadmap') {
+    dismissLanding('roadmap');
+    return;
+  }
+  if (action === 'domain') {
+    const domainId = el.dataset.domainId;
+    if (!domainId) return;
+    dismissLanding('roadmap');
+    setTimeout(function () {
+      mentorState.selectedDomain = domainId;
+      mentorSave();
+      renderRoadmap();
+    }, 50);
+    return;
+  }
+  dismissLanding();
+}
+
+document.addEventListener('click', function (e) {
+  const el = e.target.closest('[data-landing-action]');
+  if (!el) return;
+  e.preventDefault();
+  handleLandingAction(el.dataset.landingAction, el);
+});
+
 function initLanding() {
   document.querySelector('.mentor-topbar').style.display = 'none';
   document.querySelector('.mentor-body').style.display = 'none';
@@ -470,7 +496,7 @@ function renderLandingPaths() {
     const total = allTopics.length;
     const done = allTopics.filter(t => mentorState.domainCompleted[t.id]).length;
     const pct = total ? Math.round(done / total * 100) : 0;
-    html += `<div class="ml-path-card" style="--path-color:${color}" onclick="dismissLanding('roadmap');setTimeout(()=>{mentorState.selectedDomain='${d.id}';mentorSave();renderRoadmap();},50)">
+    html += `<div class="ml-path-card" style="--path-color:${color}" data-landing-action="domain" data-domain-id="${d.id}">
       <div class="ml-path-header">
         <span class="ml-path-icon">${icon}</span>
         <span class="ml-path-name">${escapeHtml(d.name)}</span>
@@ -791,7 +817,7 @@ function renderDomainSelector() {
   const grid = document.getElementById('domain-grid');
   if (!grid || !mentorData) return;
   grid.innerHTML = mentorData.domains.map(d => `
-    <div class="domain-card" onclick="selectDomain('${d.id}')" style="--domain-color:${d.color}">
+    <div class="domain-card" data-action="selectDomain" data-domain-id="${d.id}" style="--domain-color:${d.color}">
       <div class="domain-card-icon">${d.icon}</div>
       <div class="domain-card-name">${d.name}</div>
       <div class="domain-card-desc">${d.desc}</div>
@@ -829,7 +855,7 @@ async function askAIRoadmap() {
     const reply = data.reply || data.text || '';
     const matched = mentorData.domains.find(d => reply.toLowerCase().includes(d.name.toLowerCase()));
     if (matched) {
-      result.innerHTML = `🤖 AI recommends: <strong>${matched.name}</strong> — ${reply}<br><br><button class="domain-ai-pick" onclick="selectDomain('${matched.id}')">Select This Path →</button>`;
+      result.innerHTML = `🤖 AI recommends: <strong>${matched.name}</strong> — ${reply}<br><br><button class="domain-ai-pick" data-action="selectDomain" data-domain-id="${matched.id}">Select This Path →</button>`;
     } else {
       result.innerHTML = `🤖 ${reply}`;
     }
@@ -910,11 +936,11 @@ function renderCoreSection() {
   body.innerHTML = core.topics.map(t => {
     const d = !!mentorState.sharedCompleted[t.id];
     return `<label class="roadmap-topic ${d?'done':''}">
-      <input type="checkbox" ${d?'checked':''} onchange="toggleSharedTopic('${t.id}',this.checked)">
+      <input type="checkbox" ${d?'checked':''} data-change="toggleSharedTopic" data-topic-id="${t.id}">
       <span class="roadmap-topic-name">${t.name}</span>
       <span class="roadmap-topic-tag">${t.tag}</span>
       ${(t.badges||[]).map(b => `<span class="roadmap-topic-badge">${b}</span>`).join('')}
-      <button class="roadmap-topic-detail-toggle" onclick="event.preventDefault();toggleTopicDetails('${t.id}')" aria-expanded="false">
+      <button class="roadmap-topic-detail-toggle" data-action="toggleTopicDetails" data-topic-id="${t.id}" aria-expanded="false">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
       <div class="roadmap-topic-details" id="topic-details-${t.id}" style="display:none">${t.details||'<p><em>No content yet.</em></p>'}</div>
@@ -974,11 +1000,11 @@ function renderDomainPhases(domain) {
     html += `
       <div class="roadmap-phase">
         <div class="roadmap-spine">
-          <div class="roadmap-dot ${dotClass}" onclick="toggleRoadmapCard('${phase.id}')">${dotIcon}</div>
+          <div class="roadmap-dot ${dotClass}" data-action="toggleRoadmapCard" data-phase-id="${phase.id}">${dotIcon}</div>
           ${idx < domain.phases.length - 1 ? `<div class="roadmap-line ${lineClass}"></div>` : ''}
         </div>
         <div class="roadmap-card${isOpen}" id="roadmap-card-${phase.id}">
-          <div class="roadmap-card-header" onclick="toggleRoadmapCard('${phase.id}')">
+          <div class="roadmap-card-header" data-action="toggleRoadmapCard" data-phase-id="${phase.id}">
             <span class="roadmap-phase-badge ${badgeClass}">${badgeLabel}</span>
             <span class="roadmap-phase-title">${phase.phase} — ${phase.title}</span>
             <span class="roadmap-progress-mini">${phaseDone}/${phaseTotal}</span>
@@ -990,11 +1016,11 @@ function renderDomainPhases(domain) {
                 const done = !!mentorState.domainCompleted[t.id];
                 const disabled = (!isUnlocked && !isComplete) ? 'style="opacity:.45;pointer-events:none"' : '';
                 return `<label class="roadmap-topic ${done?'done':''}" ${disabled}>
-                  <input type="checkbox" ${done?'checked':''} onchange="toggleDomainTopic('${t.id}',this.checked)">
+                  <input type="checkbox" ${done?'checked':''} data-change="toggleDomainTopic" data-topic-id="${t.id}">
                   <span class="roadmap-topic-name">${t.name}</span>
                   <span class="roadmap-topic-tag">${t.tag}</span>
                   ${(t.badges||[]).map(b => `<span class="roadmap-topic-badge">${b}</span>`).join('')}
-                  <button class="roadmap-topic-detail-toggle" onclick="event.preventDefault();toggleTopicDetails('${t.id}')" aria-expanded="false">
+                  <button class="roadmap-topic-detail-toggle" data-action="toggleTopicDetails" data-topic-id="${t.id}" aria-expanded="false">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
                   </button>
                   <div class="roadmap-topic-details" id="topic-details-${t.id}" style="display:none">${t.details||'<p><em>No content yet.</em></p>'}</div>
@@ -1120,14 +1146,14 @@ function renderMentorHistoryList() {
     const title = chat.title || 'New Chat';
     const icon = getChatIcon(title);
     const dateStr = chat.createdAt ? new Date(chat.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-    return `<div class="mchat-history-item${active}" data-id="${id}" onclick="switchMentorChat('${id}')" title="${escapeHtml(dateStr ? 'Created: ' + dateStr : title)}">
+    return `<div class="mchat-history-item${active}" data-id="${id}" data-action="switchMentorChat" data-chat-id="${id}" title="${escapeHtml(dateStr ? 'Created: ' + dateStr : title)}">
       <span class="mchat-hi-icon">${icon}</span>
       <span class="mhi-title" ondblclick="renameMentorChat('${id}', event)">${escapeHtml(title)}</span>
       <div class="mchat-menu-wrap">
-        <button class="mchat-dots-btn" onclick="toggleMentorMenu('${id}', event)" title="More">⋮</button>
+        <button class="mchat-dots-btn" data-action="toggleMentorMenu" data-chat-id="${id}" title="More">⋮</button>
         <div class="mchat-menu-dropdown" id="mchat-menu-${id}">
-          <button class="mchat-menu-item" onclick="renameMentorChat('${id}', event)">✏️ Rename</button>
-          <button class="mchat-menu-item mchat-menu-danger" onclick="deleteMentorChat('${id}', event)">🗑️ Delete</button>
+          <button class="mchat-menu-item" data-action="renameMentorChat" data-chat-id="${id}">✏️ Rename</button>
+          <button class="mchat-menu-item mchat-menu-danger" data-action="deleteMentorChat" data-chat-id="${id}">🗑️ Delete</button>
         </div>
       </div>
     </div>`;
@@ -1398,7 +1424,7 @@ function renderQuizTopics() {
   const keys = Object.keys(QUIZ_QUESTIONS);
   grid.innerHTML = keys.map(k => {
     const t = QUIZ_QUESTIONS[k];
-    return `<div class="quiz-topic-card" data-id="${k}" onclick="selectQuizTopic('${k}')">
+    return `<div class="quiz-topic-card" data-id="${k}" data-action="selectQuizTopic" data-topic-id="${k}">
       <div class="quiz-topic-icon">${t.icon}</div>
       <div class="quiz-topic-name">${t.name}</div>
       <div class="quiz-topic-count">${t.questions.length} questions</div>
@@ -1438,7 +1464,7 @@ function renderQuizQuestion() {
   document.getElementById('quiz-q-score').textContent = `Score: ${quizState.score}`;
   document.getElementById('quiz-q-text').textContent = q.q;
   document.getElementById('quiz-q-options').innerHTML = q.opts.map((o,i) =>
-    `<button class="quiz-q-option" data-idx="${i}" onclick="answerQuiz(${i})">
+    `<button class="quiz-q-option" data-idx="${i}" data-action="answerQuiz" data-idx-value="${i}">
       <span class="quiz-opt-letter">${letters[i]}</span>${o}
     </button>`
   ).join('');
@@ -1636,8 +1662,7 @@ async function saveOnboarding() {
 
     await sleep(400);
     closeOnboarding();
-    loadProfileWidget();
-    loadSettingsProfile();
+    await refreshProfileWidget(true);
     if (typeof loadChatSuggestions === 'function') loadChatSuggestions('chat');
 
   } catch (e) {
@@ -1648,6 +1673,22 @@ async function saveOnboarding() {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function refreshProfileWidget(force = false) {
+  window.__userData = window.__userData || {};
+  if (force || !window.__userData.profile) {
+    try {
+      const res = await fetch('/api/profile', { credentials: 'include' });
+      if (res.ok) {
+        const profileData = await res.json();
+        window.__userData.profile = profileData.profile || profileData;
+      }
+    } catch (err) {
+      console.warn('Could not refresh profile widget:', err);
+    }
+  }
+  loadProfileWidget();
+}
 
 function loadProfileWidget() {
   const profile = window.__userData?.profile;
@@ -1679,7 +1720,7 @@ function loadProfileWidget() {
 }
 
 function loadSettingsProfile() {
-  loadProfileWidget();
+  refreshProfileWidget(true);
 }
 
 /* ── Dynamic Prompt Suggestions ─────────────────────────────────── */
@@ -1694,7 +1735,7 @@ async function loadMentorSuggestions() {
     var items = data.suggestions || [];
     if (!items.length) { wrap.innerHTML = ''; return; }
     wrap.innerHTML = items.map(function (text, i) {
-      return '<span class="dyn-suggest-chip dsc-d' + (i + 1) + '" onclick="mentorFillSuggestion(' + JSON.stringify(text) + ')" title="' + escapeHtml(text) + '"><span class="dsc-icon">🎓</span>' + escapeHtml(text) + '</span>';
+      return '<span class="dyn-suggest-chip dsc-d' + (i + 1) + '" data-action="mentorFillSuggestion" data-text=' + JSON.stringify(text) + ' title="' + escapeHtml(text) + '"><span class="dsc-icon">🎓</span>' + escapeHtml(text) + '</span>';
     }).join('');
   } catch (_) { wrap.innerHTML = ''; }
 }

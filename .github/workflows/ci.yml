@@ -1,5 +1,5 @@
-name: CI / C
-on:
+name: CI / CD   
+"on":       
   push:
     branches: [main, develop]
   pull_request:

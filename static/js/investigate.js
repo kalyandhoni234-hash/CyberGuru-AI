@@ -450,7 +450,7 @@
       chipHtml += '<div class="ic-ioc-group"><div class="ic-ioc-hdr">' + s.icon + ' ' + s.label + ' <span class="cnt">(' + items.length + ')</span></div>';
       items.forEach(function (item, idx) {
         var display = defanged[idx] || item;
-        chipHtml += '<span class="ic-ioc-chip" onclick="copyToClipboard(\'' + encodeURIComponent(display) + '\')" title="Click to copy">' + escapeHtml(display) + '<span class="copy-icon">📋</span></span>';
+        chipHtml += '<span class="ic-ioc-chip" data-action="copyToClipboard" data-encoded="' + encodeURIComponent(display) + '" title="Click to copy">' + escapeHtml(display) + '<span class="copy-icon">📋</span></span>';
       });
       chipHtml += '</div>';
     });
@@ -696,11 +696,11 @@
         var d = new Date(h.created_at);
         var dateStr = d.toLocaleDateString();
         var iocCount = h.ioc_count || 0;
-        return '<div class="ic-hist-item" onclick="loadInvestigation(' + h.id + ')">'
+        return '<div class="ic-hist-item" data-action="loadInvestigation" data-inv-id="' + h.id + '">'
           + '<div class="h-sev ' + sev + '"></div>'
           + '<div class="h-info"><div class="h-verdict">' + escapeHtml(h.verdict || '—') + '</div>'
           + '<div class="h-meta"><span>' + dateStr + '</span><span>' + time + '</span><span>' + iocCount + ' IOCs</span></div></div>'
-          + '<button class="ic-hist-delete" onclick="event.stopPropagation();deleteInvestigation(' + h.id + ')" title="Delete">✕</button>'
+          + '<button class="ic-hist-delete" data-action="deleteInvestigation" data-inv-id="' + h.id + '" title="Delete">✕</button>'
           + '</div>';
       }).join('');
     } catch (e) { console.warn('Could not load history:', e); }
@@ -822,7 +822,7 @@
       if (!items.length) { wrap.innerHTML = ''; return; }
       wrap.innerHTML = items.map(function (text, i) {
         var encoded = encodeURIComponent(text);
-        return '<span class="dyn-suggest-chip dsc-d' + (i + 1) + '" onclick="loadInvestigateSuggestion(\'' + encoded + '\')" title="' + escapeHtml(text) + '"><span class="dsc-icon">🔎</span>' + escapeHtml(text) + '</span>';
+        return '<span class="dyn-suggest-chip dsc-d' + (i + 1) + '" data-action="loadInvestigateSuggestion" data-text="' + encoded + '" title="' + escapeHtml(text) + '"><span class="dsc-icon">🔎</span>' + escapeHtml(text) + '</span>';
       }).join('');
     } catch (_) { wrap.innerHTML = ''; }
   };
@@ -1275,7 +1275,7 @@
         + '<div class="mob-ioc-group-hdr">' + s.icon + ' ' + s.label + ' <span class="mob-ioc-cnt">(' + items.length + ')</span></div>';
       items.forEach(function(item, idx) {
         var display = def[idx] || item;
-        chipHtml += '<span class="mob-ioc-chip" onclick="copyToClipboard(\'' + encodeURIComponent(display) + '\')" title="Tap to copy">'
+        chipHtml += '<span class="mob-ioc-chip" data-action="copyToClipboard" data-encoded="' + encodeURIComponent(display) + '" title="Tap to copy">'
           + escHtml(display) + '</span>';
       });
       chipHtml += '</div>';
@@ -1402,7 +1402,7 @@
         if (!items.length) { wrap.innerHTML = ''; return; }
         wrap.innerHTML = items.map(function(text) {
           var enc = encodeURIComponent(text);
-          return '<button class="mob-chip" onclick="mobUseSuggestion(\'' + enc + '\')">'
+          return '<button class="mob-chip" data-action="mobUseSuggestion" data-text="' + enc + '">'
             + '🔎 ' + escHtml(text.length > 40 ? text.slice(0,38)+'…' : text) + '</button>';
         }).join('');
       })

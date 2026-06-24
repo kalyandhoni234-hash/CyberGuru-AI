@@ -20,6 +20,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}?v=2">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<script src="{{ url_for('static', filename='js/csp-bindings.js') }}"></script>
+<style>
+.login-google-btn {
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  width:100%; padding:12px 20px; cursor:pointer;
+  background:var(--bg-surface); border:1px solid var(--border-default);
+  border-radius:var(--r-md); color:var(--text-primary);
+  font-size:14px; font-weight:500; font-family:var(--font-ui);
+  transition:all .2s; margin-bottom:16px;
+}
+.login-google-btn:hover {
+  border-color:var(--border-strong); background:var(--bg-hover);
+}
+</style>
 </head>
 <body>
 
@@ -27,7 +41,7 @@
 <canvas id="network-canvas" aria-hidden="true"></canvas>
 
 <!-- Sidebar overlay for mobile -->
-<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div id="sidebar-overlay" data-action="closeSidebar"></div>
 
 <!-- Custom confirm dialog (replaces browser confirm()) -->
 <div id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title-text">
@@ -35,8 +49,8 @@
     <div class="confirm-title" id="confirm-title-text">Delete conversation?</div>
     <div class="confirm-msg">This conversation will be permanently deleted and cannot be recovered.</div>
     <div class="confirm-actions">
-      <button class="confirm-cancel-btn" onclick="resolveConfirm(false)">Cancel</button>
-      <button class="confirm-ok-btn" onclick="resolveConfirm(true)">Delete</button>
+      <button class="confirm-cancel-btn" data-action="resolveConfirm" data-result="false">Cancel</button>
+      <button class="confirm-ok-btn" data-action="resolveConfirm" data-result="true">Delete</button>
     </div>
   </div>
 </div>
@@ -64,7 +78,7 @@
     </div>
   </div>
 
-  <button class="new-chat-btn" onclick="newChat()">
+  <button class="new-chat-btn" data-action="newChat">
     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
     </svg>
@@ -72,7 +86,7 @@
   </button>
 
   <div class="tools-menu-wrap" id="tools-menu-wrap">
-    <button class="tools-menu-btn" id="tools-menu-trigger" onclick="toggleToolsMenu(event)" aria-haspopup="true" aria-expanded="false">
+    <button class="tools-menu-btn" id="tools-menu-trigger" data-action="toggleToolsMenu" aria-haspopup="true" aria-expanded="false">
       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
         <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
@@ -84,20 +98,20 @@
     </button>
 
     <div class="tools-menu-dropdown" id="tools-menu-dropdown" role="menu">
-      <button class="tools-menu-item" id="tool-quiz" onclick="openQuizModal(); closeToolsMenu();" role="menuitem">
+      <button class="tools-menu-item" id="tool-quiz" data-action="openQuiz" role="menuitem">
         <svg class="tools-menu-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
         Quiz Mode <span class="tools-menu-shortcut">Q</span>
       </button>
-      <button class="tools-menu-item" id="tool-ctf" onclick="openCtfModal(); closeToolsMenu();" role="menuitem">
+      <button class="tools-menu-item" id="tool-ctf" data-action="openCtf" role="menuitem">
         <svg class="tools-menu-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
         CTF Challenge <span class="tools-menu-shortcut">C</span>
       </button>
-      <button class="tools-menu-item" id="tool-news" onclick="fetchCyberNews(); closeToolsMenu();" role="menuitem">
+      <button class="tools-menu-item" id="tool-news" data-action="openNews" role="menuitem">
         <svg class="tools-menu-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a4 4 0 01-4-4V6"/><line x1="12" y1="8" x2="16" y2="8"/><line x1="12" y1="12" x2="16" y2="12"/></svg>
         CyberNews <span class="tools-menu-shortcut">N</span>
       </button>
       <div class="tools-menu-divider"></div>
-      <button class="tools-menu-item" id="tool-threat" onclick="openThreatPulse(); closeToolsMenu();" role="menuitem">
+      <button class="tools-menu-item" id="tool-threat" data-action="openThreat" role="menuitem">
         <svg class="tools-menu-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         Threat Pulse <span class="tools-menu-badge">LIVE</span>
       </button>
@@ -105,7 +119,7 @@
   </div>
 
   <!-- Cyber Mentor sidebar button -->
-  <button class="mentor-sidebar-btn" onclick="openMentorOverlay()" aria-label="Open Cyber Mentor">
+  <button class="mentor-sidebar-btn" data-action="openMentorOverlay" aria-label="Open Cyber Mentor">
     <span class="mentor-sb-icon">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
@@ -141,7 +155,7 @@
       </div>
 
       <div class="user-menu-wrap" id="user-menu-wrap">
-        <button class="user-menu-btn" id="user-menu-trigger" onclick="toggleUserMenu(event)" title="More options" aria-haspopup="true" aria-expanded="false">
+        <button class="user-menu-btn" id="user-menu-trigger" data-action="toggleUserMenu" title="More options" aria-haspopup="true" aria-expanded="false">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
             <circle cx="5" cy="12" r="1.8" fill="currentColor"/>
             <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
@@ -150,7 +164,7 @@
         </button>
 
         <div class="user-menu-dropdown" id="user-menu-dropdown" role="menu">
-          <button class="user-menu-item" onclick="openSettings(); closeUserMenu();" role="menuitem">
+          <button class="user-menu-item" data-action="openSettingsMenu" role="menuitem">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
               <circle cx="12" cy="12" r="3"/>
@@ -158,7 +172,7 @@
             Settings
           </button>
           <div class="user-menu-divider"></div>
-          <button class="user-menu-item user-menu-item--danger" onclick="logout(); closeUserMenu();" role="menuitem">
+          <button class="user-menu-item user-menu-item--danger" data-action="logoutUser" role="menuitem">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
@@ -183,17 +197,17 @@
     </svg>
     <span>Rate limit reached - next request available in</span>
     <span id="rate-limit-countdown">60</span>s
-    <button id="rate-limit-dismiss" onclick="dismissRateBanner()">Dismiss</button>
+    <button id="rate-limit-dismiss" data-action="dismissRateBanner">Dismiss</button>
   </div>
 
   <!-- Topbar -->
   <div id="topbar">
-    <button id="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+    <button id="menu-toggle" data-action="toggleSidebar" aria-label="Toggle menu">
       <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
     </button>
-    <button id="sidebar-toggle" onclick="toggleSidebarCollapse()" title="Toggle sidebar">
+    <button id="sidebar-toggle" data-action="toggleSidebarCollapse" title="Toggle sidebar">
       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
@@ -202,7 +216,7 @@
       <div id="topbar-title">New Conversation</div>
     </div>
 
-    <button id="export-btn" onclick="exportChat()" title="Export conversation" class="export-btn-el">
+    <button id="export-btn" data-action="exportChat" title="Export conversation" class="export-btn-el">
       <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
       Export
     </button>
@@ -238,7 +252,7 @@
   </div><!-- /#chat-box -->
 
   <!-- Scroll to bottom button -->
-  <button id="scroll-btn" onclick="scrollToBottom()" aria-label="Scroll to bottom">
+  <button id="scroll-btn" data-action="scrollToBottom" aria-label="Scroll to bottom">
     <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
       <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
     </svg>
@@ -280,7 +294,7 @@
 
       <!-- + button with popover -->
       <div class="plus-menu-wrap" id="plus-menu-wrap">
-        <button class="plus-btn" id="plus-btn" onclick="togglePlusMenu()" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false">
+        <button class="plus-btn" id="plus-btn" data-action="togglePlusMenu" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false">
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <path d="M12 5v14M5 12h14"/>
           </svg>
@@ -289,7 +303,7 @@
         <div class="plus-menu-dropdown" id="plus-menu-dropdown" role="menu">
 
           <!-- Attach File -->
-          <label class="plus-menu-item" for="fileInput" role="menuitem" onclick="closePlusMenu()">
+          <label class="plus-menu-item" for="fileInput" role="menuitem" data-action="closePlusMenu">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
             </svg>
@@ -301,7 +315,7 @@
           <div class="plus-menu-divider"></div>
 
           <!-- Models submenu trigger -->
-          <button class="plus-menu-item" onclick="toggleModelsSubmenu(event)" role="menuitem">
+          <button class="plus-menu-item" data-action="toggleModelsSubmenu" role="menuitem">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"/>
               <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
@@ -315,15 +329,15 @@
 
           <!-- Models submenu -->
           <div class="plus-submenu" id="models-submenu">
-            <button class="plus-menu-item plus-submenu-item" onclick="setModel('gemini'); updatePlusModelLabel('Gemini Flash'); closePlusMenu()">
+            <button class="plus-menu-item plus-submenu-item" data-action="setModel" data-model="gemini" data-label="Gemini Flash">
               <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               Gemini 2.5 Flash
             </button>
-            <button class="plus-menu-item plus-submenu-item" onclick="setModel('lite'); updatePlusModelLabel('Flash Lite'); closePlusMenu()">
+            <button class="plus-menu-item plus-submenu-item" data-action="setModel" data-model="lite" data-label="Flash Lite">
               <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               Flash Lite
             </button>
-            <button class="plus-menu-item plus-submenu-item" onclick="setModel('groq'); updatePlusModelLabel('Groq Llama 3.1 8B'); closePlusMenu()">
+            <button class="plus-menu-item plus-submenu-item" data-action="setModel" data-model="groq" data-label="Groq Llama 3.1 8B">
               <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8v4l3 3"/></svg>
               Groq Llama 3.1 8B
             </button>
@@ -332,7 +346,7 @@
           <div class="plus-menu-divider"></div>
 
           <!-- Investigate -->
-          <button class="plus-menu-item plus-menu-item--accent" onclick="openInvestigatePanel(); closePlusMenu();" role="menuitem">
+          <button class="plus-menu-item plus-menu-item--accent" data-action="openInvestigate" role="menuitem">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M11 8v6M8 11h6"/>
             </svg>
@@ -350,7 +364,7 @@
         aria-label="Message input"
       ></textarea>
 
-      <button id="mic-btn" onclick="if(typeof toggleVoice==='function') toggleVoice()" title="Voice input" aria-label="Start voice input">
+      <button id="mic-btn" data-action="toggleVoice" title="Voice input" aria-label="Start voice input">
         <svg id="mic-icon-idle" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
           <rect x="9" y="2" width="6" height="11" rx="3" stroke-linejoin="round"/>
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
@@ -368,11 +382,11 @@
 
       <span id="char-count"></span>
 
-      <button id="stop-btn" onclick="stopGeneration()" title="Stop generating">
+      <button id="stop-btn" data-action="stopGeneration" title="Stop generating">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
       </button>
 
-      <button id="send-btn" onclick="sendToBackend()" title="Send message" aria-label="Send message">
+      <button id="send-btn" data-action="sendToBackend" title="Send message" aria-label="Send message">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
         </svg>
@@ -422,11 +436,11 @@
         </div>
       </div>
       <div class="tp-hdr-actions">
-        <button class="tp-refresh-btn" onclick="_tpLoad()">
+        <button class="tp-refresh-btn" data-action="_tpLoad">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Refresh
         </button>
-        <button class="tp-close-btn" onclick="closeThreatPulse()" aria-label="Close">✕</button>
+        <button class="tp-close-btn" data-action="closeThreatPulse" aria-label="Close">✕</button>
       </div>
     </div>
     <div id="tp-content"><!-- populated by threat_pulse.js --></div>
@@ -458,16 +472,7 @@
       <p style="font-size:14px; color:var(--text-secondary);">Your cybersecurity learning assistant</p>
     </div>
 
-    <button onclick="window.location.href='/auth/login'" style="
-      display:flex; align-items:center; justify-content:center; gap:12px;
-      width:100%; padding:12px 20px; cursor:pointer;
-      background:var(--bg-surface); border:1px solid var(--border-default);
-      border-radius:var(--r-md); color:var(--text-primary);
-      font-size:14px; font-weight:500; font-family:var(--font-ui);
-      transition:all .2s; margin-bottom:16px;
-    "
-    onmouseover="this.style.borderColor='var(--border-strong)';this.style.background='var(--bg-hover)'"
-    onmouseout="this.style.borderColor='var(--border-default)';this.style.background='var(--bg-surface)'">
+    <button data-action="goLogin" class="login-google-btn">
       <svg width="18" height="18" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -489,7 +494,7 @@
      ═══════════════════════════════════ -->
 <div id="onboarding-overlay" class="ob-overlay">
   <div class="onboarding-modal">
-    <button class="ob-close" onclick="closeOnboarding()">✕</button>
+    <button class="ob-close" data-action="closeOnboarding">✕</button>
 
     <div class="ob-view" id="ob-view-select">
       <div class="ob-header">
@@ -530,8 +535,8 @@
         </label>
       </div>
 
-      <button class="ob-btn ob-btn-primary" id="ob-save-btn" onclick="saveOnboarding()" disabled>Save Preference</button>
-      <button class="ob-btn ob-btn-skip" onclick="skipOnboarding()">Skip for now</button>
+      <button class="ob-btn ob-btn-primary" id="ob-save-btn" data-action="saveOnboarding" disabled>Save Preference</button>
+      <button class="ob-btn ob-btn-skip" data-action="skipOnboarding">Skip for now</button>
     </div>
 
     <div class="ob-view" id="ob-view-processing" style="display:none">
@@ -566,12 +571,12 @@
 <!-- ═══════════════════════════════════
      SETTINGS PANEL
      ═══════════════════════════════════ -->
-<div id="settings-overlay" onclick="closeSettings()"></div>
+<div id="settings-overlay" data-action="closeSettings"></div>
 
 <div id="settings-panel">
   <div class="sp-header">
     <div class="sp-title">Settings</div>
-    <button class="sp-close" onclick="closeSettings()">
+    <button class="sp-close" data-action="closeSettings">
       <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
       </svg>
@@ -579,9 +584,9 @@
   </div>
 
   <div class="sp-tabs">
-    <button class="sp-tab active" onclick="switchTab('account')">Account</button>
-    <button class="sp-tab" onclick="switchTab('appearance')">Appearance</button>
-    <button class="sp-tab" onclick="switchTab('about')">About</button>
+    <button class="sp-tab active" data-action="switchTab" data-tab="account">Account</button>
+    <button class="sp-tab" data-action="switchTab" data-tab="appearance">Appearance</button>
+    <button class="sp-tab" data-action="switchTab" data-tab="about">About</button>
   </div>
 
   <!-- Account Tab -->
@@ -610,14 +615,7 @@
 
     <div class="sp-divider"></div>
 
-    <div class="sp-section-label">Learning Profile</div>
-    <div id="settings-profile-widget">
-      <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">Loading profile...</div>
-    </div>
-
-    <div class="sp-divider"></div>
-
-    <button class="sp-danger-btn" onclick="logout()">
+    <button class="sp-danger-btn" data-action="logoutUser">
       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
       </svg>
@@ -629,15 +627,15 @@
   <div class="sp-body hidden" id="tab-appearance">
     <div class="sp-section-label">Theme</div>
     <div class="sp-theme-grid">
-      <button class="sp-theme-card" onclick="setTheme('cyber'); updateThemeCards();" id="tc-cyber">
-        <div class="sp-theme-preview tc-preview-cyber"></div>
-        <span>Dark Blue</span>
+      <button class="sp-theme-card" data-action="setTheme" data-theme="hacker" id="tc-hacker">
+        <div class="sp-theme-preview tc-preview-hacker"></div>
+        <span>Terminal Hacker</span>
       </button>
-      <button class="sp-theme-card" onclick="setTheme('oled'); updateThemeCards();" id="tc-oled">
+      <button class="sp-theme-card" data-action="setTheme" data-theme="oled" id="tc-oled">
         <div class="sp-theme-preview tc-preview-oled"></div>
         <span>OLED Violet</span>
       </button>
-      <button class="sp-theme-card" onclick="setTheme('light'); updateThemeCards();" id="tc-light">
+      <button class="sp-theme-card" data-action="setTheme" data-theme="light" id="tc-light">
         <div class="sp-theme-preview tc-preview-light"></div>
         <span>Premium White</span>
       </button>
@@ -647,9 +645,9 @@
 
     <div class="sp-section-label">Font Size</div>
     <div class="sp-font-row">
-      <button class="sp-font-btn" onclick="setFontSize('compact')" id="fs-compact">A<small>compact</small></button>
-      <button class="sp-font-btn active" onclick="setFontSize('default')" id="fs-default">A<small>default</small></button>
-      <button class="sp-font-btn" onclick="setFontSize('large')" id="fs-large">A<small>large</small></button>
+      <button class="sp-font-btn" data-action="setFontSize" data-size="compact" id="fs-compact">A<small>compact</small></button>
+      <button class="sp-font-btn active" data-action="setFontSize" data-size="default" id="fs-default">A<small>default</small></button>
+      <button class="sp-font-btn" data-action="setFontSize" data-size="large" id="fs-large">A<small>large</small></button>
     </div>
 
     <div class="sp-divider"></div>
@@ -658,7 +656,7 @@
     <div class="sp-toggle-row">
       <span class="sp-toggle-label">Compact sidebar</span>
       <label class="sp-switch">
-        <input type="checkbox" id="compact-sidebar-toggle" onchange="toggleCompactSidebar(this.checked)">
+        <input type="checkbox" id="compact-sidebar-toggle" data-change="toggleCompactSidebar">
         <span class="sp-slider"></span>
       </label>
     </div>
@@ -721,11 +719,11 @@
           <h1 class="ml-hero-title">Master Cybersecurity<br><span class="ml-hero-gradient">From Beginner to Security Engineer</span></h1>
           <p class="ml-hero-sub">Learn networking, operating systems, ethical hacking, web security, threat analysis, and real-world cybersecurity through structured AI-guided learning.</p>
           <div class="ml-hero-actions">
-            <button class="ml-btn ml-btn-primary" onclick="dismissLanding()">
+            <button class="ml-btn ml-btn-primary" data-landing-action="start">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               Start Learning
             </button>
-            <button class="ml-btn ml-btn-secondary" onclick="dismissLanding('roadmap')">
+            <button class="ml-btn ml-btn-secondary" data-landing-action="roadmap">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
               Explore Roadmap
             </button>
@@ -750,7 +748,7 @@
             <div class="ml-continue-bar-wrap"><div class="ml-continue-bar-fill" id="ml-continue-bar-fill"></div></div>
             <div class="ml-continue-pct" id="ml-continue-pct">0%</div>
           </div>
-          <button class="ml-btn ml-btn-primary ml-continue-btn" onclick="dismissLanding()">Continue Journey</button>
+          <button class="ml-btn ml-btn-primary ml-continue-btn" data-landing-action="start">Continue Journey</button>
         </div>
       </section>
 
@@ -821,7 +819,7 @@
         <div class="ml-cta-card">
           <h2 class="ml-cta-title">Ready to Become a Cybersecurity Professional?</h2>
           <p class="ml-cta-desc">Join thousands of learners mastering cybersecurity with AI-guided training. Start your journey today.</p>
-          <button class="ml-btn ml-btn-primary ml-btn-lg" onclick="dismissLanding()">
+          <button class="ml-btn ml-btn-primary ml-btn-lg" data-landing-action="start">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Launch Mentor Dashboard
           </button>
@@ -853,7 +851,7 @@
       <div class="mentor-topbar-stat"><span class="mts-value" id="mts-dashboard-streak">0</span><span class="mts-label">Streak</span></div>
       <div class="mentor-topbar-stat"><span class="mts-value" id="mts-dashboard-score">0</span><span class="mts-label">Quiz Score</span></div>
     </div>
-    <button class="mentor-close-btn" onclick="closeMentorOverlay()">
+    <button class="mentor-close-btn" data-action="closeMentorOverlay">
       <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
       </svg>
@@ -866,28 +864,28 @@
 
     <!-- Sidebar Nav -->
     <nav class="mentor-nav" role="tablist" aria-label="Mentor sections">
-      <button class="mentor-nav-item active" id="tab-dashboard" onclick="switchMentorTab('dashboard')" role="tab" aria-selected="true">
+      <button class="mentor-nav-item active" id="tab-dashboard" data-action="switchMentorTab" data-tab="dashboard" role="tab" aria-selected="true">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
         <span>Dashboard</span>
       </button>
-      <button class="mentor-nav-item" id="tab-roadmap" onclick="switchMentorTab('roadmap')" role="tab" aria-selected="false">
+      <button class="mentor-nav-item" id="tab-roadmap" data-action="switchMentorTab" data-tab="roadmap" role="tab" aria-selected="false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
         <span>Roadmap</span>
       </button>
-      <button class="mentor-nav-item" id="tab-chat" onclick="switchMentorTab('chat')" role="tab" aria-selected="false">
+      <button class="mentor-nav-item" id="tab-chat" data-action="switchMentorTab" data-tab="chat" role="tab" aria-selected="false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
         <span>AI Chat</span>
       </button>
-      <button class="mentor-nav-item" id="tab-quiz" onclick="switchMentorTab('quiz')" role="tab" aria-selected="false">
+      <button class="mentor-nav-item" id="tab-quiz" data-action="switchMentorTab" data-tab="quiz" role="tab" aria-selected="false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <span>Quizzes</span>
         <span class="mnav-badge" id="nav-quiz-badge">NEW</span>
       </button>
-      <button class="mentor-nav-item" id="tab-terminal" onclick="switchMentorTab('terminal')" role="tab" aria-selected="false">
+      <button class="mentor-nav-item" id="tab-terminal" data-action="switchMentorTab" data-tab="terminal" role="tab" aria-selected="false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
         <span>Terminal</span>
       </button>
-      <button class="mentor-nav-item" id="tab-badges" onclick="switchMentorTab('badges')" role="tab" aria-selected="false">
+      <button class="mentor-nav-item" id="tab-badges" data-action="switchMentorTab" data-tab="badges" role="tab" aria-selected="false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
         <span>Badges</span>
       </button>
@@ -973,7 +971,7 @@
           <div class="mentor-section-title">Choose Your Learning Path</div>
           <div class="domain-ai-prompt">
             <span>Not sure which path fits you?</span>
-            <button class="domain-ask-ai-btn" onclick="openDomainAI()">
+            <button class="domain-ask-ai-btn" data-action="openDomainAI">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               Ask AI to Recommend
             </button>
@@ -982,11 +980,11 @@
           <div class="domain-ai-widget" id="domain-ai-widget" style="display:none">
             <div class="domain-ai-header">
               <span>Tell AI About Yourself</span>
-              <button class="domain-ai-close" onclick="closeDomainAI()">✕</button>
+              <button class="domain-ai-close" data-action="closeDomainAI">✕</button>
             </div>
             <p class="domain-ai-hint">Describe your background, interests, and goals — the AI will recommend the best path.</p>
             <textarea id="domain-ai-input" class="domain-ai-textarea" rows="3" placeholder="e.g. I have basic IT knowledge and I'm interested in finding vulnerabilities and hacking. I enjoy hands-on challenges..."></textarea>
-            <button class="domain-ai-submit" onclick="askAIRoadmap()">Get Recommendation</button>
+            <button class="domain-ai-submit" data-action="askAIRoadmap">Get Recommendation</button>
             <div id="domain-ai-result" class="domain-ai-result"></div>
           </div>
         </div>
@@ -1000,13 +998,13 @@
                 <div class="domain-header-desc" id="domain-header-desc">Domain description</div>
               </div>
             </div>
-            <button class="domain-change-btn" onclick="showSwitchWarning()">
+            <button class="domain-change-btn" data-action="showSwitchWarning">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
               Change Path
             </button>
           </div>
           <div class="domain-core-section" id="domain-core-section">
-            <div class="domain-core-toggle" onclick="toggleCoreSection()">
+            <div class="domain-core-toggle" data-action="toggleCoreSection">
               <span>📚 Core Foundations</span>
               <span class="domain-core-count" id="domain-core-count">0/0</span>
               <svg class="domain-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
@@ -1020,15 +1018,15 @@
     </div><!-- /#panel-roadmap -->
 
     <!-- Switch Path Confirmation Modal -->
-    <div class="switch-modal" id="switch-modal" style="display:none" onclick="if(event.target===this) cancelSwitchDomain()">
+    <div class="switch-modal" id="switch-modal" style="display:none" data-action="cancelSwitchDomain">
       <div class="switch-modal-content">
         <div class="switch-modal-icon">⚠️</div>
         <div class="switch-modal-title" id="switch-modal-title">Change Learning Path?</div>
         <p id="switch-modal-body">Switching to <strong id="switch-target-name">another path</strong> will reset domain-specific progress.</p>
         <p class="switch-modal-note">✅ Core foundation topics will be kept.</p>
         <div class="switch-modal-actions">
-          <button class="quiz-btn-primary" id="switch-confirm-btn" onclick="confirmSwitchDomain()">Switch Path</button>
-          <button class="quiz-btn-secondary" onclick="cancelSwitchDomain()">Cancel</button>
+          <button class="quiz-btn-primary" id="switch-confirm-btn" data-action="confirmSwitchDomain">Switch Path</button>
+          <button class="quiz-btn-secondary" data-action="cancelSwitchDomain">Cancel</button>
         </div>
       </div>
     </div>
@@ -1039,11 +1037,11 @@
         <aside class="mchat-sidebar" id="mchat-sidebar">
           <div class="mchat-sidebar-header">
             <div class="mchat-sidebar-title">History</div>
-            <button class="mchat-new-btn" onclick="createNewConversation()" title="New conversation">+</button>
+            <button class="mchat-new-btn" data-action="createNewConversation" title="New conversation">+</button>
           </div>
           <div class="mchat-search-wrap" id="mchat-search-wrap">
             <svg class="mchat-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="mchat-search-input" id="mchat-search-input" type="text" placeholder="Search conversations..." oninput="filterMentorHistory()">
+            <input class="mchat-search-input" id="mchat-search-input" type="text" placeholder="Search conversations..." data-input="filterMentorHistory">
           </div>
           <div class="mchat-history-list" id="mchat-history-list"></div>
         </aside>
@@ -1057,8 +1055,8 @@
           </div>
           <div id="mentor-suggest-chips" class="dyn-suggest-wrap mentor-suggest-wrap"></div>
           <div class="mentor-chat-input-wrap">
-            <textarea id="mentor-chat-input" class="mentor-chat-input" placeholder="Ask your mentor anything..." rows="1" onkeydown="mentorChatKeydown(event)"></textarea>
-            <button class="mentor-chat-send" id="mentor-send-btn" onclick="mentorSendMessage()">
+            <textarea id="mentor-chat-input" class="mentor-chat-input" placeholder="Ask your mentor anything..." rows="1" data-keydown="mentorChatKeydown"></textarea>
+            <button class="mentor-chat-send" id="mentor-send-btn" data-action="mentorSendMessage">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
@@ -1072,21 +1070,21 @@
         <div id="quiz-selector">
           <div class="mentor-section-title">Choose a Topic</div>
           <div class="quiz-topic-grid" id="quiz-topic-grid"></div>
-          <button class="quiz-btn-primary" id="start-quiz-btn" onclick="startMentorQuiz()" disabled>Start Quiz</button>
+          <button class="quiz-btn-primary" id="start-quiz-btn" data-action="startMentorQuiz" disabled>Start Quiz</button>
         </div>
         <div class="mentor-quiz-question-area" id="quiz-question-area">
           <div class="quiz-q-header"><span class="quiz-q-num" id="quiz-q-num">Q 1 / 5</span><span class="quiz-q-score" id="quiz-q-score">Score: 0</span></div>
           <div class="quiz-q-text" id="quiz-q-text"></div>
           <div class="quiz-q-options" id="quiz-q-options"></div>
           <div class="quiz-feedback" id="quiz-feedback"></div>
-          <button class="quiz-btn-primary" id="quiz-next-btn" onclick="mentorQuizNext()" style="display:none">Next Question →</button>
+          <button class="quiz-btn-primary" id="quiz-next-btn" data-action="mentorQuizNext" style="display:none">Next Question →</button>
         </div>
         <div class="quiz-result-card" id="quiz-result-card">
           <div class="quiz-result-emoji" id="quiz-result-emoji">🎉</div>
           <div class="quiz-result-score" id="quiz-result-score">0 / 5</div>
           <div class="quiz-result-msg" id="quiz-result-msg"></div>
           <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap">
-            <button class="quiz-btn-primary" onclick="resetMentorQuiz()">Try Another</button>
+            <button class="quiz-btn-primary" data-action="resetMentorQuiz">Try Another</button>
           </div>
         </div>
       </div>
@@ -1104,7 +1102,7 @@
         </div>
         <div class="mterm-input-line">
           <span class="mterm-prompt-sm">$</span>
-          <input type="text" id="mterm-input" class="mterm-input" placeholder="type a command..." autofocus onkeydown="mtermKeydown(event)">
+          <input type="text" id="mterm-input" class="mterm-input" placeholder="type a command..." autofocus data-keydown="mtermKeydown">
         </div>
       </div>
     </div><!-- /#panel-terminal -->

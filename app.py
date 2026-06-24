@@ -1,8 +1,6 @@
 from dotenv import load_dotenv
 load_dotenv()  # load .env before ANY os.getenv() call
 
-print("RUNNING FILE:", __file__)
-
 from extensions import app  # noqa: E402  (must come after load_dotenv)
 from services.db_service import init_db
 

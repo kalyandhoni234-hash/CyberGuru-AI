@@ -61,7 +61,7 @@ function _quizRenderTopicPicker() {
   const cards = QUIZ_TOPIC_OPTIONS.map((opt, i) => {
     const isChecked = (i === 0 && _quizSelectedTopic === '') || _quizSelectedTopic === opt.value;
     return `
-      <label class="ctf-cat-card ${isChecked ? 'selected' : ''}" data-value="${escapeHtml(opt.value)}" onclick="_quizSelectTopic(this, '${escapeHtml(opt.value)}')">
+      <label class="ctf-cat-card ${isChecked ? 'selected' : ''}" data-value="${escapeHtml(opt.value)}" data-action="_quizSelectTopic" data-value-id="${escapeHtml(opt.value)}">
         <input type="radio" name="quiz-topic-pick" value="${escapeHtml(opt.value)}" ${isChecked ? 'checked' : ''}>
         <span class="ctf-cat-icon">${opt.icon}</span>
         <span>${escapeHtml(opt.label)}</span>
@@ -77,8 +77,8 @@ function _quizRenderTopicPicker() {
       ${cards}
     </div>
     <div class="quiz-actions">
-      <button class="quiz-cancel" onclick="closeQuizModal()">Cancel</button>
-      <button class="start-btn" onclick="_quizStartFromPicker()">Start Quiz →</button>
+      <button class="quiz-cancel" data-action="closeQuizModal">Cancel</button>
+      <button class="start-btn" data-action="_quizStartFromPicker">Start Quiz →</button>
     </div>
   `;
 }
@@ -108,7 +108,7 @@ function _quizRenderLoading(msg, sub) {
       </div>
     </div>
     <div class="quiz-actions">
-      <button class="quiz-cancel" onclick="closeQuizModal()">Cancel</button>
+      <button class="quiz-cancel" data-action="closeQuizModal">Cancel</button>
     </div>
   `;
 }
@@ -118,8 +118,8 @@ function _quizRenderError(message, allowRetry) {
     ${_quizHeader('Quiz Mode', 0)}
     <div class="ctf-error">⚠️ ${escapeHtml(message || 'Something went wrong.')}</div>
     <div class="quiz-actions">
-      <button class="quiz-cancel" onclick="closeQuizModal()">Close</button>
-      ${allowRetry ? '<button class="start-btn" onclick="_quizRenderTopicPicker()">Choose Topic</button>' : ''}
+      <button class="quiz-cancel" data-action="closeQuizModal">Close</button>
+      ${allowRetry ? '<button class="start-btn" data-action="_quizRenderTopicPicker">Choose Topic</button>' : ''}
     </div>
   `;
 }
@@ -164,7 +164,7 @@ function _quizRenderQuestion() {
     if (text === undefined) return '';
     const isSelected = selected === letter;
     return `
-      <label class="quiz-mcq-option ${isSelected ? 'selected' : ''}" onclick="_quizSelectAnswer('${q.id}', '${letter}')">
+      <label class="quiz-mcq-option ${isSelected ? 'selected' : ''}" data-action="_quizSelectAnswer" data-q-id="${q.id}" data-letter="${letter}">
         <input type="radio" name="quiz-answer-${escapeHtml(q.id)}" value="${letter}" ${isSelected ? 'checked' : ''}>
         <span class="quiz-mcq-letter">${letter}</span>
         <span class="quiz-mcq-text">${escapeHtml(text)}</span>
@@ -190,9 +190,9 @@ function _quizRenderQuestion() {
       ${options}
     </div>
     <div class="quiz-actions">
-      <button class="quiz-cancel" onclick="closeQuizModal()">Cancel</button>
-      ${_quizIndex > 0 ? '<button class="quiz-cancel" onclick="_quizPrevQuestion()">← Back</button>' : ''}
-      <button class="start-btn" id="quiz-next-btn" onclick="_quizNextOrSubmit()" ${selected ? '' : 'disabled'}>${nextLabel}</button>
+      <button class="quiz-cancel" data-action="closeQuizModal">Cancel</button>
+      ${_quizIndex > 0 ? '<button class="quiz-cancel" data-action="_quizPrevQuestion">← Back</button>' : ''}
+      <button class="start-btn" id="quiz-next-btn" data-action="_quizNextOrSubmit" ${selected ? '' : 'disabled'}>${nextLabel}</button>
     </div>
   `;
 }
@@ -289,8 +289,8 @@ function _quizRenderResult(r, title, topic) {
     <div class="quiz-review-list">${breakdownItems}</div>
 
     <div class="quiz-actions">
-      <button class="quiz-cancel" onclick="closeQuizModal()">Close</button>
-      <button class="start-btn" onclick="_quizRenderTopicPicker()">New Quiz</button>
+      <button class="quiz-cancel" data-action="closeQuizModal">Close</button>
+      <button class="start-btn" data-action="_quizRenderTopicPicker">New Quiz</button>
     </div>
   `;
 

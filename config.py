@@ -29,10 +29,20 @@ FLASH_LITE_API_URL_STREAM = (
     f"{FLASH_LITE_MODEL}:streamGenerateContent?alt=sse"
 )
 
-GEMINI_HEADERS = {
-    "Content-Type": "application/json",
-    "x-goog-api-key": API_KEY,
-}
+
+# F-04: Do NOT bake the API key into a module-level dict.
+# Module-level dicts are trivially serialised by loggers and error reporters
+# (Sentry, Rollbar, stdout tracebacks) — any serialisation leaks the key.
+# ─── Migration: replace every `from config import GEMINI_HEADERS` in
+#     gemini_service.py with `from config import get_gemini_headers`, then
+#     call get_gemini_headers() at the point each request is built. ───────
+def get_gemini_headers() -> dict:
+    """Return fresh Gemini request headers.  Never cache or log this dict."""
+    return {
+        "Content-Type": "application/json",
+        "x-goog-api-key": os.getenv("GEMINI_API_KEY", ""),
+    }
+
 
 # ==========================
 # GENERATION CONFIG
@@ -43,16 +53,35 @@ GENERATION_CONFIG = {
     "temperature": 0.7,
 }
 
-MAX_HISTORY_TURNS    = 10
-MAX_HISTORY_BYTES    = 60_000
-MAX_HISTORY_MSG_CHARS = 8000
-MAX_INPUT_CHARS      = 4000
+# ==========================
+# INPUT / CONTENT LENGTH CAPS  (F-08)
+# ==========================
+# All length limits live here — change once, applies everywhere.
+#
+# Relationship:
+#   MAX_INPUT_CHARS  ≤  MAX_HISTORY_MSG_CHARS
+#   A message stored in history may have been pasted (longer than typed),
+#   so the history cap is intentionally wider than the intake cap.
+#   Trimming happens at the history-write stage, not at intake.
+
+# User chat message — enforced in the UI and re-validated server-side.
+MAX_INPUT_CHARS       = 4_000
 
 # Triage artifacts (logs, emails, malware reports) are legitimately longer
-# than chat messages, but still need a hard ceiling — unbounded artifact
-# text gets forwarded straight into the agent's multi-round tool-calling
-# loop, which is a cost/latency-amplification DoS vector without one.
-MAX_ARTIFACT_CHARS   = 20_000
+# than chat messages but still need a hard ceiling — unbounded artifact text
+# fed into the agent's multi-round tool loop is a cost/latency-amplification
+# DoS vector without one.
+MAX_ARTIFACT_CHARS    = 20_000
+
+# Per-message cap applied when serialising history for the model context.
+MAX_HISTORY_MSG_CHARS = 8_000
+
+# Rolling history window — max round-trips kept in-context.
+MAX_HISTORY_TURNS     = 10
+
+# Total byte budget for the serialised history payload.
+MAX_HISTORY_BYTES     = 60_000
+
 
 # ==========================
 # SYSTEM INSTRUCTION
@@ -112,8 +141,17 @@ GROUNDING_KEYWORDS = [
 GOOGLE_SEARCH_TOOL = {"google_search": {}}
 
 # ==========================
-# RETRY CONFIG
+# RETRY CONFIG  (F-06)
 # ==========================
+# Service-layer back-off formula (exponential + jitter):
+#
+#   delay = min(BASE_BACKOFF * 2 ** attempt, MAX_BACKOFF)
+#           + random.uniform(0, MAX_JITTER)
+#
+# Jitter prevents thundering-herd retries — multiple gunicorn workers that
+# all hit a transient Gemini 429/503 will NOT retry in lockstep.
 
 MAX_RETRIES  = 3
-BASE_BACKOFF = 5
+BASE_BACKOFF = 5   # seconds — base for exponential back-off
+MAX_BACKOFF  = 30  # seconds — cap so retries never stall a worker indefinitely
+MAX_JITTER   = 2   # seconds — uniform random jitter added to every back-off interval

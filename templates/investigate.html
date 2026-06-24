@@ -30,11 +30,55 @@
   --font-mono: 'IBM Plex Mono', monospace;
   --font-ui: 'Inter', sans-serif;
 }
+body.theme-hacker {
+  --ic-primary: #00e676;
+  --ic-secondary: #00b248;
+  --ic-success: #00e676;
+  --ic-border-strong: rgba(0,230,118,.2);
+  --ic-bg: #030b03;
+  --ic-surface: #061006;
+  --ic-panel: rgba(8,21,8,.94);
+  --ic-card: rgba(12,30,12,.92);
+  --ic-border: rgba(0,230,118,.09);
+  --ic-hover: rgba(0,230,118,.05);
+  --ic-text-secondary: #6db88a;
+  --ic-text-muted: #356048;
+}
+body.theme-light {
+  --ic-primary: #4338ca;
+  --ic-secondary: #0369a1;
+  --ic-success: #059669;
+  --ic-border-strong: rgba(67,56,202,.2);
+  --ic-bg: #f5f4f0;
+  --ic-surface: #ffffff;
+  --ic-panel: #faf9f5;
+  --ic-card: #ffffff;
+  --ic-border: rgba(80,70,120,.12);
+  --ic-hover: rgba(67,56,202,.05);
+  --ic-text: #1a1830;
+  --ic-text-secondary: #4a4870;
+  --ic-text-muted: #9491b4;
+}
+body.theme-oled {
+  --ic-primary: #7c6ef7;
+  --ic-secondary: #d4a8ff;
+  --ic-success: #86efac;
+  --ic-border-strong: rgba(124,110,247,.2);
+  --ic-bg: #000000;
+  --ic-surface: #000000;
+  --ic-panel: #08080f;
+  --ic-card: #0f0f1a;
+  --ic-border: rgba(120,100,255,.09);
+  --ic-hover: rgba(120,100,255,.05);
+  --ic-text-secondary: #8b80c0;
+  --ic-text-muted: #453e6e;
+}
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body { height:100%; overflow:hidden; }
+html, body { height:100%; overflow:hidden; overflow-x:hidden; }
 body {
   background: var(--ic-bg); color: var(--ic-text);
   font-family: var(--font-ui); font-size:14px;
+  min-width: 0;
 }
 
 /* ── Focus visible for keyboard nav ── */
@@ -54,7 +98,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 .ic-topbar {
   display:flex; align-items:center; gap:16px;
   padding:0 24px; height:52px;
-  background:rgba(7,7,14,.95);
+  background:var(--ic-panel);
   border-bottom:1px solid var(--ic-border);
   flex-shrink:0; z-index:20;
   backdrop-filter:blur(16px);
@@ -71,7 +115,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   transition:all .18s;
 }
 .ic-topbar-nav a:hover { color:var(--ic-text); background:var(--ic-hover); }
-.ic-topbar-nav a.active { color:var(--ic-primary); background:rgba(139,92,246,.1); }
+.ic-topbar-nav a.active { color:var(--ic-primary); background:rgba(255,255,255,.04); }
 .ic-topbar-right { margin-left:auto; display:flex; align-items:center; gap:14px; }
 .ic-topbar-back {
   font-size:12px; font-weight:500; color:var(--ic-text-muted);
@@ -79,15 +123,16 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   transition:color .15s;
 }
 .ic-topbar-back:hover { color:var(--ic-text); }
-.ic-topbar-user { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--ic-primary),var(--ic-secondary)); }
+.ic-topbar-user { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--ic-primary),var(--ic-secondary)); box-shadow:0 0 0 1px rgba(255,255,255,.04), 0 0 18px rgba(0,0,0,.2); }
 
 /* ── Grid ── */
-.ic-grid { display:grid; grid-template-columns:240px minmax(720px,1fr) 360px; flex:1; overflow:hidden; }
+.ic-grid { display:grid; grid-template-columns:240px minmax(0,1fr) 360px; flex:1; overflow:hidden; min-width:0; }
 
 /* ── Left Panel ── */
 .ic-left {
   background: var(--ic-panel); border-right:1px solid var(--ic-border);
   overflow-y:auto; padding:16px;
+  min-width:0;
 }
 .ic-section-title {
   font-size:10px; font-weight:600; text-transform:uppercase;
@@ -147,7 +192,8 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 /* ── Center Panel ── */
 .ic-center {
   display:flex; flex-direction:column; overflow:hidden;
-  background: rgba(7,7,14,.3);
+  background: var(--ic-bg);
+  min-width:0;
 }
 .ic-center-hdr {
   padding:14px 20px; border-bottom:1px solid var(--ic-border); flex-shrink:0;
@@ -168,14 +214,14 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   transition:border-color .2s;
 }
 .ic-editor-wrap:focus-within {
-  border-color:rgba(139,92,246,.25);
-  box-shadow:0 0 0 3px rgba(139,92,246,.04);
+  border-color:var(--ic-border-strong);
+  box-shadow:0 0 0 3px rgba(0,230,118,.05);
 }
 .ic-dropzone {
   position:absolute; inset:0; z-index:5;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-  background:rgba(139,92,246,.06);
-  border:2px dashed rgba(139,92,246,.25);
+  background:rgba(0,230,118,.05);
+  border:2px dashed var(--ic-border-strong);
   border-radius:var(--ic-radius);
   opacity:0; pointer-events:none;
   transition:all .3s;
@@ -196,7 +242,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   display:flex; align-items:center; gap:8px;
   padding:10px 14px;
   border-top:1px solid var(--ic-border);
-  background:rgba(0,0,0,.15);
+  background:var(--ic-panel);
 }
 .ic-editor-actions label, .ic-editor-actions button {
   padding:6px 12px; border-radius:7px; font-size:11px; font-weight:500; cursor:pointer;
@@ -230,6 +276,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   overflow-y:auto; padding:14px;
   display:flex; flex-direction:column; gap:10px;
   position:sticky; top:0; align-self:start; max-height:100vh;
+  min-width:0;
 }
 
 /* ── Pipeline ── */
@@ -685,7 +732,14 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 
 /* ── Responsive ── */
 @media (max-width:1200px) {
-  .ic-grid { grid-template-columns:240px 1fr 320px; }
+  .ic-grid { grid-template-columns:220px minmax(0,1fr); }
+  .ic-right {
+    grid-column: 1 / -1;
+    position: static;
+    max-height: none;
+    border-left: none;
+    border-top: 1px solid var(--ic-border);
+  }
 }
 @media (max-width:1024px) {
   .ic-grid { grid-template-columns:1fr; grid-template-rows:auto 1fr auto; }
@@ -1469,13 +1523,13 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   .ic-mobile-types-wrap { display:block; }
   .ic-mobile-types-wrap::after {
     content:''; position:absolute; right:0; top:0; bottom:0; width:24px;
-    background:linear-gradient(to right, transparent, rgba(7,7,14,.95));
+    background:linear-gradient(to right, transparent, var(--ic-panel));
     pointer-events:none; z-index:2;
   }
   .ic-mobile-types {
     display:flex; gap:5px; overflow-x:auto;
     padding:6px 10px; flex-shrink:0;
-    background:rgba(7,7,14,.95);
+    background:var(--ic-panel);
     border-bottom:1px solid var(--ic-border);
     -webkit-overflow-scrolling:touch; scrollbar-width:none;
     scroll-snap-type:x mandatory;
@@ -1493,7 +1547,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   }
   .ic-mobile-types .ic-type-item:hover { background:var(--ic-hover); color:var(--ic-text); }
   .ic-mobile-types .ic-type-item.active {
-    background:rgba(139,92,246,.12); border-color:rgba(139,92,246,.35);
+    background:rgba(0,230,118,.1); border-color:var(--ic-border-strong);
     color:var(--ic-primary);
     transition:all .18s ease-out;
   }
@@ -1535,9 +1589,9 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
     display:flex; flex-wrap:wrap; gap:5px;
     padding:6px 8px;
     position:sticky; bottom:0;
-    background:rgba(0,0,0,.35);
+    background:var(--ic-panel);
     backdrop-filter:blur(10px);
-    border-top:1px solid rgba(139,92,246,.15);
+    border-top:1px solid var(--ic-border);
     z-index:10;
   }
   .ic-editor-actions label, .ic-editor-actions button:not(.ic-analyze-btn) {
@@ -1643,7 +1697,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   /* ── Mobile hint ── */
   .ic-mobile-hint {
     display:flex; align-items:center; gap:8px;
-    background:rgba(139,92,246,.08); border:1px solid rgba(139,92,246,.12);
+    background:rgba(0,230,118,.06); border:1px solid var(--ic-border-strong);
     border-radius:8px; padding:8px 10px; margin-bottom:8px;
   }
   .ic-mobile-hint-icon { font-size:18px; line-height:1; }
@@ -1720,7 +1774,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
     <div class="ic-mobile-types" id="ic-mobile-types">
       {% set mobile_labels = {'auto':'Auto','url':'URL','phishing_email':'Email','log':'Log','malware':'Malware','ioc':'IOC','domain':'Domain','ip':'IP'} %}
       {% for t in types %}
-      <a class="ic-type-item {% if loop.first %}active{% endif %}" data-type="{{ t.id }}" href="#" onclick="return selectType('{{ t.id }}', this)" role="tab" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+      <a class="ic-type-item {% if loop.first %}active{% endif %}" data-type="{{ t.id }}" data-action="selectType" data-type-id="{{ t.id }}" href="#" role="tab" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
         <span class="ic-type-icon" aria-hidden="true">{{ t.icon }}</span>
         <span class="ic-type-label">{{ mobile_labels.get(t.id, t.id) }}</span>
       </a>
@@ -1737,7 +1791,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
       <div class="ic-section-title">Investigation Types</div>
       <div class="ic-type-list" id="ic-type-list">
         {% for t in types %}
-        <a class="ic-type-item {% if loop.first %}active{% endif %}" data-type="{{ t.id }}" href="#" onclick="return selectType('{{ t.id }}', this)" role="tab" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+      <a class="ic-type-item {% if loop.first %}active{% endif %}" data-type="{{ t.id }}" data-action="selectType" data-type-id="{{ t.id }}" href="#" role="tab" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
           <span class="ic-type-icon" aria-hidden="true">{{ t.icon }}</span>
           <div>
             <div class="ic-type-label">{{ t.label }}</div>
@@ -1777,14 +1831,14 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
           <textarea class="ic-textarea" id="ic-editor"
             placeholder="Paste a URL, IP address, domain, email headers, security log, malware report, hash, or any security indicator here..."
             data-mob-placeholder="Paste evidence..."
-            spellcheck="false" oninput="onEditorInput()"></textarea>
+            spellcheck="false" data-input="onEditorInput"></textarea>
           <div class="ic-editor-actions">
             <label class="ic-file-label" aria-label="Upload a file">📎 Upload File
               <input type="file" id="ic-file-input" hidden accept=".txt,.log,.pdf,.eml,.csv,.json,.md">
             </label>
-            <button onclick="clearEditor()" aria-label="Clear editor">🗑️ Clear</button>
+            <button data-action="clearEditor" aria-label="Clear editor">🗑️ Clear</button>
             <span class="ic-char-count" id="ic-char-count" aria-live="polite"></span>
-            <button class="ic-analyze-btn" id="ic-analyze-btn" onclick="runInvestigation()" aria-label="Run analysis">🔍 Analyze</button>
+            <button class="ic-analyze-btn" id="ic-analyze-btn" data-action="runInvestigation" aria-label="Run analysis">🔍 Analyze</button>
           </div>
         </div>
       </div>
@@ -1793,7 +1847,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
       <div class="ic-dashboard" id="ic-dashboard" style="display:none;">
 
         <!-- Collapsed evidence bar -->
-        <div class="ic-evidence-bar" id="ic-evidence-bar" onclick="toggleEvidence()" role="button" tabindex="0" aria-label="Toggle evidence view" aria-expanded="false" onkeydown="if(event.key==='Enter')toggleEvidence()">
+        <div class="ic-evidence-bar" id="ic-evidence-bar" data-action="toggleEvidence" role="button" tabindex="0" aria-label="Toggle evidence view" aria-expanded="false" data-keydown="toggleEvidence">
           <span class="ic-evidence-icon" aria-hidden="true">📄</span>
           <span class="ic-evidence-label">Original Evidence</span>
           <span class="ic-evidence-preview" id="ic-evidence-preview"></span>
@@ -1875,7 +1929,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 
         <!-- Raw Findings (collapsed by default) -->
         <div class="ic-dash-card" id="ic-dash-raw">
-          <div class="ic-dash-hdr" onclick="toggleRawFindings()" role="button" tabindex="0" aria-label="Toggle raw findings" aria-expanded="false" onkeydown="if(event.key==='Enter')toggleRawFindings()" style="cursor:pointer;">
+          <div class="ic-dash-hdr" data-action="toggleRawFindings" role="button" tabindex="0" aria-label="Toggle raw findings" aria-expanded="false" data-keydown="toggleRawFindings" style="cursor:pointer;">
             <span>Raw Findings</span>
             <span class="ic-dash-hdr-right">
               <span class="badge info" id="ic-dash-verdict-badge">Inconclusive</span>
@@ -1887,7 +1941,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
             <div class="ic-export-bar" id="ic-dash-export-bar" style="display:none;margin-top:8px;">
               <a class="ic-export-btn" id="ic-dash-export-md" target="_blank">📄 Markdown</a>
               <a class="ic-export-btn" id="ic-dash-export-json" target="_blank">📋 JSON</a>
-              <button class="ic-export-btn" onclick="printReport()">🖨️ Print</button>
+              <button class="ic-export-btn" data-action="printReport">🖨️ Print</button>
             </div>
           </div>
         </div>
@@ -1895,7 +1949,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
       </div>
 
       <div class="ic-new-analysis" id="ic-new-analysis" style="display:none;">
-        <button onclick="newAnalysis()">➕ New Investigation</button>
+        <button data-action="newAnalysis">➕ New Investigation</button>
       </div>
     </main>
 
@@ -1949,7 +2003,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
     <div class="mob-tabs-row" id="mob-tabs-row" role="tablist" aria-label="Investigation types">
       {% set mobile_labels = {'auto':'Auto','url':'URL','phishing_email':'Email','log':'Log','malware':'Malware','ioc':'IOC','domain':'Domain','ip':'IP'} %}
       {% for t in types %}
-      <button class="mob-tab {% if loop.first %}mob-tab--active{% endif %}" type="button" data-type="{{ t.id }}" onclick="mobSelectType('{{ t.id }}', this)" role="tab" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+      <button class="mob-tab {% if loop.first %}mob-tab--active{% endif %}" type="button" data-type="{{ t.id }}" data-action="mobSelectType" data-type-id="{{ t.id }}" role="tab" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
         <span class="mob-tab-icon" aria-hidden="true">{{ t.icon }}</span>
         <span class="mob-tab-label">{{ mobile_labels.get(t.id, t.id) }}</span>
       </button>
@@ -1965,7 +2019,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
         id="mob-textarea"
         placeholder="Paste evidence..."
         spellcheck="false"
-        oninput="mobOnInput()"
+        data-input="mobOnInput"
         data-mob-placeholder="Paste evidence..."
         aria-label="Evidence input"></textarea>
     </div>
@@ -1975,27 +2029,27 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
     <div class="mob-action-row1">
       <label class="mob-btn-sec" aria-label="Upload a file">
         Upload File
-        <input type="file" id="mob-file-input" accept=".txt,.log,.pdf,.eml,.csv,.json,.md" onchange="mobFileLoad(event)">
+        <input type="file" id="mob-file-input" accept=".txt,.log,.pdf,.eml,.csv,.json,.md" data-change="mobFileLoad">
       </label>
-      <button class="mob-btn-sec" type="button" onclick="mobClear()">Clear</button>
+      <button class="mob-btn-sec" type="button" data-action="mobClear">Clear</button>
       <span class="mob-char-count" id="mob-char-count" aria-live="polite"></span>
     </div>
-    <button id="mob-analyze-btn" type="button" onclick="mobRunInvestigation()">Analyze</button>
+    <button id="mob-analyze-btn" type="button" data-action="mobRunInvestigation">Analyze</button>
   </footer>
 </div>
 
 <div id="mob-report-screen" aria-hidden="true">
   <header class="mob-report-topbar">
-    <button class="mob-back-btn" type="button" onclick="mobBackToInput()">Back</button>
+    <button class="mob-back-btn" type="button" data-action="mobBackToInput">Back</button>
     <div class="mob-report-title-text">Investigation Report</div>
-    <button class="mob-new-btn" type="button" onclick="mobNewAnalysis()">New</button>
+    <button class="mob-new-btn" type="button" data-action="mobNewAnalysis">New</button>
   </header>
 
   <div class="mob-pipeline-strip" id="mob-pipeline-strip" aria-label="Investigation pipeline"></div>
 
   <div class="mob-report-scroll" id="mob-report-scroll">
     <section class="mob-card">
-      <div class="mob-card-hdr mob-evidence-bar" id="mob-evidence-bar" onclick="mobToggleEvidence()" role="button" tabindex="0" aria-label="Toggle evidence view" aria-expanded="false" onkeydown="if(event.key==='Enter')mobToggleEvidence()">
+      <div class="mob-card-hdr mob-evidence-bar" id="mob-evidence-bar" data-action="mobToggleEvidence" role="button" tabindex="0" aria-label="Toggle evidence view" aria-expanded="false" data-keydown="mobToggleEvidence">
         <span>Original Evidence</span>
         <span class="mob-evidence-preview-text" id="mob-evidence-preview"></span>
         <span class="mob-evidence-toggle-icon" id="mob-evidence-toggle">▶</span>
@@ -2079,7 +2133,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
     </section>
 
     <section class="mob-card">
-      <div class="mob-card-hdr mob-raw-hdr" id="mob-raw-hdr" onclick="mobToggleRaw()" role="button" tabindex="0" aria-label="Toggle raw findings" aria-expanded="false" onkeydown="if(event.key==='Enter')mobToggleRaw()">
+      <div class="mob-card-hdr mob-raw-hdr" id="mob-raw-hdr" data-action="mobToggleRaw" role="button" tabindex="0" aria-label="Toggle raw findings" aria-expanded="false" data-keydown="mobToggleRaw">
         <span>Raw Findings</span>
         <span class="mob-card-badge" id="mob-raw-toggle">▶</span>
       </div>
@@ -2093,6 +2147,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 <!-- Toast -->
 <div class="ic-toast" id="ic-toast" aria-live="polite" role="status"></div>
 
+<script src="{{ url_for('static', filename='js/csp-bindings.js') }}"></script>
 <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 <script src="{{ url_for('static', filename='js/investigate.js') }}"></script>
 </body>

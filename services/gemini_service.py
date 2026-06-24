@@ -1,8 +1,7 @@
 import time
 import logging
 import requests
-from config import GEMINI_HEADERS, MAX_RETRIES, BASE_BACKOFF
-
+from config import get_gemini_headers, MAX_RETRIES, BASE_BACKOFF
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +26,7 @@ def gemini_post(url, payload, stream=False, timeout=60):
         resp = requests.post(
             url,
             json=payload,
-            headers=GEMINI_HEADERS,
+            headers=get_gemini_headers(),
             timeout=timeout,
             stream=stream,
         )

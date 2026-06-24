@@ -96,6 +96,9 @@ def set_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # F-05: HSTS — only sent over HTTPS in production; prevents downgrade attacks
+    if IS_PRODUCTION:
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
     response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
@@ -105,7 +108,6 @@ def set_security_headers(response):
             "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
             "media-src 'self' blob: data:;"
         )
-    
     return response
 
 
@@ -137,10 +139,21 @@ def csrf_protect(f):
 # ==========================
 
 oauth = OAuth(app)
+
+# F-10: Guard — fail loudly at startup if OAuth credentials are missing
+# rather than silently passing None to authlib and crashing at runtime.
+_google_client_id     = os.getenv("GOOGLE_CLIENT_ID")
+_google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+if not _google_client_id or not _google_client_secret:
+    raise ValueError(
+        "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables must be set. "
+        "Add them to your Render dashboard (or .env for local dev)."
+    )
+
 google = oauth.register(
     name="google",
-    client_id=os.getenv("GOOGLE_CLIENT_ID"),
-    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    client_id=_google_client_id,
+    client_secret=_google_client_secret,
     server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
     client_kwargs={"scope": "openid email profile"},
 )

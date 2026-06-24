@@ -167,7 +167,7 @@ def get_ctf_challenge(category: str = None) -> dict:
     except RuntimeError as e:
         rate_limited = "rate limit" in str(e).lower()
         return {"ok": False, "error": str(e), "rate_limited": rate_limited}
-    except (json.JSONDecodeError, KeyError) as e:
+    except (json.JSONDecodeError, KeyError):
         logger.exception("CTF challenge — bad JSON from Groq")
         return {"ok": False, "error": "Could not parse challenge response. Please try again."}
 
@@ -197,6 +197,6 @@ def score_ctf_answer(challenge: dict, user_answer: str) -> dict:
     except RuntimeError as e:
         rate_limited = "rate limit" in str(e).lower()
         return {"ok": False, "error": str(e), "rate_limited": rate_limited}
-    except (json.JSONDecodeError, KeyError) as e:
+    except (json.JSONDecodeError, KeyError):
         logger.exception("CTF scoring — bad JSON from Groq")
         return {"ok": False, "error": "Could not parse scoring result. Please try again."}

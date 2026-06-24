@@ -21,6 +21,7 @@ from config import API_URL, API_URL_STREAM, FLASH_LITE_API_URL, FLASH_LITE_API_U
 from services.gemini_service import gemini_post, build_contents, GeminiRateLimitError, GeminiServiceError
 from services.cyberguru_agent import investigate
 from services.groq_service import groq_chat, groq_stream, build_groq_messages
+from services.skill_profile_service import SkillProfileService
 from services.db_service import (
     create_chat_session,
     get_chat_sessions,
@@ -35,7 +36,6 @@ from utils.grounding import needs_grounding
 from utils.quiz import sanitize_quiz_topic, build_quiz_prompt
 
 logger = logging.getLogger(__name__)
-from services.skill_profile_service import SkillProfileService
 
 
 def _get_adaptive_system_prompt(user_message: str = "") -> str:

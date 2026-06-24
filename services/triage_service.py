@@ -19,14 +19,13 @@ import re
 import json
 import logging
 from dotenv import load_dotenv
- 
-load_dotenv()
 from google import genai
 from google.genai import types
- 
 from utils.abuseipdb_tool import check_abuseipdb
 from utils.virustotal_tool import check_virustotal_ip
 from utils.mitre_mapper import lookup_mitre, extract_mitre_techniques
+
+load_dotenv()
  
 logger = logging.getLogger(__name__)
  
@@ -252,7 +251,7 @@ def _run_tool_call(function_call):
  
     try:
         return func(**args)
-    except Exception as exc:
+    except Exception:
         # FIX #2 (tool level): log full detail server-side, return a safe stub.
         logger.exception("Triage: tool %s raised an exception", name)
         return {"error": "Tool lookup failed", "tool": name}
@@ -427,7 +426,7 @@ Remember to append the machine-readable JSON block at the end of your response.
             "tool_calls": tool_calls_made,
         }
  
-    except Exception as exc:
+    except Exception:
         # FIX #2 (outer level): log full traceback, return safe generic message.
         logger.exception("Triage: analyze_artifact raised an unhandled exception")
         return {

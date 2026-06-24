@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()  # load .env before ANY os.getenv() call
 
 from extensions import app  # noqa: E402  (must come after load_dotenv)
-from services.db_service import init_db
+from services.db_service import init_db  # noqa: E402
 
 init_db()
 

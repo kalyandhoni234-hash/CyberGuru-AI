@@ -75,7 +75,6 @@ def investigate_analyze():
     try:
         data = request.get_json(silent=True) or {}
         artifact = sanitize_artifact(data.get("artifact", ""))
-        artifact_type = data.get("type", "auto")
 
         if not artifact:
             return jsonify({"error": "Please provide an artifact to investigate."}), 400

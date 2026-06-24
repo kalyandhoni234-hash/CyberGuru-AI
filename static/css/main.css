@@ -128,7 +128,7 @@ body.theme-hacker .history-item::before {
   background: var(--blue-vivid);
 }
 body.theme-hacker #input-area {
-  background: linear-gradient(0deg, rgba(3,11,3,.96) 0%, rgba(3,11,3,.82) 58%, transparent 100%);
+  background: var(--bg-panel);
   border-top-color: rgba(0,230,118,.08);
 }
 body.theme-hacker #suggestions-box {
@@ -1293,7 +1293,7 @@ body.theme-light .sp-theme-card.active { border-color: var(--blue-vivid); }
 }
 
 body.theme-hacker #topbar {
-  background: linear-gradient(180deg, rgba(3,11,3,.98), rgba(6,16,6,.96));
+  background: var(--bg-panel);
   border-bottom-color: rgba(0,230,118,.12);
   box-shadow: 0 1px 0 rgba(0,230,118,.08), inset 0 -1px 0 rgba(255,255,255,.03);
 }

@@ -57,8 +57,6 @@ async function showUserProfile(user) {
         const profileData = await pRes.json();
         window.__userData = window.__userData || {};
         window.__userData.profile = profileData.profile || profileData;
-        if (typeof loadProfileWidget === 'function') loadProfileWidget();
-        if (typeof loadSettingsProfile === 'function') loadSettingsProfile();
         // Show onboarding if not completed
         if (!window.__userData.profile.onboarding_completed) {
           if (typeof showOnboarding === 'function') setTimeout(showOnboarding, 600);

@@ -8,7 +8,7 @@ import json
 import secrets as _secrets
 from functools import wraps
 
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, g
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -91,23 +91,48 @@ def request_too_large_handler(e):
     }), 413
 
 
+@app.before_request
+def mint_csp_nonce():
+    """Generate a fresh nonce for every request.
+
+    The nonce is exposed to Jinja2 via flask.g so templates can write:
+        <script nonce="{{ g.csp_nonce }}">...</script>
+    The same value is embedded in the Content-Security-Policy header by
+    set_security_headers() below, replacing the old 'unsafe-inline' directive.
+    """
+    g.csp_nonce = _secrets.token_hex(16)
+
+
 @app.after_request
 def set_security_headers(response):
+    # Pull the nonce minted for this request; fall back if g is unavailable
+    # (e.g. error responses that bypass the before_request hook).
+    nonce = getattr(g, "csp_nonce", _secrets.token_hex(16))
+
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    # F-05: HSTS — only sent over HTTPS in production; prevents downgrade attacks
+    response.headers["Permissions-Policy"] = (
+        "microphone=(self), camera=(), geolocation=()"
+    )
+
+    # HSTS — only sent in production (HTTPS). Prevents SSL-stripping attacks.
     if IS_PRODUCTION:
-        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
-    response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
-            "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
-            "connect-src 'self' https://cdnjs.cloudflare.com; "
-            "img-src 'self' data: https:; "
-            "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
-            "media-src 'self' blob: data:;"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=63072000; includeSubDomains; preload"
         )
+
+    # Nonce-based CSP — 'unsafe-inline' removed.
+    # Every <script> and <style> tag in templates must carry nonce="{{ g.csp_nonce }}".
+    response.headers["Content-Security-Policy"] = (
+        f"default-src 'self'; "
+        f"script-src 'self' 'nonce-{nonce}' https://cdnjs.cloudflare.com; "
+        f"style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+        f"connect-src 'self' https://cdnjs.cloudflare.com; "
+        f"img-src 'self' data: https:; "
+        f"font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
+        f"media-src 'self' blob: data:;"
+    )
     return response
 
 

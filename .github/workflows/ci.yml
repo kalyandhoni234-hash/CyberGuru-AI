@@ -1,5 +1,6 @@
-name: CI / CD   
-"on":       
+name: CI / CD
+
+"on":
   push:
     branches: [main, develop]
   pull_request:
@@ -10,8 +11,7 @@ env:
 
 # ---------------------------------------------------------------------------
 # Pipeline order:
-#   lint  ──►  test   ──►  deploy  (main push only)
-#              security ──►  (same gate)
+#   lint  ──►  security  ──►  test  ──►  deploy  (main push only)
 # ---------------------------------------------------------------------------
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
 
   # ── 2. Security scan ──────────────────────────────────────────────────────
   security:
-    name: Security scan (bandit)
+    name: Security scan (bandit + pip-audit)
     runs-on: ubuntu-latest
 
     steps:
@@ -47,11 +47,15 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
 
-      - name: Install bandit
-        run: pip install bandit
+      - name: Install security tools
+        run: pip install bandit pip-audit
 
-      - name: Run bandit
-        # Medium+ severity & confidence; exclude test files and any venv dir
+      - name: pip-audit (dependency CVE scan)
+        # Scans requirements.txt for known CVEs — fails on any finding
+        run: pip-audit -r requirements.txt
+
+      - name: Run bandit (SAST)
+        # Medium+ severity & confidence; exclude test files and venv dirs
         run: |
           bandit -r . \
             -x ./tests,./venv,./.venv \
@@ -75,13 +79,18 @@ jobs:
           --health-retries 5
 
     env:
-      # Placeholder values — unit tests must not call live APIs.
-      # Add TEST_DATABASE_URL as a GitHub secret for integration tests.
-      GEMINI_API_KEY:  ci-placeholder
-      GROQ_API_KEY:    ci-placeholder
-      SECRET_KEY:      ci-test-secret-not-for-production
-      REDIS_URL:       redis://localhost:6379
-      DATABASE_URL:    ${{ secrets.TEST_DATABASE_URL }}
+      # ── Required by extensions.py at import time ──────────────────────────
+      # extensions.py raises ValueError if FLASK_SECRET_KEY, GOOGLE_CLIENT_ID,
+      # or GOOGLE_CLIENT_SECRET are missing — so all three must be set here.
+      # (conftest.py also sets them via os.environ.setdefault, but the CI env
+      #  vars take precedence and are safer for the module-level raise check.)
+      FLASK_SECRET_KEY:      ci-test-secret-32chars-not-for-prod
+      GOOGLE_CLIENT_ID:      ci-placeholder-client-id
+      GOOGLE_CLIENT_SECRET:  ci-placeholder-client-secret
+      GEMINI_API_KEY:        ci-placeholder
+      GROQ_API_KEY:          ci-placeholder
+      REDIS_URL:             redis://localhost:6379
+      DATABASE_URL:          ${{ secrets.TEST_DATABASE_URL }}
 
     steps:
       - uses: actions/checkout@v4

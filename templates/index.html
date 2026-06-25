@@ -21,7 +21,7 @@
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}?v=2">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 <script src="{{ url_for('static', filename='js/csp-bindings.js') }}"></script>
-<style>
+<style nonce="{{ g.csp_nonce }}">
 .login-google-btn {
   display:flex; align-items:center; justify-content:center; gap:12px;
   width:100%; padding:12px 20px; cursor:pointer;

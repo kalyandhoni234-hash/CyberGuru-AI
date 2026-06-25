@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}?v=2">
-<style>
+<style nonce="{{ g.csp_nonce }}">
 :root {
   --ic-bg: #07070E;
   --ic-surface: #0C0C18;
@@ -79,6 +79,7 @@ body {
   background: var(--ic-bg); color: var(--ic-text);
   font-family: var(--font-ui); font-size:14px;
   min-width: 0;
+  display: block !important; /* Override main.css flex layout */
 }
 
 /* ── Focus visible for keyboard nav ── */
@@ -92,7 +93,13 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 ::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.12); }
 
 /* ── App Shell ── */
-.ic-app { display:flex; flex-direction:column; height:100vh; }
+.ic-app {
+  display:flex; flex-direction:column;
+  width: 100% !important; min-width: 100% !important;
+  max-width: none !important;
+  height: 100vh; min-height: 100vh;
+  overflow: hidden;
+}
 
 /* ── Topbar ── */
 .ic-topbar {
@@ -126,7 +133,12 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 .ic-topbar-user { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--ic-primary),var(--ic-secondary)); box-shadow:0 0 0 1px rgba(255,255,255,.04), 0 0 18px rgba(0,0,0,.2); }
 
 /* ── Grid ── */
-.ic-grid { display:grid; grid-template-columns:240px minmax(0,1fr) 360px; flex:1; overflow:hidden; min-width:0; }
+.ic-grid {
+  display:grid; grid-template-columns:220px minmax(0,1fr) 300px;
+  flex:1; overflow:hidden;
+  width: 100% !important; min-width: 100% !important;
+  max-width: none !important;
+}
 
 /* ── Left Panel ── */
 .ic-left {

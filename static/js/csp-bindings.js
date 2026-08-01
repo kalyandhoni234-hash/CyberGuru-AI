@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
       case 'toggleRawFindings':  toggleRawFindings(); break;
       case 'printReport':        printReport(); break;
       case 'copyToClipboard':    copyToClipboard(el.dataset.encoded); break;
+      case 'copyIocGroup':       copyIocGroup(el.dataset.key); break;
       case 'loadInvestigation':  loadInvestigation(parseInt(el.dataset.invId, 10)); break;
       case 'deleteInvestigation':
         e.stopPropagation();

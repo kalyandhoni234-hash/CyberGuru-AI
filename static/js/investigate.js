@@ -445,15 +445,23 @@
       return;
     }
 
+    window._lastIocData = iocs;
+    window._lastIocDefanged = iocsDefanged;
+
     var chipHtml = '';
     sections.forEach(function (s) {
       var items = iocs[s.key] || [];
       var defanged = iocsDefanged[s.key] || [];
       if (items.length === 0) return;
-      chipHtml += '<div class="ic-ioc-group"><div class="ic-ioc-hdr">' + s.icon + ' ' + s.label + ' <span class="cnt">(' + items.length + ')</span></div>';
+      var type = s.key.replace(/s$/, '');
+      chipHtml += '<div class="ic-ioc-group"><div class="ic-ioc-hdr">'
+        + '<span>' + s.icon + ' ' + s.label + ' <span class="cnt">(' + items.length + ')</span></span>'
+        + '<button class="ic-ioc-copyall" data-action="copyIocGroup" data-key="' + s.key + '" title="Copy all ' + s.label + '">⧉ Copy all</button>'
+        + '</div>';
       items.forEach(function (item, idx) {
         var display = defanged[idx] || item;
-        chipHtml += '<span class="ic-ioc-chip" data-action="copyToClipboard" data-encoded="' + encodeURIComponent(display) + '" title="Click to copy">' + escapeHtml(display) + '<span class="copy-icon">📋</span></span>';
+        chipHtml += '<span class="ic-ioc-chip ic-ioc-chip--' + type + '" data-action="copyToClipboard" data-encoded="' + encodeURIComponent(display) + '" title="Click to copy">'
+          + '<span class="ic-ioc-dot"></span>' + escapeHtml(display) + '<span class="copy-icon">📋</span></span>';
       });
       chipHtml += '</div>';
     });
@@ -793,6 +801,14 @@
       document.body.removeChild(ta);
       showToast('Copied to clipboard', 'success');
     });
+  };
+
+  window.copyIocGroup = function (key) {
+    var items = (window._lastIocData && window._lastIocData[key]) || [];
+    if (!items.length) return;
+    var def = (window._lastIocDefanged && window._lastIocDefanged[key]) || [];
+    var text = items.map(function (it, i) { return def[i] || it; }).join('\n');
+    copyToClipboard(encodeURIComponent(text));
   };
 
   // ── Toast ──
@@ -1425,10 +1441,11 @@
       if (!items.length) return;
       chipHtml += '<div class="mob-ioc-group">'
         + '<div class="mob-ioc-group-hdr">' + s.icon + ' ' + s.label + ' <span class="mob-ioc-cnt">(' + items.length + ')</span></div>';
+      var type = s.key.replace(/s$/, '');
       items.forEach(function(item, idx) {
         var display = def[idx] || item;
-        chipHtml += '<span class="mob-ioc-chip" data-action="copyToClipboard" data-encoded="' + encodeURIComponent(display) + '" title="Tap to copy">'
-          + escHtml(display) + '</span>';
+        chipHtml += '<span class="mob-ioc-chip mob-ioc-chip--' + type + '" data-action="copyToClipboard" data-encoded="' + encodeURIComponent(display) + '" title="Tap to copy">'
+          + '<span class="mob-ioc-dot"></span>' + escHtml(display) + '</span>';
       });
       chipHtml += '</div>';
     });

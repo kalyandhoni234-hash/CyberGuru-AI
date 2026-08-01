@@ -1,0 +1,14 @@
+User-agent: *
+
+# Allow public pages
+Allow: /$
+Allow: /investigate$
+
+# Block all API endpoints (no crawlable content)
+Disallow: /api/
+Disallow: /auth/
+Disallow: /analyze-file
+Disallow: /health
+
+# Sitemap location
+Sitemap: https://cyberguru-ai.onrender.com/sitemap.xml

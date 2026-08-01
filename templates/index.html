@@ -3,1122 +3,304 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CyberGuru AI | Cybersecurity Learning Assistant</title>
-<meta name="description" content="CyberGuru AI helps students learn cybersecurity, ethical hacking, malware analysis, SQL injection, XSS, OWASP Top 10 and cyber defense concepts.">
-<meta name="keywords" content="cybersecurity, ethical hacking, malware, SQL injection, XSS, OWASP, cybersecurity learning, cyber security chatbot">
+
+<!-- ═══════════════════════════════════════
+     PRIMARY META
+     ═══════════════════════════════════════ -->
+<title>CyberGuru AI | SOC Investigation Center</title>
+<meta name="description" content="CyberGuru AI Investigation Center — analyze IPs, domains, URLs, file hashes, malware, phishing emails, and network logs with AI-powered IOC extraction and MITRE ATT&CK mapping.">
 <meta name="author" content="Guru Sharan Kalyan">
 <meta name="robots" content="index, follow">
-<meta property="og:title" content="CyberGuru AI">
-<meta property="og:description" content="Learn cybersecurity concepts with an AI-powered cybersecurity assistant.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://cyberguru-ai.onrender.com/">
+<link rel="canonical" href="https://cyberguru-ai.onrender.com/">
+
+<!-- ═══════════════════════════════════════
+     OPEN GRAPH  (Facebook · LinkedIn · Discord · WhatsApp · Telegram)
+     ═══════════════════════════════════════ -->
+<meta property="og:type"        content="website">
+<meta property="og:site_name"   content="CyberGuru AI">
+<meta property="og:url"         content="https://cyberguru-ai.onrender.com/">
+<meta property="og:title"       content="CyberGuru AI – SOC Investigation Center">
+<meta property="og:description" content="Investigate IPs, domains, file hashes, URLs, malware, phishing emails and network logs. AI-powered threat analysis with MITRE ATT&CK mapping.">
+<meta property="og:image"       content="https://cyberguru-ai.onrender.com/static/assets/og-image.png">
+<meta property="og:image:width"  content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt"   content="CyberGuru AI SOC Investigation Center">
+<meta property="og:locale"      content="en_US">
+
+<!-- ═══════════════════════════════════════
+     TWITTER CARDS
+     ═══════════════════════════════════════ -->
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:site"        content="@CyberGuruAI">
+<meta name="twitter:title"       content="CyberGuru AI – SOC Investigation Center">
+<meta name="twitter:description" content="Investigate IPs, domains, file hashes, malware, phishing emails and network logs with AI-powered threat analysis.">
+<meta name="twitter:image"       content="https://cyberguru-ai.onrender.com/static/assets/og-image.png">
+<meta name="twitter:image:alt"   content="CyberGuru AI SOC Investigation Center">
+
+<!-- ═══════════════════════════════════════
+     STRUCTURED DATA — JSON-LD
+     ═══════════════════════════════════════ -->
+<script type="application/ld+json" nonce="{{ g.csp_nonce }}">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://cyberguru-ai.onrender.com/#organization",
+      "name": "CyberGuru AI",
+      "url": "https://cyberguru-ai.onrender.com/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://cyberguru-ai.onrender.com/static/assets/favicon.png"
+      },
+      "description": "AI-powered SOC investigation tool for cybersecurity analysts.",
+      "founder": { "@type": "Person", "name": "Guru Sharan Kalyan" }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://cyberguru-ai.onrender.com/#website",
+      "url": "https://cyberguru-ai.onrender.com/",
+      "name": "CyberGuru AI",
+      "publisher": { "@id": "https://cyberguru-ai.onrender.com/#organization" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://cyberguru-ai.onrender.com/#app",
+      "name": "CyberGuru AI Investigation Center",
+      "applicationCategory": "SecurityApplication",
+      "operatingSystem": "Web Browser",
+      "url": "https://cyberguru-ai.onrender.com/",
+      "description": "An AI-powered SOC investigation center. Analyze IPs, domains, URLs, file hashes, malware, phishing emails, and network logs. Extracts IOCs and maps findings to MITRE ATT&CK.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "featureList": [
+        "IP address analysis",
+        "Domain reputation lookup",
+        "File hash investigation",
+        "URL threat analysis",
+        "Malware artifact analysis",
+        "Phishing email triage",
+        "Network log analysis",
+        "MITRE ATT&CK mapping",
+        "IOC extraction",
+        "Investigation-grounded AI copilot"
+      ],
+      "publisher": { "@id": "https://cyberguru-ai.onrender.com/#organization" }
+    }
+  ]
+}
+</script>
+
+<!-- ═══════════════════════════════════════
+     PWA MANIFEST
+     ═══════════════════════════════════════ -->
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#8B5CF6">
+
+<!-- ═══════════════════════════════════════
+     PERFORMANCE: PRECONNECT + FONTS
+     ═══════════════════════════════════════ -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}?v=2">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 <script src="{{ url_for('static', filename='js/csp-bindings.js') }}"></script>
+
 <style nonce="{{ g.csp_nonce }}">
-.login-google-btn {
-  display:flex; align-items:center; justify-content:center; gap:12px;
-  width:100%; padding:12px 20px; cursor:pointer;
-  background:var(--bg-surface); border:1px solid var(--border-default);
-  border-radius:var(--r-md); color:var(--text-primary);
-  font-size:14px; font-weight:500; font-family:var(--font-ui);
-  transition:all .2s; margin-bottom:16px;
+:root {
+  --lp-bg: #07070E;
+  --lp-surface: #0C0C18;
+  --lp-card: rgba(255,255,255,.03);
+  --lp-border: rgba(255,255,255,.08);
+  --lp-primary: #8B5CF6;
+  --lp-secondary: #00E5FF;
+  --lp-success: #00FF88;
+  --lp-danger: #FF4757;
+  --lp-text: #EAEAF0;
+  --lp-text-secondary: #9090AA;
+  --lp-text-muted: #555570;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-ui: 'Inter', sans-serif;
 }
-.login-google-btn:hover {
-  border-color:var(--border-strong); background:var(--bg-hover);
+body.theme-hacker {
+  --lp-primary: #00e676;
+  --lp-secondary: #00b248;
+  --lp-success: #00e676;
+  --lp-bg: #030b03;
+  --lp-surface: #061006;
+  --lp-card: rgba(0,230,118,.04);
+  --lp-border: rgba(0,230,118,.12);
+  --lp-text-secondary: #6db88a;
+  --lp-text-muted: #356048;
+}
+body.theme-light {
+  --lp-primary: #4338ca;
+  --lp-secondary: #0369a1;
+  --lp-success: #059669;
+  --lp-bg: #f5f4f0;
+  --lp-surface: #ffffff;
+  --lp-card: #ffffff;
+  --lp-border: rgba(80,70,120,.14);
+  --lp-text: #1a1830;
+  --lp-text-secondary: #4a4870;
+  --lp-text-muted: #9491b4;
+}
+body.theme-oled {
+  --lp-primary: #7c6ef7;
+  --lp-secondary: #d4a8ff;
+  --lp-success: #86efac;
+  --lp-bg: #000000;
+  --lp-surface: #000000;
+  --lp-card: #0f0f1a;
+  --lp-border: rgba(120,100,255,.12);
+  --lp-text-secondary: #8b80c0;
+  --lp-text-muted: #453e6e;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; }
+body {
+  background: var(--lp-bg); color: var(--lp-text);
+  font-family: var(--font-ui); font-size:14px;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--lp-border); border-radius:3px; }
+
+.lp-wrap { min-height:100vh; display:flex; flex-direction:column; }
+
+/* ── Topbar ── */
+.lp-topbar {
+  display:flex; align-items:center; gap:12px;
+  padding:0 28px; height:56px;
+  background:rgba(12,12,24,.7);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--lp-border);
+}
+.lp-brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; letter-spacing:-.01em; }
+.lp-brand svg { width:20px; height:20px; }
+.lp-topbar-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+.lp-btn {
+  padding:7px 16px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;
+  text-decoration:none; font-family:var(--font-ui);
+  border:1px solid var(--lp-border); background:var(--lp-card); color:var(--lp-text);
+  transition:all .18s; display:inline-flex; align-items:center; gap:6px;
+}
+.lp-btn:hover { background:rgba(255,255,255,.05); border-color:var(--lp-border); }
+.lp-btn-primary {
+  background:linear-gradient(135deg,var(--lp-primary),var(--lp-secondary));
+  border-color:transparent !important; color:#fff !important;
+}
+.lp-btn-primary:hover { filter:brightness(1.1); }
+.lp-user-dot { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,var(--lp-primary),var(--lp-secondary)); }
+
+/* ── Hero ── */
+.lp-hero {
+  padding:72px 28px 40px; text-align:center;
+  max-width:860px; margin:0 auto;
+}
+.lp-hero-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--lp-primary); border:1px solid rgba(139,92,246,.3);
+  background:rgba(139,92,246,.08);
+  padding:5px 12px; border-radius:999px; margin-bottom:22px;
+}
+.lp-hero h1 {
+  font-size:clamp(28px,5vw,46px); font-weight:700; letter-spacing:-.03em; line-height:1.1;
+}
+.lp-hero h1 .grad {
+  background:linear-gradient(90deg,var(--lp-primary),var(--lp-secondary));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.lp-hero p.lead {
+  margin:18px auto 0; max-width:640px;
+  font-size:15px; line-height:1.65; color:var(--lp-text-secondary);
+}
+.lp-hero-ctas { margin-top:32px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+.lp-hero-ctas .lp-btn { padding:11px 24px; font-size:13.5px; border-radius:10px; }
+
+/* ── Feature grid ── */
+.lp-features {
+  max-width:980px; margin:24px auto 0; padding:0 28px 64px;
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px;
+}
+.lp-feature {
+  background:var(--lp-card); border:1px solid var(--lp-border);
+  border-radius:14px; padding:18px 18px 16px;
+  transition:transform .18s, border-color .18s;
+}
+.lp-feature:hover { transform:translateY(-2px); border-color:var(--lp-border); }
+.lp-feature .f-icon { font-size:22px; margin-bottom:10px; }
+.lp-feature h3 { font-size:13.5px; font-weight:600; margin-bottom:6px; }
+.lp-feature p { font-size:12px; line-height:1.55; color:var(--lp-text-secondary); }
+
+/* ── Footer ── */
+.lp-footer {
+  margin-top:auto; padding:22px 28px; text-align:center;
+  border-top:1px solid var(--lp-border);
+  font-size:11.5px; color:var(--lp-text-muted);
+}
+
+@media (max-width:600px) {
+  .lp-hero { padding-top:52px; }
+  .lp-topbar { padding:0 16px; }
 }
 </style>
 </head>
 <body>
+<div class="lp-wrap">
 
-<!-- Background: animated network topology canvas -->
-<canvas id="network-canvas" aria-hidden="true"></canvas>
-
-<!-- Sidebar overlay for mobile -->
-<div id="sidebar-overlay" data-action="closeSidebar"></div>
-
-<!-- Custom confirm dialog (replaces browser confirm()) -->
-<div id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title-text">
-  <div class="confirm-box">
-    <div class="confirm-title" id="confirm-title-text">Delete conversation?</div>
-    <div class="confirm-msg">This conversation will be permanently deleted and cannot be recovered.</div>
-    <div class="confirm-actions">
-      <button class="confirm-cancel-btn" data-action="resolveConfirm" data-result="false">Cancel</button>
-      <button class="confirm-ok-btn" data-action="resolveConfirm" data-result="true">Delete</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════
-     SIDEBAR
-     ═══════════════════════════════════ -->
-<aside id="sidebar" role="navigation" aria-label="Sidebar">
-
-  <div class="sidebar-logo">
-    <div class="logo-mark">
-      <div class="logo-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.6)" stroke-width="1.5" stroke-linejoin="round"/>
-          <path d="M9 12l2 2 4-4" stroke="rgba(255,255,255,.85)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div>
-        <div class="logo-text">CyberGuru AI</div>
-        <div class="logo-badge">
-          <svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="3" fill="currentColor"/></svg>
-          Security Intelligence
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <button class="new-chat-btn" data-action="newChat">
-    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-    </svg>
-    New Conversation
-  </button>
-
-  <div class="tools-menu-wrap" id="tools-menu-wrap">
-    <button class="tools-menu-btn" id="tools-menu-trigger" data-action="toggleToolsMenu" aria-haspopup="true" aria-expanded="false">
-      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+  <header class="lp-topbar">
+    <div class="lp-brand">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(139,92,246,.2)" stroke="#8B5CF6" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M9 12l2 2 4-4" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      Tools
-      <svg class="tools-menu-chevron" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/>
-      </svg>
-    </button>
-
-    <div class="tools-menu-dropdown" id="tools-menu-dropdown" role="menu">
-      <button class="tools-menu-item" id="tool-quiz" data-action="openQuiz" role="menuitem">
-        <svg class="tools-menu-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-        Quiz Mode <span class="tools-menu-shortcut">Q</span>
-      </button>
-      <button class="tools-menu-item" id="tool-ctf" data-action="openCtf" role="menuitem">
-        <svg class="tools-menu-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-        CTF Challenge <span class="tools-menu-shortcut">C</span>
-      </button>
-      <button class="tools-menu-item" id="tool-news" data-action="openNews" role="menuitem">
-        <svg class="tools-menu-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a4 4 0 01-4-4V6"/><line x1="12" y1="8" x2="16" y2="8"/><line x1="12" y1="12" x2="16" y2="12"/></svg>
-        CyberNews <span class="tools-menu-shortcut">N</span>
-      </button>
-      <div class="tools-menu-divider"></div>
-      <button class="tools-menu-item" id="tool-threat" data-action="openThreat" role="menuitem">
-        <svg class="tools-menu-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Threat Pulse <span class="tools-menu-badge">LIVE</span>
-      </button>
+      CyberGuru AI
     </div>
-  </div>
-
-  <!-- Cyber Mentor sidebar button -->
-  <button class="mentor-sidebar-btn" data-action="openMentorOverlay" aria-label="Open Cyber Mentor">
-    <span class="mentor-sb-icon">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
-      </svg>
-    </span>
-    Cyber Mentor
-    <span class="mentor-sb-badge">NEW</span>
-  </button>
-
-  <div class="history-section">
-    <div class="history-label">Recent</div>
-    <div class="history-list" id="history-list">
-      <div class="history-empty" id="history-empty">No conversations yet.<br>Start by asking a question.</div>
+    <div class="lp-topbar-right">
+      {% if session.get('user') %}
+      <a class="lp-btn" href="/auth/logout" onclick="event.preventDefault();fetch('/auth/logout',{method:'POST',headers:{'X-CSRF-Token':'{{ session.get("csrf_token") }}'}}).then(function(){window.location.href='/';});">Log out</a>
+      <div class="lp-user-dot" title="{{ session['user'].get('name', '') }}"></div>
+      {% else %}
+      <a class="lp-btn" href="/auth/login">Sign in</a>
+      {% endif %}
     </div>
-  </div>
+  </header>
 
-  <div class="sidebar-footer">
-
-    <div class="sidebar-footer-top">
-      <div class="status-row">
-        <div class="status-dot"></div>
-        API Connected
-      </div>
-      <div class="sidebar-version" id="sidebar-version">v1.1 | Gemini 2.5 Flash</div>
-    </div>
-
-    <!-- User profile row with three-dots dropdown -->
-    <div id="user-profile-row" style="display:none;">
-      <img id="user-avatar" src="" alt="" width="32" height="32" class="user-profile-avatar">
-      <div class="user-profile-info">
-        <div id="user-name" class="user-profile-name"></div>
-        <div id="user-email" class="user-profile-email"></div>
-      </div>
-
-      <div class="user-menu-wrap" id="user-menu-wrap">
-        <button class="user-menu-btn" id="user-menu-trigger" data-action="toggleUserMenu" title="More options" aria-haspopup="true" aria-expanded="false">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
-            <circle cx="5" cy="12" r="1.8" fill="currentColor"/>
-            <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
-            <circle cx="19" cy="12" r="1.8" fill="currentColor"/>
-          </svg>
-        </button>
-
-        <div class="user-menu-dropdown" id="user-menu-dropdown" role="menu">
-          <button class="user-menu-item" data-action="openSettingsMenu" role="menuitem">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-            Settings
-          </button>
-          <div class="user-menu-divider"></div>
-          <button class="user-menu-item user-menu-item--danger" data-action="logoutUser" role="menuitem">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-            </svg>
-            Sign out
-          </button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</aside>
-
-<!-- ═══════════════════════════════════
-     MAIN
-     ═══════════════════════════════════ -->
-<main id="main">
-
-  <!-- Rate-limit banner -->
-  <div id="rate-limit-banner" role="alert" aria-live="polite">
-    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-    </svg>
-    <span>Rate limit reached - next request available in</span>
-    <span id="rate-limit-countdown">60</span>s
-    <button id="rate-limit-dismiss" data-action="dismissRateBanner">Dismiss</button>
-  </div>
-
-  <!-- Topbar -->
-  <div id="topbar">
-    <button id="menu-toggle" data-action="toggleSidebar" aria-label="Toggle menu">
-      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-      </svg>
-    </button>
-    <button id="sidebar-toggle" data-action="toggleSidebarCollapse" title="Toggle sidebar">
-      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
-      </svg>
-    </button>
-    <div class="topbar-context">
-      <div id="topbar-title">New Conversation</div>
-    </div>
-
-    <button id="export-btn" data-action="exportChat" title="Export conversation" class="export-btn-el">
-      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-      Export
-    </button>
-
-    <div class="topbar-divider"></div>
-
-    <div class="model-badge" id="topbar-model-badge">
-      <div class="model-dot"></div>
-      <span id="topbar-model-text">Gemini 2.5 Flash</span>
-    </div>
-    <div class="model-badge" id="tps-badge" style="display:none;">
-      <div class="model-dot" style="background:var(--green);"></div>
-      <span id="tps-value">0</span> t/s
-    </div>
-  </div>
-
-  <!-- Chat messages -->
-  <div id="chat-box">
-    <div id="welcome">
-      <div class="welcome-shield">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.55)" stroke-width="1.5" stroke-linejoin="round"/>
-          <path d="M9 12l2 2 4-4" stroke="rgba(255,255,255,.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="welcome-text-group">
-        <div class="welcome-heading">CyberGuru AI</div>
-        <div class="welcome-sub">Your AI-powered cybersecurity learning assistant. Ask about threats, attacks, defenses, and security best practices.</div>
-      </div>
-      <div class="welcome-caps" id="welcome-caps"></div>
-      <div class="suggest-grid" id="suggest-grid"></div>
-    </div>
-  </div><!-- /#chat-box -->
-
-  <!-- Scroll to bottom button -->
-  <button id="scroll-btn" data-action="scrollToBottom" aria-label="Scroll to bottom">
-    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-    </svg>
-    Scroll to bottom
-  </button>
-
-  <!-- Typing indicator -->
-  <div id="typing-indicator" data-state="thinking">
-    <div class="typing-inner">
-      <div class="typing-avatar">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.6)" stroke-width="1.5" stroke-linejoin="round"/>
-          <path d="M9 12l2 2 4-4" stroke="rgba(255,255,255,.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="typing-body">
-        <div class="typing-state-row">
-          <svg class="typing-state-icon" id="typing-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="7" y="7" width="10" height="10" rx="1" stroke-linecap="round"/>
-            <path stroke-linecap="round" d="M7 9H5M7 12H4M7 15H5M17 9h2M17 12h3M17 15h2M9 7V5M12 7V4M15 7V5M9 17v2M12 17v3M15 17v2"/>
-          </svg>
-          <span class="typing-label" id="typing-label">Thinking</span>
-        </div>
-        <div class="typing-dots">
-          <span></span><span></span><span></span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════
-       INPUT AREA  (fixed)
-       ═══════════════════════════════════ -->
-  <div id="input-area">
-
-    <div id="suggestions-box"></div>
-
-    <div class="input-wrapper">
-
-      <!-- + button with popover -->
-      <div class="plus-menu-wrap" id="plus-menu-wrap">
-        <button class="plus-btn" id="plus-btn" data-action="togglePlusMenu" title="More actions" aria-label="More actions" aria-haspopup="true" aria-expanded="false">
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-        </button>
-
-        <div class="plus-menu-dropdown" id="plus-menu-dropdown" role="menu">
-
-          <!-- Attach File -->
-          <label class="plus-menu-item" for="fileInput" role="menuitem" data-action="closePlusMenu">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
-            </svg>
-            Attach File
-            <span class="plus-menu-hint">.txt .log .pdf</span>
-          </label>
-          <input type="file" id="fileInput" hidden accept=".txt,.log,.pdf">
-
-          <div class="plus-menu-divider"></div>
-
-          <!-- Models submenu trigger -->
-          <button class="plus-menu-item" data-action="toggleModelsSubmenu" role="menuitem">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
-            </svg>
-            Model
-            <span class="plus-menu-hint" id="plus-active-model">Gemini Flash</span>
-            <svg class="plus-menu-chevron" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
-          </button>
-
-          <!-- Models submenu -->
-          <div class="plus-submenu" id="models-submenu">
-            <button class="plus-menu-item plus-submenu-item" data-action="setModel" data-model="gemini" data-label="Gemini Flash">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              Gemini 2.5 Flash
-            </button>
-            <button class="plus-menu-item plus-submenu-item" data-action="setModel" data-model="lite" data-label="Flash Lite">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              Flash Lite
-            </button>
-            <button class="plus-menu-item plus-submenu-item" data-action="setModel" data-model="groq" data-label="Groq Llama 3.1 8B">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8v4l3 3"/></svg>
-              Groq Llama 3.1 8B
-            </button>
-          </div>
-
-          <div class="plus-menu-divider"></div>
-
-          <!-- Investigate -->
-          <button class="plus-menu-item plus-menu-item--accent" data-action="openInvestigate" role="menuitem">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M11 8v6M8 11h6"/>
-            </svg>
-            Investigate
-            <span class="plus-menu-badge">AI</span>
-          </button>
-
-        </div><!-- /.plus-menu-dropdown -->
-      </div><!-- /.plus-menu-wrap -->
-
-      <textarea
-        id="user-input"
-        rows="1"
-        placeholder="Ask CyberGuru anything about threats, attacks, defenses..."
-        aria-label="Message input"
-      ></textarea>
-
-      <button id="mic-btn" data-action="toggleVoice" title="Voice input" aria-label="Start voice input">
-        <svg id="mic-icon-idle" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-          <rect x="9" y="2" width="6" height="11" rx="3" stroke-linejoin="round"/>
-          <path stroke-linecap="round" stroke-linejoin="round" d="M5 10a7 7 0 0014 0M12 19v3M8 22h8"/>
-        </svg>
-        <svg id="mic-icon-stop" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
-          <rect x="4" y="4" width="16" height="16" rx="3"/>
-        </svg>
-      </button>
-
-      <div id="voice-visualizer" class="voice-visualizer" aria-hidden="true">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-
-      <span id="char-count"></span>
-
-      <button id="stop-btn" data-action="stopGeneration" title="Stop generating">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-      </button>
-
-      <button id="send-btn" data-action="sendToBackend" title="Send message" aria-label="Send message">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
-        </svg>
-      </button>
-
-    </div><!-- /.input-wrapper -->
-
-    <div class="input-hint">
-      <span>Enter to send</span>
-      <span>Shift+Enter for new line</span>
-      <span>.txt .log .pdf supported</span>
-    </div>
-
-  </div><!-- /#input-area -->
-
-</main>
-
-<!-- ═══════════════════════════════════
-     QUIZ MODAL
-     ═══════════════════════════════════ -->
-<div id="quiz-modal" class="quiz-modal">
-  <div class="quiz-modal-content ctf-modal-content" id="quiz-modal-body">
-    <!-- populated dynamically by static/js/quiz.js -->
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════
-     CTF CHALLENGE MODAL
-     ═══════════════════════════════════ -->
-<div id="ctf-modal" class="quiz-modal">
-  <div class="quiz-modal-content ctf-modal-content" id="ctf-modal-body">
-    <!-- populated dynamically by static/js/ctf.js -->
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════
-     THREAT PULSE MODAL
-     ═══════════════════════════════════ -->
-<div id="tp-modal" class="quiz-modal">
-  <div class="quiz-modal-content tp-modal-content">
-    <div class="tp-hdr">
-      <div class="tp-hdr-left">
-        <div class="tp-hdr-icon">🛡️</div>
-        <div class="tp-hdr-text">
-          <h2>Threat Pulse</h2>
-          <p>Live cybersecurity intelligence — CVEs · CISA exploits · malware · headlines</p>
-        </div>
-      </div>
-      <div class="tp-hdr-actions">
-        <button class="tp-refresh-btn" data-action="_tpLoad">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          Refresh
-        </button>
-        <button class="tp-close-btn" data-action="closeThreatPulse" aria-label="Close">✕</button>
-      </div>
-    </div>
-    <div id="tp-content"><!-- populated by threat_pulse.js --></div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════
-     LOGIN OVERLAY
-     ═══════════════════════════════════ -->
-<div id="login-overlay" style="
-  display:none; position:fixed; inset:0; z-index:9999;
-  background:var(--bg-base); align-items:center; justify-content:center;
-">
-  <div style="
-    background:var(--bg-card); border:1px solid var(--border-default);
-    border-radius:var(--r-xl); padding:48px 40px; max-width:400px; width:90%;
-    text-align:center; box-shadow:var(--shadow-md);
-  ">
-    <div style="margin-bottom:28px;">
-      <div style="display:inline-flex; align-items:center; justify-content:center;
-        width:56px; height:56px; border-radius:var(--r-lg);
-        background:linear-gradient(135deg,#1e40af,#0891b2);
-        margin-bottom:16px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        </svg>
-      </div>
-      <h1 style="font-size:22px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">CyberGuru AI</h1>
-      <p style="font-size:14px; color:var(--text-secondary);">Your cybersecurity learning assistant</p>
-    </div>
-
-    <button data-action="goLogin" class="login-google-btn">
-      <svg width="18" height="18" viewBox="0 0 24 24">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-      </svg>
-      Continue with Google
-    </button>
-
-    <p style="font-size:11px; color:var(--text-muted); line-height:1.6;">
-      By signing in you agree to use this tool responsibly.<br>
-      Only cybersecurity-related topics are supported.
+  <section class="lp-hero">
+    <div class="lp-hero-badge">SOC Investigation Center</div>
+    <h1>Investigate evidence.<br><span class="grad">Find the truth.</span></h1>
+    <p class="lead">
+      A dedicated analyst workspace for IPs, domains, URLs, file hashes, malware,
+      phishing emails, and network logs. Run a full pipeline — IOC extraction,
+      threat-intelligence lookups, risk scoring, and MITRE ATT&CK mapping — then ask
+      the AI copilot follow-up questions grounded in your investigation.
     </p>
-  </div>
+    <div class="lp-hero-ctas">
+      {% if session.get('user') %}
+      <a class="lp-btn lp-btn-primary" href="/">Open Investigation Center</a>
+      {% else %}
+      <a class="lp-btn lp-btn-primary" href="/auth/login">Sign in with Google</a>
+      {% endif %}
+      <a class="lp-btn" href="/investigate">Preview tool</a>
+    </div>
+  </section>
+
+  <section class="lp-features" aria-label="Capabilities">
+    <div class="lp-feature"><div class="f-icon">🧬</div><h3>IOC Extraction</h3><p>Pull IPs, domains, URLs, hashes, and emails out of any artifact automatically.</p></div>
+    <div class="lp-feature"><div class="f-icon">🕵️</div><h3>Threat Intelligence</h3><p>Cross-reference indicators against known-threat sources with TTL caching.</p></div>
+    <div class="lp-feature"><div class="f-icon">🎯</div><h3>MITRE ATT&amp;CK Mapping</h3><p>Map findings to the MITRE ATT&amp;CK framework and score overall risk.</p></div>
+    <div class="lp-feature"><div class="f-icon">🗂️</div><h3>Artifact Analysis</h3><p>Phishing email headers, security logs, malware reports, URLs, and more.</p></div>
+    <div class="lp-feature"><div class="f-icon">📜</div><h3>Incident Reports</h3><p>Structured markdown/JSON reports you can export or print for your notes.</p></div>
+    <div class="lp-feature"><div class="f-icon">🤖</div><h3>AI Copilot</h3><p>Ask follow-up questions grounded in the current investigation and report.</p></div>
+  </section>
+
+  <footer class="lp-footer">
+    CyberGuru AI · SOC Investigation Center — sign in with Google to start investigating.
+  </footer>
+
 </div>
-
-<!-- ═══════════════════════════════════
-     ONBOARDING MODAL  (single-step skill selection)
-     ═══════════════════════════════════ -->
-<div id="onboarding-overlay" class="ob-overlay">
-  <div class="onboarding-modal">
-    <button class="ob-close" data-action="closeOnboarding">✕</button>
-
-    <div class="ob-view" id="ob-view-select">
-      <div class="ob-header">
-        <div class="ob-icon-wrap">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-        </div>
-        <h2 class="ob-title">Welcome to CyberGuru AI</h2>
-        <p class="ob-sub">Select your experience level so I can tailor every answer to you.</p>
-      </div>
-
-      <div class="ob-cards" id="ob-cards">
-        <label class="ob-card" data-level="beginner">
-          <input type="radio" name="skill_level" value="beginner" hidden>
-          <div class="ob-card-dot"></div>
-          <div class="ob-card-body">
-            <div class="ob-card-name">Beginner</div>
-            <div class="ob-card-desc">New to cybersecurity. No prior experience.</div>
-          </div>
-          <div class="ob-card-check">✓</div>
-        </label>
-        <label class="ob-card" data-level="intermediate">
-          <input type="radio" name="skill_level" value="intermediate" hidden>
-          <div class="ob-card-dot"></div>
-          <div class="ob-card-body">
-            <div class="ob-card-name">Intermediate</div>
-            <div class="ob-card-desc">Some experience. Basics of networks &amp; security.</div>
-          </div>
-          <div class="ob-card-check">✓</div>
-        </label>
-        <label class="ob-card" data-level="advanced">
-          <input type="radio" name="skill_level" value="advanced" hidden>
-          <div class="ob-card-dot"></div>
-          <div class="ob-card-body">
-            <div class="ob-card-name">Advanced</div>
-            <div class="ob-card-desc">Experienced. Want expert-level guidance.</div>
-          </div>
-          <div class="ob-card-check">✓</div>
-        </label>
-      </div>
-
-      <button class="ob-btn ob-btn-primary" id="ob-save-btn" data-action="saveOnboarding" disabled>Save Preference</button>
-      <button class="ob-btn ob-btn-skip" data-action="skipOnboarding">Skip for now</button>
-    </div>
-
-    <div class="ob-view" id="ob-view-processing" style="display:none">
-      <div class="ob-processing">
-        <div class="ob-pulse-ring"></div>
-        <div class="ob-spinner">
-          <svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" fill="none" stroke-width="4" stroke-linecap="round"/></svg>
-        </div>
-        <h2 class="ob-title" style="margin-top:20px;">Personalizing Your Experience</h2>
-        <div class="ob-status-steps">
-          <div class="ob-step-row" id="ob-step-1"><span class="ob-step-dot"></span>Saving your skill preference…</div>
-          <div class="ob-step-row" id="ob-step-2"><span class="ob-step-dot"></span>Setting up adaptive intelligence…</div>
-          <div class="ob-step-row" id="ob-step-3"><span class="ob-step-dot"></span>Almost ready…</div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════
-     SCRIPTS
-     ═══════════════════════════════════ -->
-<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
-<script src="{{ url_for('static', filename='js/ctf.js') }}"></script>
-<script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
-<script src="{{ url_for('static', filename='js/threat_pulse.js') }}"></script>
-<script src="{{ url_for('static', filename='js/investigation_badge.js') }}"></script>
-<script src="{{ url_for('static', filename='js/mentor.js') }}"></script>
-<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
-
-<!-- ═══════════════════════════════════
-     SETTINGS PANEL
-     ═══════════════════════════════════ -->
-<div id="settings-overlay" data-action="closeSettings"></div>
-
-<div id="settings-panel">
-  <div class="sp-header">
-    <div class="sp-title">Settings</div>
-    <button class="sp-close" data-action="closeSettings">
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-    </button>
-  </div>
-
-  <div class="sp-tabs">
-    <button class="sp-tab active" data-action="switchTab" data-tab="account">Account</button>
-    <button class="sp-tab" data-action="switchTab" data-tab="appearance">Appearance</button>
-    <button class="sp-tab" data-action="switchTab" data-tab="about">About</button>
-  </div>
-
-  <!-- Account Tab -->
-  <div class="sp-body" id="tab-account">
-    <div class="sp-avatar-section">
-      <img id="sp-avatar" src="" alt="" class="sp-avatar-img"/>
-      <div>
-        <div id="sp-name" class="sp-name"></div>
-        <div id="sp-email" class="sp-email"></div>
-      </div>
-    </div>
-
-    <div class="sp-divider"></div>
-
-    <div class="sp-section-label">Account</div>
-    <div class="sp-info-row">
-      <span class="sp-info-key">Status</span>
-      <span class="sp-info-val sp-status-val">
-        <span class="status-dot"></span> Active
-      </span>
-    </div>
-    <div class="sp-info-row">
-      <span class="sp-info-key">Model</span>
-      <span class="sp-info-val">Gemini 2.5 Flash</span>
-    </div>
-
-    <div class="sp-divider"></div>
-
-    <button class="sp-danger-btn" data-action="logoutUser">
-      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-      </svg>
-      Sign out
-    </button>
-  </div>
-
-  <!-- Appearance Tab -->
-  <div class="sp-body hidden" id="tab-appearance">
-    <div class="sp-section-label">Theme</div>
-    <div class="sp-theme-grid">
-      <button class="sp-theme-card" data-action="setTheme" data-theme="hacker" id="tc-hacker">
-        <div class="sp-theme-preview tc-preview-hacker"></div>
-        <span>Terminal Hacker</span>
-      </button>
-      <button class="sp-theme-card" data-action="setTheme" data-theme="oled" id="tc-oled">
-        <div class="sp-theme-preview tc-preview-oled"></div>
-        <span>OLED Violet</span>
-      </button>
-      <button class="sp-theme-card" data-action="setTheme" data-theme="light" id="tc-light">
-        <div class="sp-theme-preview tc-preview-light"></div>
-        <span>Premium White</span>
-      </button>
-    </div>
-
-    <div class="sp-divider"></div>
-
-    <div class="sp-section-label">Font Size</div>
-    <div class="sp-font-row">
-      <button class="sp-font-btn" data-action="setFontSize" data-size="compact" id="fs-compact">A<small>compact</small></button>
-      <button class="sp-font-btn active" data-action="setFontSize" data-size="default" id="fs-default">A<small>default</small></button>
-      <button class="sp-font-btn" data-action="setFontSize" data-size="large" id="fs-large">A<small>large</small></button>
-    </div>
-
-    <div class="sp-divider"></div>
-
-    <div class="sp-section-label">Sidebar</div>
-    <div class="sp-toggle-row">
-      <span class="sp-toggle-label">Compact sidebar</span>
-      <label class="sp-switch">
-        <input type="checkbox" id="compact-sidebar-toggle" data-change="toggleCompactSidebar">
-        <span class="sp-slider"></span>
-      </label>
-    </div>
-  </div>
-
-  <!-- About Tab -->
-  <div class="sp-body hidden" id="tab-about">
-    <div class="sp-about-logo">
-      <div class="sp-about-icon">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.6)" stroke-width="1.5" stroke-linejoin="round"/>
-          <path d="M9 12l2 2 4-4" stroke="rgba(255,255,255,.85)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="sp-about-name">CyberGuru AI</div>
-      <div class="sp-about-tagline">Security Intelligence Platform</div>
-    </div>
-
-    <div class="sp-divider"></div>
-
-    <div class="sp-section-label">Info</div>
-    <div class="sp-info-row">
-      <span class="sp-info-key">Version</span>
-      <span class="sp-info-val">v1.0</span>
-    </div>
-    <div class="sp-info-row">
-      <span class="sp-info-key">Model</span>
-      <span class="sp-info-val">Gemini 2.5 Flash</span>
-    </div>
-    <div class="sp-info-row">
-      <span class="sp-info-key">Author</span>
-      <span class="sp-info-val">Guru Sharan Kalyan</span>
-    </div>
-
-    <div class="sp-divider"></div>
-
-    <div class="sp-section-label">Links</div>
-    <a class="sp-link-row" href="https://github.com/kalyandhoni234-hash/CyberGuru-AI" target="_blank">
-      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
-      Github Repository
-      <svg class="sp-link-arrow" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M7 7h10v10"/></svg>
-    </a>
-  </div>
-</div><!-- /#settings-panel -->
-
-<!-- ═══════════════════════════════════
-     CYBER MENTOR OVERLAY
-     ═══════════════════════════════════ -->
-<div id="mentor-overlay" role="dialog" aria-modal="true" aria-label="Cyber Mentor">
-
-  <!-- LANDING PAGE -->
-  <div class="mentor-landing" id="mentor-landing">
-    <canvas class="ml-bg-canvas" id="ml-bg-canvas"></canvas>
-
-    <div class="ml-scroll">
-      <!-- Hero -->
-      <section class="ml-hero">
-        <div class="ml-hero-content">
-          <div class="ml-hero-badge">AI-POWERED CYBERSECURITY TRAINING</div>
-          <h1 class="ml-hero-title">Master Cybersecurity<br><span class="ml-hero-gradient">From Beginner to Security Engineer</span></h1>
-          <p class="ml-hero-sub">Learn networking, operating systems, ethical hacking, web security, threat analysis, and real-world cybersecurity through structured AI-guided learning.</p>
-          <div class="ml-hero-actions">
-            <button class="ml-btn ml-btn-primary" data-landing-action="start">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              Start Learning
-            </button>
-            <button class="ml-btn ml-btn-secondary" data-landing-action="roadmap">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-              Explore Roadmap
-            </button>
-          </div>
-          <div class="ml-hero-metrics">
-            <div class="ml-hero-metric"><span class="ml-metric-val">40+</span><span class="ml-metric-lbl">Topics</span></div>
-            <div class="ml-hero-metric"><span class="ml-metric-val">20+</span><span class="ml-metric-lbl">Labs</span></div>
-            <div class="ml-hero-metric"><span class="ml-metric-val">100+</span><span class="ml-metric-lbl">Quizzes</span></div>
-            <div class="ml-hero-metric"><span class="ml-metric-val">8</span><span class="ml-metric-lbl">Domains</span></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Continue Learning -->
-      <section class="ml-section" id="ml-continue-section" style="display:none">
-        <div class="ml-continue-card" id="ml-continue-card">
-          <div class="ml-continue-icon" id="ml-continue-icon">👋</div>
-          <div class="ml-continue-info">
-            <div class="ml-continue-greeting" id="ml-continue-greeting">Welcome Back</div>
-            <div class="ml-continue-track"><span class="ml-continue-label">Current Track:</span> <span id="ml-continue-track">—</span></div>
-            <div class="ml-continue-lesson"><span class="ml-continue-label">Current Lesson:</span> <span id="ml-continue-lesson">—</span></div>
-            <div class="ml-continue-bar-wrap"><div class="ml-continue-bar-fill" id="ml-continue-bar-fill"></div></div>
-            <div class="ml-continue-pct" id="ml-continue-pct">0%</div>
-          </div>
-          <button class="ml-btn ml-btn-primary ml-continue-btn" data-landing-action="start">Continue Journey</button>
-        </div>
-      </section>
-
-      <!-- Learning Paths -->
-      <section class="ml-section">
-        <div class="ml-section-header">
-          <h2 class="ml-section-title">Learning Paths</h2>
-          <p class="ml-section-desc">Choose your cybersecurity journey. Each path is curated with hands-on lessons, quizzes, and AI guidance.</p>
-        </div>
-        <div class="ml-paths-grid" id="ml-paths-grid"></div>
-      </section>
-
-      <!-- Why Learn -->
-      <section class="ml-section">
-        <div class="ml-section-header">
-          <h2 class="ml-section-title">Why Learn With Cyber Mentor</h2>
-          <p class="ml-section-desc">Everything you need to go from beginner to security professional.</p>
-        </div>
-        <div class="ml-features-grid">
-          <div class="ml-feature-card">
-            <div class="ml-feature-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
-            <h3 class="ml-feature-title">AI Mentor</h3>
-            <p class="ml-feature-desc">Personalized cybersecurity guidance powered by AI. Ask questions, get explanations, and receive real-time feedback on your learning journey.</p>
-          </div>
-          <div class="ml-feature-card">
-            <div class="ml-feature-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
-            <h3 class="ml-feature-title">Hands-On Practice</h3>
-            <p class="ml-feature-desc">Interactive quizzes, simulated terminal exercises, and practical labs that reinforce your learning with real-world cybersecurity scenarios.</p>
-          </div>
-          <div class="ml-feature-card">
-            <div class="ml-feature-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
-            <h3 class="ml-feature-title">Structured Roadmap</h3>
-            <p class="ml-feature-desc">Follow a complete learning path from beginner to advanced. Each phase unlocks as you progress, ensuring you build a strong foundation first.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Learning Journey Timeline -->
-      <section class="ml-section">
-        <div class="ml-section-header">
-          <h2 class="ml-section-title">Your Learning Journey</h2>
-          <p class="ml-section-desc">A structured progression from foundation to mastery.</p>
-        </div>
-        <div class="ml-timeline" id="ml-timeline"></div>
-      </section>
-
-      <!-- Stats -->
-      <section class="ml-section ml-stats-section">
-        <div class="ml-stats-grid">
-          <div class="ml-stat-card"><span class="ml-stat-number">40+</span><span class="ml-stat-label">Topics Available</span></div>
-          <div class="ml-stat-card"><span class="ml-stat-number">20+</span><span class="ml-stat-label">Interactive Labs</span></div>
-          <div class="ml-stat-card"><span class="ml-stat-number">100+</span><span class="ml-stat-label">Quizzes</span></div>
-          <div class="ml-stat-card"><span class="ml-stat-number">8</span><span class="ml-stat-label">Learning Paths</span></div>
-        </div>
-      </section>
-
-      <!-- Achievement Preview -->
-      <section class="ml-section">
-        <div class="ml-section-header">
-          <h2 class="ml-section-title">Achievements</h2>
-          <p class="ml-section-desc">Earn badges as you master new skills.</p>
-        </div>
-        <div class="ml-badges-grid" id="ml-badges-grid"></div>
-      </section>
-
-      <!-- Final CTA -->
-      <section class="ml-cta-section">
-        <div class="ml-cta-card">
-          <h2 class="ml-cta-title">Ready to Become a Cybersecurity Professional?</h2>
-          <p class="ml-cta-desc">Join thousands of learners mastering cybersecurity with AI-guided training. Start your journey today.</p>
-          <button class="ml-btn ml-btn-primary ml-btn-lg" data-landing-action="start">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Launch Mentor Dashboard
-          </button>
-        </div>
-      </section>
-
-      <div class="ml-footer">
-        <span>CyberGuru AI — Mentor Mode</span>
-        <span>Master Cybersecurity. One Lesson at a Time.</span>
-      </div>
-    </div><!-- /.ml-scroll -->
-  </div><!-- /.mentor-landing -->
-
-  <!-- Mentor Topbar -->
-  <div class="mentor-topbar">
-    <div class="mentor-topbar-logo">
-      <div class="mentor-topbar-logo-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
-        </svg>
-      </div>
-      <div>
-        <div class="mentor-topbar-title">Cyber Mentor</div>
-        <div class="mentor-topbar-sub">Premium Learning Dashboard</div>
-      </div>
-    </div>
-    <div class="mentor-topbar-stats">
-      <div class="mentor-topbar-stat"><span class="mts-value" id="mts-dashboard-done">0</span><span class="mts-label">Done</span></div>
-      <div class="mentor-topbar-stat"><span class="mts-value" id="mts-dashboard-streak">0</span><span class="mts-label">Streak</span></div>
-      <div class="mentor-topbar-stat"><span class="mts-value" id="mts-dashboard-score">0</span><span class="mts-label">Quiz Score</span></div>
-    </div>
-    <button class="mentor-close-btn" data-action="closeMentorOverlay">
-      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-      Close
-    </button>
-  </div>
-
-  <!-- Mentor Body -->
-  <div class="mentor-body">
-
-    <!-- Sidebar Nav -->
-    <nav class="mentor-nav" role="tablist" aria-label="Mentor sections">
-      <button class="mentor-nav-item active" id="tab-dashboard" data-action="switchMentorTab" data-tab="dashboard" role="tab" aria-selected="true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-        <span>Dashboard</span>
-      </button>
-      <button class="mentor-nav-item" id="tab-roadmap" data-action="switchMentorTab" data-tab="roadmap" role="tab" aria-selected="false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-        <span>Roadmap</span>
-      </button>
-      <button class="mentor-nav-item" id="tab-chat" data-action="switchMentorTab" data-tab="chat" role="tab" aria-selected="false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-        <span>AI Chat</span>
-      </button>
-      <button class="mentor-nav-item" id="tab-quiz" data-action="switchMentorTab" data-tab="quiz" role="tab" aria-selected="false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>Quizzes</span>
-        <span class="mnav-badge" id="nav-quiz-badge">NEW</span>
-      </button>
-      <button class="mentor-nav-item" id="tab-terminal" data-action="switchMentorTab" data-tab="terminal" role="tab" aria-selected="false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-        <span>Terminal</span>
-      </button>
-      <button class="mentor-nav-item" id="tab-badges" data-action="switchMentorTab" data-tab="badges" role="tab" aria-selected="false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
-        <span>Badges</span>
-      </button>
-    </nav>
-
-    <!-- DASHBOARD panel -->
-    <div class="mentor-panel active" id="panel-dashboard">
-      <div class="mdash-wrap">
-        <div class="mdash-grid">
-          <div class="mdash-card mdash-card-primary">
-            <div class="mdash-card-icon">📊</div>
-            <div class="mdash-card-body">
-              <div class="mdash-card-value" id="mdash-progress-pct">0%</div>
-              <div class="mdash-card-label">Overall Progress</div>
-              <div class="mdash-card-bar"><div class="mdash-card-bar-fill" id="mdash-progress-fill" style="width:0%"></div></div>
-            </div>
-          </div>
-          <div class="mdash-card">
-            <div class="mdash-card-icon">✅</div>
-            <div class="mdash-card-body">
-              <div class="mdash-card-value" id="mdash-topics-done">0</div>
-              <div class="mdash-card-label">Topics Completed</div>
-              <div class="mdash-card-sub">of <span id="mdash-topics-total">0</span> total</div>
-            </div>
-          </div>
-          <div class="mdash-card">
-            <div class="mdash-card-icon">🔥</div>
-            <div class="mdash-card-body">
-              <div class="mdash-card-value" id="mdash-streak">0</div>
-              <div class="mdash-card-label">Day Streak</div>
-              <div class="mdash-card-sub">keep going!</div>
-            </div>
-          </div>
-          <div class="mdash-card">
-            <div class="mdash-card-icon">🏆</div>
-            <div class="mdash-card-body">
-              <div class="mdash-card-value" id="mdash-badges">0</div>
-              <div class="mdash-card-label">Badges Earned</div>
-              <div class="mdash-card-sub"><span id="mdash-badges-next">Complete first topic</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Analytics cards -->
-      <div class="mdash-analytics-grid">
-        <div class="mdash-analytics-card" id="activity-chart-card">
-          <div class="mdash-analytics-header">
-            <div class="mdash-analytics-title">Learning Activity</div>
-            <div class="mdash-analytics-sub">Track your cybersecurity learning journey</div>
-          </div>
-          <div class="mdash-chart-wrap" id="mdash-chart-wrap">
-            <svg class="mdash-chart-svg" id="mdash-chart-svg" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid meet"></svg>
-          </div>
-          <div class="mdash-chart-legend" id="mdash-chart-legend"></div>
-          <div class="mdash-chart-tooltip" id="mdash-chart-tooltip" style="display:none"></div>
-        </div>
-        <div class="mdash-analytics-card" id="heatmap-card">
-          <div class="mdash-analytics-header">
-            <div class="mdash-analytics-title">Learning Consistency</div>
-            <div class="mdash-analytics-sub">Daily activity over the last 30 days</div>
-          </div>
-          <div class="mdash-heatmap-wrap" id="mdash-heatmap-wrap"></div>
-          <div class="mdash-heatmap-legend" id="mdash-heatmap-legend"></div>
-        </div>
-      </div>
-
-      <!-- Most Active Domains -->
-      <div class="mdash-domains-card">
-        <div class="mdash-analytics-header">
-          <div class="mdash-analytics-title">Most Active Domains</div>
-          <div class="mdash-analytics-sub">Completion progress across learning paths</div>
-        </div>
-        <div class="mdash-domains-bars" id="mdash-domains-bars"></div>
-      </div>
-    </div><!-- /#panel-dashboard -->
-
-    <!-- ROADMAP panel -->
-    <div class="mentor-panel" id="panel-roadmap">
-      <div class="roadmap-container">
-
-        <div id="domain-selector">
-          <div class="mentor-section-title">Choose Your Learning Path</div>
-          <div class="domain-ai-prompt">
-            <span>Not sure which path fits you?</span>
-            <button class="domain-ask-ai-btn" data-action="openDomainAI">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              Ask AI to Recommend
-            </button>
-          </div>
-          <div class="domain-grid" id="domain-grid"></div>
-          <div class="domain-ai-widget" id="domain-ai-widget" style="display:none">
-            <div class="domain-ai-header">
-              <span>Tell AI About Yourself</span>
-              <button class="domain-ai-close" data-action="closeDomainAI">✕</button>
-            </div>
-            <p class="domain-ai-hint">Describe your background, interests, and goals — the AI will recommend the best path.</p>
-            <textarea id="domain-ai-input" class="domain-ai-textarea" rows="3" placeholder="e.g. I have basic IT knowledge and I'm interested in finding vulnerabilities and hacking. I enjoy hands-on challenges..."></textarea>
-            <button class="domain-ai-submit" data-action="askAIRoadmap">Get Recommendation</button>
-            <div id="domain-ai-result" class="domain-ai-result"></div>
-          </div>
-        </div>
-
-        <div id="domain-roadmap-view" style="display:none">
-          <div class="domain-header" id="domain-header">
-            <div class="domain-header-info">
-              <span class="domain-header-icon" id="domain-header-icon">🛡️</span>
-              <div>
-                <div class="domain-header-name" id="domain-header-name">Domain Name</div>
-                <div class="domain-header-desc" id="domain-header-desc">Domain description</div>
-              </div>
-            </div>
-            <button class="domain-change-btn" data-action="showSwitchWarning">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-              Change Path
-            </button>
-          </div>
-          <div class="domain-core-section" id="domain-core-section">
-            <div class="domain-core-toggle" data-action="toggleCoreSection">
-              <span>📚 Core Foundations</span>
-              <span class="domain-core-count" id="domain-core-count">0/0</span>
-              <svg class="domain-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
-            </div>
-            <div class="domain-core-body" id="domain-core-body"></div>
-          </div>
-          <div id="roadmap-phases"></div>
-        </div>
-
-      </div>
-    </div><!-- /#panel-roadmap -->
-
-    <!-- Switch Path Confirmation Modal -->
-    <div class="switch-modal" id="switch-modal" style="display:none" data-action="cancelSwitchDomain">
-      <div class="switch-modal-content">
-        <div class="switch-modal-icon">⚠️</div>
-        <div class="switch-modal-title" id="switch-modal-title">Change Learning Path?</div>
-        <p id="switch-modal-body">Switching to <strong id="switch-target-name">another path</strong> will reset domain-specific progress.</p>
-        <p class="switch-modal-note">✅ Core foundation topics will be kept.</p>
-        <div class="switch-modal-actions">
-          <button class="quiz-btn-primary" id="switch-confirm-btn" data-action="confirmSwitchDomain">Switch Path</button>
-          <button class="quiz-btn-secondary" data-action="cancelSwitchDomain">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- AI CHAT panel -->
-    <div class="mentor-panel" id="panel-chat">
-      <div class="mchat-layout">
-        <aside class="mchat-sidebar" id="mchat-sidebar">
-          <div class="mchat-sidebar-header">
-            <div class="mchat-sidebar-title">History</div>
-            <button class="mchat-new-btn" data-action="createNewConversation" title="New conversation">+</button>
-          </div>
-          <div class="mchat-search-wrap" id="mchat-search-wrap">
-            <svg class="mchat-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="mchat-search-input" id="mchat-search-input" type="text" placeholder="Search conversations..." data-input="filterMentorHistory">
-          </div>
-          <div class="mchat-history-list" id="mchat-history-list"></div>
-        </aside>
-
-        <div class="mchat-main" id="mchat-main">
-          <div class="mentor-chat-msgs" id="mentor-chat-msgs">
-            <div class="mentor-msg">
-              <div class="mentor-msg-avatar">🛡️</div>
-              <div class="mentor-msg-bubble">Hey! I'm your Cyber Mentor. Ask me anything about cybersecurity.</div>
-            </div>
-          </div>
-          <div id="mentor-suggest-chips" class="dyn-suggest-wrap mentor-suggest-wrap"></div>
-          <div class="mentor-chat-input-wrap">
-            <textarea id="mentor-chat-input" class="mentor-chat-input" placeholder="Ask your mentor anything..." rows="1" data-keydown="mentorChatKeydown"></textarea>
-            <button class="mentor-chat-send" id="mentor-send-btn" data-action="mentorSendMessage">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div><!-- /#panel-chat -->
-
-    <!-- QUIZ panel -->
-    <div class="mentor-panel" id="panel-quiz">
-      <div class="mentor-quiz-wrap">
-        <div id="quiz-selector">
-          <div class="mentor-section-title">Choose a Topic</div>
-          <div class="quiz-topic-grid" id="quiz-topic-grid"></div>
-          <button class="quiz-btn-primary" id="start-quiz-btn" data-action="startMentorQuiz" disabled>Start Quiz</button>
-        </div>
-        <div class="mentor-quiz-question-area" id="quiz-question-area">
-          <div class="quiz-q-header"><span class="quiz-q-num" id="quiz-q-num">Q 1 / 5</span><span class="quiz-q-score" id="quiz-q-score">Score: 0</span></div>
-          <div class="quiz-q-text" id="quiz-q-text"></div>
-          <div class="quiz-q-options" id="quiz-q-options"></div>
-          <div class="quiz-feedback" id="quiz-feedback"></div>
-          <button class="quiz-btn-primary" id="quiz-next-btn" data-action="mentorQuizNext" style="display:none">Next Question →</button>
-        </div>
-        <div class="quiz-result-card" id="quiz-result-card">
-          <div class="quiz-result-emoji" id="quiz-result-emoji">🎉</div>
-          <div class="quiz-result-score" id="quiz-result-score">0 / 5</div>
-          <div class="quiz-result-msg" id="quiz-result-msg"></div>
-          <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap">
-            <button class="quiz-btn-primary" data-action="resetMentorQuiz">Try Another</button>
-          </div>
-        </div>
-      </div>
-    </div><!-- /#panel-quiz -->
-
-    <!-- TERMINAL panel -->
-    <div class="mentor-panel" id="panel-terminal">
-      <div class="mterm-wrap">
-        <div class="mentor-section-title">Terminal Simulator</div>
-        <div class="mterm-desc">Type Linux commands below. Try: <code>help</code>, <code>ls</code>, <code>ping</code>, <code>nmap</code>, <code>ifconfig</code></div>
-        <div class="mterm-screen" id="mterm-screen">
-          <div class="mterm-line"><span class="mterm-prompt">mentor@cyberguru:~$</span> <span class="mterm-cmd">echo "Welcome to Cyber Mentor Terminal"</span></div>
-          <div class="mterm-line mterm-output">Welcome to Cyber Mentor Terminal</div>
-          <div class="mterm-line"><span class="mterm-prompt">mentor@cyberguru:~$</span> <span class="mterm-cmd">type help to see available commands</span></div>
-        </div>
-        <div class="mterm-input-line">
-          <span class="mterm-prompt-sm">$</span>
-          <input type="text" id="mterm-input" class="mterm-input" placeholder="type a command..." autofocus data-keydown="mtermKeydown">
-        </div>
-      </div>
-    </div><!-- /#panel-terminal -->
-
-    <!-- BADGES panel -->
-    <div class="mentor-panel" id="panel-badges">
-      <div class="mbadge-wrap">
-        <div class="mentor-section-title">Achievements & Badges</div>
-        <div class="mbadge-grid" id="mbadge-grid"></div>
-      </div>
-    </div><!-- /#panel-badges -->
-
-  </div><!-- /.mentor-body -->
-</div><!-- /#mentor-overlay -->
-
-<!-- Investigation Center is now a dedicated page at /investigate -->
-
 </body>
 </html>

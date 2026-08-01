@@ -1,0 +1,36 @@
+{
+  "name": "CyberGuru AI – SOC Investigation Center",
+  "short_name": "CyberGuru AI",
+  "description": "AI-powered SOC investigation center. Analyze IOCs, malware, phishing emails, and network logs with MITRE ATT&CK mapping.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#030b03",
+  "theme_color": "#00e676",
+  "orientation": "portrait-primary",
+  "lang": "en",
+  "categories": ["security", "productivity"],
+  "icons": [
+    {
+      "src": "/static/assets/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/assets/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Investigation Center",
+      "short_name": "Investigate",
+      "description": "Analyze IOCs, malware, and threat artifacts",
+      "url": "/",
+      "icons": [{ "src": "/static/assets/favicon.png", "sizes": "96x96" }]
+    }
+  ]
+}

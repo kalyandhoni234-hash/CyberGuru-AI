@@ -40,21 +40,28 @@ WRONG_CSRF  = {"X-CSRF-Token": "totally-wrong-token"}
 # Every endpoint that is @login_required (GET or POST, doesn't matter —
 # auth check fires before route logic).
 AUTH_REQUIRED_ENDPOINTS = [
-    ("GET",  "/api/chat/sessions"),
-    ("POST", "/api/chat/sessions"),
-    ("POST", "/chat"),
-    ("POST", "/analyze-file"),
-    ("POST", "/api/tts"),
+    ("GET",    "/api/investigate/history"),
+    ("GET",    "/api/investigate/1"),
+    ("GET",    "/api/investigate/1/export/md"),
+    ("GET",    "/api/investigate/1/export/json"),
+    ("POST",   "/api/investigate/analyze"),
+    ("POST",   "/api/investigate/ask"),
+    ("DELETE", "/api/investigate/1"),
+    ("POST",   "/analyze-file"),
+    ("POST",   "/api/triage/analyze"),
 ]
 
 # Every state-changing endpoint that is @csrf_protect.
 # Tuple: (method, path, json_body_or_None)
+# NOTE: these run as authenticated requests so login_required passes and the
+# CSRF gate is what must reject them (auth is checked first).
 CSRF_PROTECTED_ENDPOINTS = [
-    ("POST", "/api/triage/analyze",  {"artifact": "test log"}),
-    ("POST", "/auth/logout",         None),
-    ("POST", "/api/tts",             {"text": "hello"}),
-    ("POST", "/analyze-file",        None),      # multipart — body not needed to hit CSRF gate
-    ("POST", "/chat",                {"message": "hi", "session_id": 1}),
+    ("POST",   "/api/investigate/analyze", {"artifact": "test log"}),
+    ("POST",   "/api/investigate/ask",     {"investigation_id": 1, "question": "hi"}),
+    ("DELETE", "/api/investigate/1",       None),
+    ("POST",   "/api/triage/analyze",      {"artifact": "test log"}),
+    ("POST",   "/auth/logout",             None),
+    ("POST",   "/analyze-file",            None),      # multipart — body not needed to hit CSRF gate
 ]
 
 
@@ -144,9 +151,9 @@ class TestCsrfProtection:
     """State-changing routes must reject requests that fail the CSRF check."""
 
     @pytest.mark.parametrize("method,path,body", CSRF_PROTECTED_ENDPOINTS)
-    def test_missing_csrf_header_returns_403(self, client, method, path, body):
-        """No X-CSRF-Token header at all → 403 before auth or business logic."""
-        resp = getattr(client, method.lower())(path, json=body)
+    def test_missing_csrf_header_returns_403(self, authenticated_client, method, path, body):
+        """No X-CSRF-Token header at all → 403 before business logic."""
+        resp = getattr(authenticated_client, method.lower())(path, json=body)
         assert resp.status_code == 403, (
             f"{method} {path}: missing CSRF header should return 403, got {resp.status_code}"
         )
@@ -155,9 +162,9 @@ class TestCsrfProtection:
         assert data.get("csrf_error") is True
 
     @pytest.mark.parametrize("method,path,body", CSRF_PROTECTED_ENDPOINTS)
-    def test_wrong_csrf_token_returns_403(self, client, method, path, body):
+    def test_wrong_csrf_token_returns_403(self, authenticated_client, method, path, body):
         """Wrong token (not matching session) → 403."""
-        resp = getattr(client, method.lower())(path, json=body, headers=WRONG_CSRF)
+        resp = getattr(authenticated_client, method.lower())(path, json=body, headers=WRONG_CSRF)
         assert resp.status_code == 403, (
             f"{method} {path}: wrong CSRF token should return 403, got {resp.status_code}"
         )

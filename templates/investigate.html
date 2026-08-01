@@ -112,8 +112,20 @@
   --ic-radius: 16px;
   --font-mono: 'IBM Plex Mono', monospace;
   --font-ui: 'Inter', sans-serif;
+
+  /* Severity / risk scale tokens */
+  --sev-critical: #FF4757;
+  --sev-critical-soft: rgba(255,71,87,.2);
+  --sev-high: #FF6348;
+  --sev-high-soft: rgba(255,99,72,.2);
+  --sev-medium: #FFA502;
+  --sev-medium-soft: rgba(255,165,2,.2);
+  --sev-low: #00FF88;
+  --sev-low-soft: rgba(0,255,136,.15);
+  --sev-unknown: #555570;
+  --sev-unknown-soft: rgba(85,85,112,.2);
 }
-body.theme-hacker {
+html.theme-hacker {
   --ic-primary: #00e676;
   --ic-secondary: #00b248;
   --ic-success: #00e676;
@@ -126,8 +138,18 @@ body.theme-hacker {
   --ic-hover: rgba(0,230,118,.05);
   --ic-text-secondary: #6db88a;
   --ic-text-muted: #356048;
+  --sev-critical: #ff5252;
+  --sev-critical-soft: rgba(255,82,82,.2);
+  --sev-high: #ff8a50;
+  --sev-high-soft: rgba(255,138,80,.2);
+  --sev-medium: #ffca28;
+  --sev-medium-soft: rgba(255,202,40,.2);
+  --sev-low: #00e676;
+  --sev-low-soft: rgba(0,230,118,.16);
+  --sev-unknown: #3a5a44;
+  --sev-unknown-soft: rgba(53,96,72,.28);
 }
-body.theme-light {
+html.theme-light {
   --ic-primary: #4338ca;
   --ic-secondary: #0369a1;
   --ic-success: #059669;
@@ -141,8 +163,18 @@ body.theme-light {
   --ic-text: #1a1830;
   --ic-text-secondary: #4a4870;
   --ic-text-muted: #9491b4;
+  --sev-critical: #dc2626;
+  --sev-critical-soft: rgba(220,38,38,.13);
+  --sev-high: #ea580c;
+  --sev-high-soft: rgba(234,88,12,.13);
+  --sev-medium: #b45309;
+  --sev-medium-soft: rgba(180,83,9,.13);
+  --sev-low: #047857;
+  --sev-low-soft: rgba(4,120,87,.11);
+  --sev-unknown: #8b87a8;
+  --sev-unknown-soft: rgba(139,135,168,.16);
 }
-body.theme-oled {
+html.theme-oled {
   --ic-primary: #7c6ef7;
   --ic-secondary: #d4a8ff;
   --ic-success: #86efac;
@@ -155,6 +187,16 @@ body.theme-oled {
   --ic-hover: rgba(120,100,255,.05);
   --ic-text-secondary: #8b80c0;
   --ic-text-muted: #453e6e;
+  --sev-critical: #ff5470;
+  --sev-critical-soft: rgba(255,84,112,.22);
+  --sev-high: #ff8a5c;
+  --sev-high-soft: rgba(255,138,92,.22);
+  --sev-medium: #ffb020;
+  --sev-medium-soft: rgba(255,176,32,.22);
+  --sev-low: #86efac;
+  --sev-low-soft: rgba(134,239,172,.16);
+  --sev-unknown: #6b6399;
+  --sev-unknown-soft: rgba(107,99,153,.22);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body { height:100%; overflow:hidden; overflow-x:hidden; }
@@ -266,10 +308,10 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 .ic-hist-item .h-sev {
   width:3px; height:22px; border-radius:2px; flex-shrink:0;
 }
-.ic-hist-item .h-sev.critical { background:var(--ic-danger); }
-.ic-hist-item .h-sev.high { background:#FF6348; }
-.ic-hist-item .h-sev.medium { background:var(--ic-warning); }
-.ic-hist-item .h-sev.low { background:var(--ic-success); }
+.ic-hist-item .h-sev.critical { background:var(--sev-critical); }
+.ic-hist-item .h-sev.high { background:var(--sev-high); }
+.ic-hist-item .h-sev.medium { background:var(--sev-medium); }
+.ic-hist-item .h-sev.low { background:var(--sev-low); }
 .ic-hist-item .h-info { flex:1; min-width:0; }
 .ic-hist-item .h-verdict {
   font-size:11.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -425,10 +467,10 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 .ic-card-hdr .badge {
   font-size:9px; padding:2px 7px; border-radius:5px; font-weight:600; text-transform:none; letter-spacing:0;
 }
-.ic-card-hdr .badge.critical { background:rgba(255,71,87,.15); color:var(--ic-danger); }
-.ic-card-hdr .badge.high { background:rgba(255,99,72,.15); color:#FF6348; }
-.ic-card-hdr .badge.medium { background:rgba(255,165,2,.15); color:var(--ic-warning); }
-.ic-card-hdr .badge.low { background:rgba(0,255,136,.1); color:var(--ic-success); }
+.ic-card-hdr .badge.critical { background:var(--sev-critical-soft); color:var(--sev-critical); }
+.ic-card-hdr .badge.high { background:var(--sev-high-soft); color:var(--sev-high); }
+.ic-card-hdr .badge.medium { background:var(--sev-medium-soft); color:var(--sev-medium); }
+.ic-card-hdr .badge.low { background:var(--sev-low-soft); color:var(--sev-low); }
 .ic-card-hdr .badge.info { background:rgba(139,92,246,.12); color:var(--ic-primary); }
 .ic-card-body { padding:12px 13px; }
 
@@ -440,6 +482,29 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 .ic-risk-ring .rfg { fill:none; stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 1s ease; }
 .ic-risk-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; }
 .ic-risk-label { font-size:11px; color:var(--ic-text-secondary); margin-top:4px; font-weight:600; }
+/* Risk gauge — segmented severity bar */
+.ic-risk-bar { position:relative; margin:10px 0 0; padding-top:8px; }
+.ic-risk-bar-track {
+  height:8px; border-radius:99px;
+  background:linear-gradient(90deg,var(--sev-low),var(--sev-medium) 45%,var(--sev-high) 72%,var(--sev-critical));
+  opacity:.5;
+}
+.ic-risk-bar-marker {
+  position:absolute; top:0; margin-left:-7px;
+  width:14px; height:16px; transition:left .8s cubic-bezier(.16,1,.3,1);
+}
+.ic-risk-bar-marker::before {
+  content:''; display:block; width:2px; height:8px; margin:0 auto;
+  background:currentColor; border-radius:1px; opacity:.9;
+}
+.ic-risk-bar-marker .ic-risk-bar-knob {
+  display:block; width:12px; height:12px; margin:1px auto 0;
+  border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,.45);
+}
+.ic-risk-bar-scale {
+  display:flex; justify-content:space-between; padding-top:3px;
+  font-size:8px; font-family:var(--font-mono); color:var(--ic-text-muted);
+}
 .ic-risk-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
 .ic-risk-cell { text-align:center; padding:6px; border-radius:7px; background:rgba(255,255,255,.015); }
 .ic-risk-cell .lbl { font-size:9px; color:var(--ic-text-muted); text-transform:uppercase; letter-spacing:.06em; }
@@ -676,11 +741,11 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   font-size:12px; font-weight:700; text-transform:uppercase;
   letter-spacing:.06em; line-height:1.3;
 }
-.ic-vb-badge.severity-critical { background:rgba(255,71,87,.2); color:#FF4757; }
-.ic-vb-badge.severity-high { background:rgba(255,99,72,.2); color:#FF6348; }
-.ic-vb-badge.severity-medium { background:rgba(255,165,2,.2); color:#FFA502; }
-.ic-vb-badge.severity-low { background:rgba(0,255,136,.15); color:#00FF88; }
-.ic-vb-badge.severity-unknown { background:rgba(85,85,112,.2); color:#555570; }
+.ic-vb-badge.severity-critical { background:var(--sev-critical-soft); color:var(--sev-critical); }
+.ic-vb-badge.severity-high { background:var(--sev-high-soft); color:var(--sev-high); }
+.ic-vb-badge.severity-medium { background:var(--sev-medium-soft); color:var(--sev-medium); }
+.ic-vb-badge.severity-low { background:var(--sev-low-soft); color:var(--sev-low); }
+.ic-vb-badge.severity-unknown { background:var(--sev-unknown-soft); color:var(--sev-unknown); }
 .ic-vb-verdict {
   font-size:20px; font-weight:700; letter-spacing:-.01em;
   color:var(--ic-text);
@@ -713,10 +778,10 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 .ic-summary-card .sc-sub {
   font-size:10px; color:var(--ic-text-muted); margin-top:2px;
 }
-.ic-summary-card.severity-critical { border-color:rgba(255,71,87,.3); }
-.ic-summary-card.severity-high { border-color:rgba(255,99,72,.3); }
-.ic-summary-card.severity-medium { border-color:rgba(255,165,2,.3); }
-.ic-summary-card.severity-low { border-color:rgba(0,255,136,.2); }
+.ic-summary-card.severity-critical { border-color:var(--sev-critical-soft); }
+.ic-summary-card.severity-high { border-color:var(--sev-high-soft); }
+.ic-summary-card.severity-medium { border-color:var(--sev-medium-soft); }
+.ic-summary-card.severity-low { border-color:var(--sev-low-soft); }
 
 /* Dashboard cards */
 .ic-dash-card {
@@ -757,10 +822,10 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 .ic-dash-hdr .badge {
   font-size:9px; padding:2px 7px; border-radius:5px; font-weight:600; text-transform:none; letter-spacing:0;
 }
-.ic-dash-hdr .badge.critical { background:rgba(255,71,87,.15); color:var(--ic-danger); }
-.ic-dash-hdr .badge.high { background:rgba(255,99,72,.15); color:#FF6348; }
-.ic-dash-hdr .badge.medium { background:rgba(255,165,2,.15); color:var(--ic-warning); }
-.ic-dash-hdr .badge.low { background:rgba(0,255,136,.1); color:var(--ic-success); }
+.ic-dash-hdr .badge.critical { background:var(--sev-critical-soft); color:var(--sev-critical); }
+.ic-dash-hdr .badge.high { background:var(--sev-high-soft); color:var(--sev-high); }
+.ic-dash-hdr .badge.medium { background:var(--sev-medium-soft); color:var(--sev-medium); }
+.ic-dash-hdr .badge.low { background:var(--sev-low-soft); color:var(--sev-low); }
 .ic-dash-body { padding:12px 14px; }
 .ic-dash-body p { font-size:12.5px; line-height:1.6; color:var(--ic-text-secondary); margin:0; }
 
@@ -1371,13 +1436,13 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.07em;
-    background: rgba(85,85,112,0.2);
-    color: #888899;
+    background: var(--sev-unknown-soft);
+    color: var(--sev-unknown);
   }
-  .mob-vb-badge--critical { background: rgba(255,71,87,0.2);  color: #FF4757; }
-  .mob-vb-badge--high     { background: rgba(255,99,72,0.2);  color: #FF6348; }
-  .mob-vb-badge--medium   { background: rgba(255,165,2,0.2);  color: #FFA502; }
-  .mob-vb-badge--low      { background: rgba(0,255,136,0.15); color: #00FF88; }
+  .mob-vb-badge--critical { background: var(--sev-critical-soft); color: var(--sev-critical); }
+  .mob-vb-badge--high     { background: var(--sev-high-soft); color: var(--sev-high); }
+  .mob-vb-badge--medium   { background: var(--sev-medium-soft); color: var(--sev-medium); }
+  .mob-vb-badge--low      { background: var(--sev-low-soft); color: var(--sev-low); }
   .mob-vb-verdict {
     font-size: 16px;
     font-weight: 700;
@@ -1812,6 +1877,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   .ic-risk-score { padding:2px 0; }
   .ic-risk-ring { width:56px; height:56px; }
   .ic-risk-num { font-size:15px; }
+  .ic-risk-bar { margin-top:8px; }
   .ic-risk-grid { gap:4px; }
   .ic-risk-cell { padding:4px; }
   .ic-risk-cell .val { font-size:11px; }

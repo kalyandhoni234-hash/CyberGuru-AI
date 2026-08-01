@@ -391,7 +391,7 @@
     var threatEl = document.getElementById('ic-vb-threat');
     var iocEl = document.getElementById('ic-vb-ioc-count');
 
-    var severityColor = severity === 'critical' ? '#FF4757' : severity === 'high' ? '#FF6348' : severity === 'medium' ? '#FFA502' : severity === 'low' ? '#00FF88' : '#555570';
+    var severityColor = sevColor(severity);
 
     if (badgeEl) {
       badgeEl.textContent = severity.toUpperCase();
@@ -643,7 +643,9 @@
 
     var circumference = 2 * Math.PI * 28;
     var offset = circumference - (score / 100) * circumference;
-    var severityColor = severity === 'critical' ? '#FF4757' : severity === 'high' ? '#FF6348' : severity === 'medium' ? '#FFA502' : severity === 'low' ? '#00FF88' : '#555570';
+    var severityColor = sevColor(severity);
+    var markerLeft = Math.max(0, Math.min(100, score));
+    var confidenceColor = sevColor(confidence > 70 ? 'low' : confidence > 40 ? 'medium' : 'unknown');
 
     body.innerHTML = '<div class="ic-risk-score">'
       + '<div class="ic-risk-ring">'
@@ -654,9 +656,13 @@
       + '<div class="ic-risk-num" style="color:' + severityColor + '">' + score + '</div>'
       + '</div>'
       + '<div class="ic-risk-label" style="color:' + severityColor + '">' + severity.toUpperCase() + '</div>'
+      + '<div class="ic-risk-bar" role="img" aria-label="Risk score ' + score + ' out of 100">'
+      + '<div class="ic-risk-bar-track"></div>'
+      + '<div class="ic-risk-bar-marker" style="left:' + markerLeft + '%;color:' + severityColor + ';"><span class="ic-risk-bar-knob" style="background:' + severityColor + ';"></span></div>'
       + '</div>'
+      + '<div class="ic-risk-bar-scale"><span>0</span><span>50</span><span>100</span></div>'
       + '<div class="ic-risk-grid">'
-      + '<div class="ic-risk-cell"><div class="lbl">Confidence</div><div class="val" style="color:' + (confidence > 70 ? '#00FF88' : confidence > 40 ? '#FFA502' : '#555570') + '">' + confidence + '%</div></div>'
+      + '<div class="ic-risk-cell"><div class="lbl">Confidence</div><div class="val" style="color:' + confidenceColor + '">' + confidence + '%</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">IOCs</div><div class="val">' + iocCount + '</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">Category</div><div class="val" style="font-size:11px">' + escapeHtml(category) + '</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">Source</div><div class="val" style="font-size:11px">' + (data.from_cache ? 'Cached' : 'Fresh') + '</div></div>'
@@ -809,6 +815,15 @@
     if (typeof str !== 'string') return String(str || '');
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
+
+  // Resolve the active theme's severity color from CSS tokens.
+  function sevColor(sev) {
+    var fallback = { critical: '#FF4757', high: '#FF6348', medium: '#FFA502', low: '#00FF88', unknown: '#555570' };
+    var token = fallback.hasOwnProperty(sev) ? '--sev-' + sev : '--sev-unknown';
+    var val = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    return val || fallback[sev] || fallback.unknown;
+  }
+  window.sevColor = sevColor;
 
   function toTimeStr(d) {
     return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -1311,8 +1326,7 @@
     var verdict    = analysis.verdict || 'Analyzed';
     var iocCount   = risk.ioc_count || data.ioc_count || 0;
 
-    var colorMap = { critical:'#FF4757', high:'#FF6348', medium:'#FFA502', low:'#00FF88' };
-    var color = colorMap[severity] || '#888899';
+    var color = window.sevColor ? window.sevColor(severity) : '#888899';
 
     var sev = $('mob-vb-sev');
     if (sev) { sev.textContent = severity.toUpperCase(); sev.className = 'mob-vb-badge mob-vb-badge--' + severity; }

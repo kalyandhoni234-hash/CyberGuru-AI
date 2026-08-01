@@ -55,6 +55,18 @@
   --shadow-md:  0 4px 20px rgba(0,0,0,.55);
   --glow-blue:  0 0 24px rgba(79,110,247,.28);
   --glow-cyan:  0 0 18px rgba(56,232,255,.18);
+
+  /* Severity / risk scale tokens (theme-aware, overridden per theme) */
+  --sev-critical: #FF4757;
+  --sev-critical-soft: rgba(255,71,87,.2);
+  --sev-high: #FF6348;
+  --sev-high-soft: rgba(255,99,72,.2);
+  --sev-medium: #FFA502;
+  --sev-medium-soft: rgba(255,165,2,.2);
+  --sev-low: #00FF88;
+  --sev-low-soft: rgba(0,255,136,.15);
+  --sev-unknown: #555570;
+  --sev-unknown-soft: rgba(85,85,112,.2);
 }
 
 /* Themes */

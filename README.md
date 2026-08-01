@@ -1,21 +1,20 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/CyberGuru_AI-v1.1-4F6EF7?style=for-the-badge&logo=shield&logoColor=white" alt="CyberGuru AI"/>
+<img src="https://img.shields.io/badge/CyberGuru_AI-v2.0-4F6EF7?style=for-the-badge&logo=shield&logoColor=white" alt="CyberGuru AI"/>
 
-# 🛡️ CyberGuru AI
+# 🛡️ CyberGuru AI — SOC Investigation Center
 
-**A cybersecurity-focused AI assistant for students, analysts, and learners**
+**A standalone AI-powered SOC investigation workspace**
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
-[![Flask](https://img.shields.io/badge/Flask-2.x-000000?style=flat&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
+[![Flask](https://img.shields.io/badge/Flask-3.x-000000?style=flat&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?style=flat&logo=google&logoColor=white)](https://ai.google.dev)
-[![Groq](https://img.shields.io/badge/Groq-Gemma_2_9B-F55036?style=flat&logo=groq&logoColor=white)](https://groq.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791?style=flat&logo=postgresql&logoColor=white)](https://neon.tech)
-[![Redis](https://img.shields.io/badge/Redis-Upstash-DC382D?style=flat&logo=redis&logoColor=white)](https://upstash.com)
+[![Redis](https://img.shields.io/badge/Rate_Limit-Upstash-DC382D?style=flat&logo=redis&logoColor=white)](https://upstash.com)
 [![Render](https://img.shields.io/badge/Deployed_on-Render-46E3B7?style=flat&logo=render&logoColor=white)](https://render.com)
 [![License](https://img.shields.io/badge/License-MIT-22c55e?style=flat)](LICENSE)
 
-[**Live Demo**](https://cyberguru-ai.onrender.com) · [**Report Bug**](https://github.com/kalyandhoni234-hash/CyberGuru-AI/issues) · [**Request Feature**](https://github.com/kalyandhoni234-hash/CyberGuru-AI/issues)
+[**Live App**](https://cyberguru-ai.onrender.com) · [**Report Bug**](https://github.com/kalyandhoni234-hash/CyberGuru-AI/issues) · [**Request Feature**](https://github.com/kalyandhoni234-hash/CyberGuru-AI/issues)
 
 </div>
 
@@ -23,94 +22,56 @@
 
 ## Overview
 
-CyberGuru AI is a full-stack cybersecurity assistant web application built for students and analysts who want a domain-focused AI experience beyond generic chat. Analyze logs, triage phishing emails, extract IOCs, map findings to MITRE ATT&CK, track live threats, and learn via structured roadmaps — all from a single polished interface.
+CyberGuru AI is a dedicated **SOC Investigation Center**. Analysts paste or upload evidence — an IP, domain, URL, file hash, malware report, phishing email, or security log — and the app runs a full investigation pipeline:
 
-Built with Flask, powered by **Gemini 2.5 Flash** and **Groq (Gemma 2 9B)**, and deployed live on Render with PostgreSQL and Redis.
+- **IOC extraction** (IPs, domains, URLs, hashes, emails) with defanging
+- **Threat-intelligence lookups** (AbuseIPDB, VirusTotal) with TTL caching
+- **MITRE ATT&CK mapping** to technique IDs and tactic names
+- **Risk scoring** and a **structured incident report** you can export (Markdown/JSON) or print
+- An **investigation-grounded AI copilot** to ask follow-up questions about the artifact, IOCs, report, or next steps
+
+Built with Flask, powered by **Gemini 2.5 Flash**, and deployed on Render with PostgreSQL (Neon) and Redis (Upstash).
 
 ---
 
 ## ✨ Features
 
-### 🤖 Multi-Model AI Chat
-Context-aware, multi-turn cybersecurity conversations with real-time streaming via Server-Sent Events (SSE). Choose from three models per session:
+### 🧬 Investigation Pipeline
+Every analysis runs a deterministic pipeline before the AI verdict:
+1. **Extracting Indicators** — regex-based IOC extraction
+2. **Parsing Evidence** — type-aware parsing (URLs, phishing emails, logs, malware reports, hashes)
+3. **Threat Intelligence Lookup** — AbuseIPDB + VirusTotal reputation, RFC-1918/private IPs skipped before external calls
+4. **MITRE ATT&CK Mapping** — keyword → T-ID / tactic lookup
+5. **Risk Assessment** — severity + confidence → risk score
+6. **AI Analysis** — Gemini verdict and summary
+7. **Report Generation** — full incident report
 
-| Model | Provider | Best for |
-|---|---|---|
-| Gemini 2.5 Flash | Google | Deep analysis, long context |
-| Gemini Flash Lite | Google | Faster, lightweight queries |
-| Gemma 2 9B | Groq (LPU) | Ultra-low latency responses |
+### 🤖 Investigation-Grounded Copilot
+A panel beside the results lets you ask questions *scoped to the current investigation*:
+- Grounded in the artifact, extracted IOCs, threat-intel results, MITRE mapping, and generated report
+- SSE streaming responses, CSRF + rate-limited, `@login_required`
+- `POST /api/investigate/ask` with `{ "investigation_id": <id>, "question": "<text>" }`
 
-Sessions are auto-titled by Gemini on first message and persisted to PostgreSQL with full history management.
-
----
-
-### 🔍 Security Triage Agent
-Paste any artifact and get a structured threat report in seconds:
-- Auto-detects artifact type: log, phishing email, malware report, or URL
-- Extracts Indicators of Compromise — IPs, domains, hashes, URLs — with defanging for safe display
-- Maps findings to [MITRE ATT&CK](https://attack.mitre.org/) techniques (T-IDs + tactic names)
-- Queries [AbuseIPDB](https://www.abuseipdb.com/) and [VirusTotal](https://www.virustotal.com/) for live reputation scores
-- Returns a severity verdict with structured JSON summary
-- Skips RFC-1918 / private IP ranges before external API calls
-- **PDF Export** — one-click investigation report download (dark-themed, WeasyPrint)
-
----
-
-### 📚 Cyber Mentor Mode
-A dedicated learning environment at `/cyber-mentor` with three structured roadmaps:
-
-| Track | Target |
-|---|---|
-| SOC Analyst L1 | Blue team fundamentals, SIEM, log analysis |
-| Ethical Hacker | Recon, exploitation, post-exploitation methodology |
-| Cybersecurity Fundamentals | Networking, OS, cryptography basics |
-
-Features phased lessons, progress tracking (DB-persisted quiz scores), a collapsible history sidebar, and deep-link integration back to the main chat via `?ask=` params.
-
----
-
-### 🚩 CTF Challenge Mode
-Gemini-backed CTF generation with:
-- Dynamic challenge creation across difficulty tiers (Easy / Medium / Hard)
-- Server-side answer storage in Flask session (no client-side spoilers)
-- Streamed hints on request
-- Scoring and session persistence
-
----
-
-### 🌐 Live Threat Landscape Dashboard
-Aggregates real-time threat intelligence from four sources with 10-minute server-side caching:
-
-| Source | Data |
-|---|---|
-| [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) | Known exploited vulnerabilities |
-| [ransomware.live](https://ransomware.live) | Active ransomware group activity |
-| [AbuseIPDB](https://www.abuseipdb.com/) | Top reported malicious IPs |
-| [CyberNews](https://cybernews.com/) | Breaking security headlines |
-
----
-
-### 📰 CyberNews Feed
-Live headlines from [The Hacker News](https://thehackernews.com/) and [BleepingComputer](https://www.bleepingcomputer.com/) RSS feeds:
-- 10-minute server-side TTL cache with stale fallback
-- Relative timestamps
-- Client-side topic filters: malware, phishing, vulnerabilities, data breach
-
----
+### 🏠 Smart Root
+- Anonymous visitors get a lightweight **landing page** with a sign-in CTA
+- Authenticated users land directly on the **Investigation Center**
+- `/investigate` always serves the tool (redirects anonymous users to `/`)
 
 ### 📁 File Analysis
-Upload files for AI-powered security review. Supported: `.txt`, `.log`, `.pdf`, `.py`, `.js`, `.json`, `.yaml`, `.conf`, `.sh`, `.csv`, `.md` — up to 5 MB.
+Upload files for AI-powered security review. Supported: `.txt`, `.log`, `.pdf`, `.py`, `.js`, `.json`, `.yaml`, `.conf`, `.sh`, `.csv`, `.md` — up to 5 MB. Magic-byte validation blocks disguised executables, archives, and images.
 
----
+### 🗂️ Investigation History & Exports
+- Per-user history (scoped to `user_id` in every query)
+- One-click Markdown / JSON export and print
 
 ### 🔒 Security-First Backend
-- Rate limiting on all API routes (Flask-Limiter + Redis/Upstash)
-- CSRF protection on all state-changing endpoints
-- Login-required guards on sensitive routes
-- Sanitized error responses — no stack traces or internal paths leak to clients
+- Rate limiting on all API routes (Flask-Limiter, per-user keys; Redis/Upstash in production)
+- CSRF protection on all state-changing endpoints (double-submit cookie pattern)
+- `@login_required` guards on sensitive routes; **auth is checked before CSRF**
+- Nonce-based CSP (`'unsafe-inline'` removed) with a CSP violation report endpoint
+- Sanitized error responses — no stack traces leak to clients
 - `MAX_CONTENT_LENGTH` enforced at the Flask layer
-- SRI hashes on all CDN assets
-- Neon PostgreSQL connection pool with `SELECT 1` ping-on-checkout (prevents stale connection 500s on Render)
+- Neon PostgreSQL connection pool with `SELECT 1` ping-on-checkout (prevents stale-connection 500s on Render)
 
 ---
 
@@ -119,16 +80,12 @@ Upload files for AI-powered security review. Supported: `.txt`, `.log`, `.pdf`, 
 | Layer | Technology |
 |---|---|
 | Backend | Python 3.10+, Flask, Gunicorn |
-| AI — Primary | Gemini 2.5 Flash, Gemini Flash Lite (Google GenAI SDK) |
-| AI — Speed | Gemma 2 9B via Groq LPU |
-| PDF Export | WeasyPrint + Jinja2 |
+| AI | Gemini 2.5 Flash (Google GenAI SDK), SSE streaming |
 | Database | PostgreSQL (Neon) |
 | Rate Limiting | Flask-Limiter + Redis (Upstash) |
 | Auth | Authlib (Google OAuth 2.0) |
-| Threat Intel | AbuseIPDB API, VirusTotal API, CISA KEV, ransomware.live |
-| News | feedparser + TTL cache |
+| Threat Intel | AbuseIPDB API, VirusTotal API |
 | Frontend | HTML5, CSS3 (custom design system), Vanilla JS |
-| Voice | Web Speech API |
 | Deployment | Render + Gunicorn |
 
 ---
@@ -137,30 +94,26 @@ Upload files for AI-powered security review. Supported: `.txt`, `.log`, `.pdf`, 
 
 ```
 CyberGuru-AI/
-├── app.py                    # Entry point — initialises DB, registers blueprints
-├── config.py                 # API config, system prompts, generation settings
-├── extensions.py             # Flask app factory, limiter, CSRF, login helpers
+├── app.py                    # Entry point — initialises DB, registers routes
+├── config.py                 # API config, system prompts, generation settings, length caps
+├── extensions.py             # Flask app, limiter, CSRF, login helpers, CSP headers
 ├── requirements.txt
+├── requirements-dev.txt      # pytest
 │
 ├── routes/
-│   ├── auth.py               # Google OAuth login / logout
-│   ├── chat.py               # Main AI chat (SSE streaming, auto-title)
-│   ├── analyze.py            # File upload and analysis
-│   ├── triage.py             # Security triage agent endpoints
-│   ├── news.py               # CyberNews RSS feed with caching
-│   ├── threat.py             # Threat Landscape dashboard aggregator
-│   ├── mentor.py             # Cyber Mentor mode — lessons, quiz, history
-│   ├── ctf.py                # CTF Challenge mode
-│   ├── export.py             # Investigation report PDF export
-│   └── misc.py               # Health check, static helpers
+│   ├── auth.py               # Google OAuth login / logout / /auth/me / CSRF token
+│   ├── analyze.py            # /analyze-file + investigation-scoped copilot (/api/investigate/ask)
+│   ├── investigate_center.py # Smart root, /investigate, analyze/history/detail/delete/export
+│   ├── triage.py             # Artifact triage endpoints (analyze, analyze-log/email/malware)
+│   ├── misc.py               # /health, /csp-report, /favicon.ico
+│   └── seo.py                # /sitemap.xml, /robots.txt
 │
 ├── services/
 │   ├── gemini_service.py     # Gemini API client + SSE error handling
-│   ├── groq_service.py       # Groq API client (Gemma 2 9B)
-│   ├── db_service.py         # PostgreSQL session / history management
+│   ├── db_service.py         # PostgreSQL pool + users + investigation CRUD
 │   ├── file_service.py       # File extraction (PDF, log, text)
 │   ├── triage_service.py     # Triage agent with Gemini function calling
-│   └── cyberguru_agent.py    # Agent orchestration layer
+│   └── cyberguru_agent.py    # Investigation orchestration layer
 │
 ├── utils/
 │   ├── ioc_extractor.py      # Regex IOC extraction (IPs, domains, hashes, URLs)
@@ -170,25 +123,26 @@ CyberGuru-AI/
 │   ├── defang.py             # IOC defanging for safe display
 │   ├── sanitize.py           # Input / output sanitisation helpers
 │   ├── grounding.py          # Detects queries needing Google Search grounding
-│   ├── report_generator.py   # Triage report → PDF formatter
-│   ├── quiz.py               # Security quiz generation
+│   ├── report_generator.py   # Incident report generation
 │   └── cache.py              # Generic TTL cache utility
 │
 ├── templates/
-│   ├── index.html            # Main chat UI
-│   ├── cyber_mentor.html     # Mentor mode landing + lesson view
-│   └── report.html           # PDF export template (dark-themed)
+│   ├── index.html            # Landing page (anonymous visitors)
+│   └── investigate.html      # SOC Investigation Center (authenticated users)
 │
 ├── static/
 │   ├── css/main.css          # Design system — tokens, themes, components
+│   ├── manifest.json         # PWA manifest
+│   ├── robots.txt
 │   └── js/
-│       ├── chat.js           # SSE, model switcher, chat history
-│       ├── mentor.js         # Mentor mode UI, progress, deep-links
-│       └── threat.js         # Threat dashboard polling + render
+│       ├── csp-bindings.js   # CSP-compliant event delegation + theme init
+│       ├── auth.js           # Login state, CSRF-token fetch interceptor
+│       └── investigate.js    # Investigation Center UI + copilot SSE handler
 │
 └── tests/
+    ├── conftest.py           # Route/db stubs, fixtures
     ├── test_auth_routes.py
-    ├── test_chat_persistence.py
+    ├── test_security.py      # Auth, CSRF, rate limiting
     ├── test_file_upload_limits.py
     ├── test_ioc_extractor.py
     └── test_triage_parsing.py
@@ -203,17 +157,13 @@ CyberGuru-AI/
 - Python 3.10+
 - PostgreSQL database ([Neon](https://neon.tech) free tier works)
 - [Google Gemini API key](https://ai.google.dev/)
-- [Groq API key](https://console.groq.com/) — for Gemma 2 9B
-- Optional: [AbuseIPDB](https://www.abuseipdb.com/api) and [VirusTotal](https://www.virustotal.com/gui/join-us) keys for triage reputation lookups
+- Optional: [AbuseIPDB](https://www.abuseipdb.com/api) and [VirusTotal](https://www.virustotal.com/gui/join-us) keys for reputation lookups
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   # HTTPS
    git clone https://github.com/kalyandhoni234-hash/CyberGuru-AI.git
-   # SSH (recommended if you have SSH keys configured)
-   git clone git@github.com:kalyandhoni234-hash/CyberGuru-AI.git
    cd CyberGuru-AI
    ```
 
@@ -235,22 +185,24 @@ CyberGuru-AI/
    ```env
    # AI
    GEMINI_API_KEY=your_gemini_api_key
-   GROQ_API_KEY=your_groq_api_key
 
-   # Database & Cache
+   # Database
    DATABASE_URL=postgresql://user:password@host/dbname
-   REDIS_URL=redis://...
 
    # Auth
    GOOGLE_CLIENT_ID=your_google_oauth_client_id
    GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
-   SECRET_KEY=a_random_secret_key_for_flask_sessions
+   FLASK_SECRET_KEY=generate_with_python_-c_import_secrets_print(secrets.token_hex(32))
 
    # Threat Intel (optional)
    ABUSEIPDB_API_KEY=your_abuseipdb_key
    VIRUSTOTAL_API_KEY=your_virustotal_key
 
+   # Rate limiting (optional — falls back to in-memory)
+   REDIS_URL=redis://...
+
    # App
+   APP_ENV=production              # sets Secure cookies + HSTS
    ALLOWED_ORIGINS=http://localhost:5000
    ```
 
@@ -272,7 +224,7 @@ CyberGuru-AI/
    gunicorn app:app
    ```
 
-PostgreSQL (Neon) and Redis (Upstash) both have free tiers compatible with Render's free plan. The connection pool uses `SELECT 1` ping-on-checkout to prevent stale connection errors after idle periods.
+PostgreSQL (Neon) and Redis (Upstash) both have free tiers compatible with Render's free plan. The connection pool uses `SELECT 1` ping-on-checkout to prevent stale-connection errors after idle periods.
 
 ---
 
@@ -283,7 +235,7 @@ pip install -r requirements-dev.txt
 pytest tests/
 ```
 
-Coverage includes: auth routes, chat persistence, file upload validation, IOC extraction, and triage response parsing.
+Coverage includes: auth routes, the smart root, CSRF + auth ordering on every protected endpoint, file upload validation, IOC extraction, and triage response parsing.
 
 ---
 
@@ -313,5 +265,5 @@ B.Tech CSE (Cybersecurity) — Government Engineering College, Ajmer
 ---
 
 <div align="center">
-<sub>Built for learning. Powered by AI. Secured by design.</sub>
+<sub>Built for investigators. Powered by AI. Secured by design.</sub>
 </div>

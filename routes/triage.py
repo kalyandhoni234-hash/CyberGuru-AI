@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 
 @app.route("/api/triage/analyze", methods=["POST"])
 @limiter.limit("20 per minute; 100 per day", key_func=get_user_id)
-@csrf_protect
 @login_required
+@csrf_protect
 def triage_analyze():
     """
     Analyze a security artifact (auto-detect type or specify).
@@ -66,8 +66,8 @@ def triage_analyze():
 
 @app.route("/api/triage/analyze-log", methods=["POST"])
 @limiter.limit("20 per minute; 100 per day", key_func=get_user_id)
-@csrf_protect
 @login_required
+@csrf_protect
 def triage_analyze_log():
     """Analyze a log file for security threats."""
     try:
@@ -94,8 +94,8 @@ def triage_analyze_log():
 
 @app.route("/api/triage/analyze-email", methods=["POST"])
 @limiter.limit("20 per minute; 100 per day", key_func=get_user_id)
-@csrf_protect
 @login_required
+@csrf_protect
 def triage_analyze_email():
     """Analyze an email for phishing/security threats."""
     try:
@@ -127,8 +127,8 @@ def triage_analyze_email():
 
 @app.route("/api/triage/analyze-malware", methods=["POST"])
 @limiter.limit("20 per minute; 100 per day", key_func=get_user_id)
-@csrf_protect
 @login_required
+@csrf_protect
 def triage_analyze_malware():
     """Analyze a malware behavior report."""
     try:

@@ -66,6 +66,18 @@ CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=True)
 # worker processes. For true multi-process rate limiting on Render, set
 # REDIS_URL and switch storage_uri to _REDIS_URL below.
 _REDIS_URL = os.getenv("REDIS_URL")
+if not _REDIS_URL and IS_PRODUCTION:
+    # Silent degradation risk: without Redis, each Gunicorn worker keeps its
+    # own independent counter, so the *effective* rate limit multiplies by
+    # the worker count with no error surfaced anywhere. Make sure this shows
+    # up in logs/monitoring rather than failing invisibly.
+    import logging
+    logging.getLogger(__name__).warning(
+        "REDIS_URL is not set in production — rate limiting is falling back "
+        "to in-memory storage, which is NOT shared across worker processes. "
+        "Effective rate limits will be higher than configured (multiplied by "
+        "worker count). Set REDIS_URL to restore accurate multi-worker limits."
+    )
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -131,7 +143,8 @@ def set_security_headers(response):
         f"connect-src 'self' https://cdnjs.cloudflare.com; "
         f"img-src 'self' data: https:; "
         f"font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
-        f"media-src 'self' blob: data:;"
+        f"media-src 'self' blob: data:; "
+        f"report-uri /csp-report;"
     )
     return response
 

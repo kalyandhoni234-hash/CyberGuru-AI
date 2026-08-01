@@ -245,6 +245,7 @@
     document.getElementById('ic-pipeline').style.display = '';
     document.getElementById('ic-dashboard').setAttribute('aria-busy', 'true');
     currentInvestigationId = null;
+    syncCopilotVisibility();
     resetPipeline();
     showDashboard();
 
@@ -283,6 +284,7 @@
 
       currentInvestigationId = data.investigation_id;
       document.getElementById('ic-dashboard').setAttribute('aria-busy', 'false');
+      syncCopilotVisibility();
 
       populateEvidenceBar(artifact);
       populateVerdictBanner(data);
@@ -337,6 +339,7 @@
 
   window.newAnalysis = function () {
     currentInvestigationId = null;
+    syncCopilotVisibility();
     _evidenceText = '';
     hideDashboard();
     var firstType = document.querySelector('.ic-type-item');
@@ -718,6 +721,7 @@
       if (!res.ok) { showToast('Investigation not found.', 'error'); return; }
       var data = await res.json();
       currentInvestigationId = id;
+      syncCopilotVisibility();
 
       document.getElementById('ic-empty-state').style.display = 'none';
       document.getElementById('ic-pipeline').style.display = 'none';
@@ -759,6 +763,7 @@
       loadHistory();
       if (currentInvestigationId === id) {
         currentInvestigationId = null;
+        syncCopilotVisibility();
         _evidenceText = '';
         hideDashboard();
         document.getElementById('ic-pipeline').style.display = 'none';
@@ -811,20 +816,29 @@
 
   // ── Dynamic Prompt Suggestions ──
 
+  var SUGGESTION_BANK = window.SUGGESTION_BANK || [
+    'Check if 45.77.65.211 is known to be malicious',
+    'Analyze this phishing email: "Your account will be suspended..."',
+    'Review firewall log for SQL injection attempts',
+    'Look up the domain example-evil.com reputation',
+    'Analyze malware behavior in this report',
+    'Investigate this suspicious URL for credential harvesting',
+    'Triage this auth log for brute-force activity',
+    'Scan this log for data exfiltration indicators',
+    'Check this PowerShell command line for abuse',
+    'Analyze this suspicious file hash',
+  ];
+  window.SUGGESTION_BANK = SUGGESTION_BANK;
+
   window.loadInvestigateSuggestions = async function () {
     var wrap = document.getElementById('ic-suggest-chips');
     if (!wrap) return;
-    try {
-      var res = await fetch('/api/prompt-suggestions?module=investigate&count=4', { credentials: 'include' });
-      if (!res.ok) { wrap.innerHTML = ''; return; }
-      var data = await res.json();
-      var items = data.suggestions || [];
-      if (!items.length) { wrap.innerHTML = ''; return; }
-      wrap.innerHTML = items.map(function (text, i) {
-        var encoded = encodeURIComponent(text);
-        return '<span class="dyn-suggest-chip dsc-d' + (i + 1) + '" data-action="loadInvestigateSuggestion" data-text="' + encoded + '" title="' + escapeHtml(text) + '"><span class="dsc-icon">🔎</span>' + escapeHtml(text) + '</span>';
-      }).join('');
-    } catch (_) { wrap.innerHTML = ''; }
+    var items = SUGGESTION_BANK.slice(0, 4);
+    if (!items.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = items.map(function (text, i) {
+      var encoded = encodeURIComponent(text);
+      return '<span class="dyn-suggest-chip dsc-d' + (i + 1) + '" data-action="loadInvestigateSuggestion" data-text="' + encoded + '" title="' + escapeHtml(text) + '"><span class="dsc-icon">🔎</span>' + escapeHtml(text) + '</span>';
+    }).join('');
   };
 
   window.loadInvestigateSuggestion = function (text) {
@@ -832,6 +846,130 @@
     var decoded = typeof text === 'string' && text.indexOf('%') !== -1 ? decodeURIComponent(text) : text;
     if (editor) { editor.value = decoded; editor.focus(); updateCharCount(); }
   };
+
+  // ── Investigation-grounded AI Copilot ──
+
+  function syncCopilotVisibility() {
+    var card = document.getElementById('ic-copilot-card');
+    if (!card) return;
+    card.style.display = currentInvestigationId ? '' : 'none';
+  }
+  window.syncCopilotVisibility = syncCopilotVisibility;
+
+  function copilotAddMsg(role, text) {
+    var box = document.getElementById('ic-copilot-msgs');
+    if (!box) return null;
+    var wrap = document.createElement('div');
+    wrap.className = 'ic-copilot-msg ' + role;
+    var avatar = document.createElement('span');
+    avatar.className = 'cp-avatar';
+    avatar.textContent = role === 'user' ? '👤' : '🤖';
+    var bubble = document.createElement('div');
+    bubble.className = 'cp-bubble';
+    bubble.textContent = text;
+    wrap.appendChild(avatar);
+    wrap.appendChild(bubble);
+    box.appendChild(wrap);
+    box.scrollTop = box.scrollHeight;
+    return bubble;
+  }
+
+  function copilotSetBusy(busy) {
+    var btn = document.querySelector('.ic-copilot-send');
+    if (btn) btn.disabled = busy;
+  }
+
+  window.sendCopilotQuestion = async function (question) {
+    question = (question || '').trim();
+    if (!question || !currentInvestigationId) return;
+    var input = document.getElementById('ic-copilot-input');
+    if (input) input.value = '';
+    copilotAddMsg('user', question);
+    var thinking = copilotAddMsg('thinking', 'Thinking');
+    if (thinking) thinking.classList.add('thinking');
+    copilotSetBusy(true);
+
+    var res;
+    try {
+      res = await fetch('/api/investigate/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ investigation_id: currentInvestigationId, question: question }),
+      });
+    } catch (e) {
+      if (thinking) { thinking.classList.remove('thinking'); thinking.textContent = 'Network error. Please try again.'; thinking.parentElement.classList.add('error'); }
+      copilotSetBusy(false);
+      return;
+    }
+
+    if (!res.ok || !res.headers.get('content-type') || res.headers.get('content-type').indexOf('text/event-stream') === -1) {
+      var errData = {};
+      try { errData = await res.json(); } catch (_) {}
+      if (thinking) { thinking.classList.remove('thinking'); thinking.textContent = errData.error || ('Request failed (' + res.status + ').'); thinking.parentElement.classList.add('error'); }
+      copilotSetBusy(false);
+      return;
+    }
+
+    var reader = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    var done = false;
+    try {
+      while (!done) {
+        var r = await reader.read();
+        if (r.done) { done = true; break; }
+        buffer += decoder.decode(r.value, { stream: true });
+        var parts = buffer.split('\n\n');
+        buffer = parts.pop();
+        for (var i = 0; i < parts.length; i++) {
+          var line = parts[i];
+          if (line.indexOf('data:') !== 0) continue;
+          var jsonStr = line.slice(5).trim();
+          if (!jsonStr) continue;
+          var evt;
+          try { evt = JSON.parse(jsonStr); } catch (_) { continue; }
+          if (evt.error) {
+            if (thinking) { thinking.classList.remove('thinking'); thinking.textContent = evt.error; thinking.parentElement.classList.add('error'); }
+            done = true; break;
+          }
+          if (evt.done) { done = true; break; }
+          if (evt.token && thinking) {
+            thinking.classList.remove('thinking');
+            thinking.textContent += evt.token;
+          }
+        }
+      }
+    } catch (e) {
+      if (thinking) { thinking.classList.remove('thinking'); thinking.textContent = 'Connection interrupted. Please try again.'; thinking.parentElement.classList.add('error'); }
+    }
+    copilotSetBusy(false);
+    var box = document.getElementById('ic-copilot-msgs');
+    if (box) box.scrollTop = box.scrollHeight;
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('ic-copilot-form');
+    var input = document.getElementById('ic-copilot-input');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (input && input.value.trim()) sendCopilotQuestion(input.value);
+      });
+    }
+    if (input) {
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if (input.value.trim()) sendCopilotQuestion(input.value);
+        }
+      });
+      input.addEventListener('input', function () {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 84) + 'px';
+      });
+    }
+  });
 
 })();
 (function () {
@@ -1395,18 +1533,13 @@
   function mobLoadSuggestions() {
     var wrap = $('mob-chips');
     if (!wrap) return;
-    fetch('/api/prompt-suggestions?module=investigate&count=3', { credentials:'include' })
-      .then(function(r) { return r.ok ? r.json() : { suggestions: [] }; })
-      .then(function(d) {
-        var items = (d.suggestions || []).slice(0, 3);
-        if (!items.length) { wrap.innerHTML = ''; return; }
-        wrap.innerHTML = items.map(function(text) {
-          var enc = encodeURIComponent(text);
-          return '<button class="mob-chip" data-action="mobUseSuggestion" data-text="' + enc + '">'
-            + '🔎 ' + escHtml(text.length > 40 ? text.slice(0,38)+'…' : text) + '</button>';
-        }).join('');
-      })
-      .catch(function() { wrap.innerHTML = ''; });
+    var items = (window.SUGGESTION_BANK || []).slice(0, 3);
+    if (!items.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = items.map(function(text) {
+      var enc = encodeURIComponent(text);
+      return '<button class="mob-chip" data-action="mobUseSuggestion" data-text="' + enc + '">'
+        + '🔎 ' + escHtml(text.length > 40 ? text.slice(0,38)+'…' : text) + '</button>';
+    }).join('');
   }
 
   window.mobUseSuggestion = function(enc) {

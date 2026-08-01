@@ -2,11 +2,13 @@
 Investigation Center — Dedicated SOC workspace for artifact analysis.
 
 Endpoints:
-  GET  /investigate                      — Serve the Investigation Center page.
-  POST /api/investigate/analyze          — Run full investigation pipeline.
-  GET  /api/investigate/history          — List past investigations.
-  GET  /api/investigate/<id>             — Get single investigation details.
-  DELETE /api/investigate/<id>           — Delete an investigation.
+  GET  /                               — Smart root: landing page when logged out,
+                                         Investigation Center when authenticated.
+  GET  /investigate                    — Serve the Investigation Center page (gated).
+  POST /api/investigate/analyze        — Run full investigation pipeline.
+  GET  /api/investigate/history        — List past investigations.
+  GET  /api/investigate/<id>           — Get single investigation details.
+  DELETE /api/investigate/<id>         — Delete an investigation.
   GET  /api/investigate/<id>/export/md   — Export as Markdown.
   GET  /api/investigate/<id>/export/json — Export as JSON.
 
@@ -20,7 +22,7 @@ Reuses existing:
 import json
 import logging
 
-from flask import jsonify, request, render_template, Response
+from flask import jsonify, redirect, render_template, request, Response, session
 from extensions import app, limiter, csrf_protect, login_required, get_user_id, get_user_id_int
 from utils.sanitize import sanitize_artifact
 from services.cyberguru_agent import investigate
@@ -46,17 +48,30 @@ INVESTIGATION_TYPES = [
 ]
 
 
+@app.route("/", methods=["GET"])
+@limiter.limit("60 per minute")
+def home():
+    """Smart root — landing page for anonymous visitors, the Investigation
+    Center for authenticated users."""
+    if session.get("user"):
+        return render_template("investigate.html", types=INVESTIGATION_TYPES)
+    return render_template("index.html")
+
+
 @app.route("/investigate", methods=["GET"])
 @limiter.limit("60 per minute")
 def investigate_page():
-    """Serve the Investigation Center page."""
+    """Serve the Investigation Center page. Anonymous visitors are sent to
+    the landing page (which links to Google login)."""
+    if not session.get("user"):
+        return redirect("/")
     return render_template("investigate.html", types=INVESTIGATION_TYPES)
 
 
 @app.route("/api/investigate/analyze", methods=["POST"])
 @limiter.limit("10 per minute", key_func=get_user_id)
-@csrf_protect
 @login_required
+@csrf_protect
 def investigate_analyze():
     """Run the full investigation pipeline and return structured results.
 
@@ -239,8 +254,8 @@ def investigate_detail(investigation_id):
 
 @app.route("/api/investigate/<int:investigation_id>", methods=["DELETE"])
 @limiter.limit("20 per minute", key_func=get_user_id)
-@csrf_protect
 @login_required
+@csrf_protect
 def investigate_delete(investigation_id):
     """Delete a single investigation."""
     try:

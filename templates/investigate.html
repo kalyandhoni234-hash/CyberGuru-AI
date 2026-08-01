@@ -3,9 +3,92 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Investigation Center | CyberGuru AI</title>
+
+<!-- ═══════════════════════════════════════
+     PRIMARY META
+     ═══════════════════════════════════════ -->
+<title>CyberGuru AI | SOC Investigation Center – IOC & Threat Analysis</title>
+<meta name="description" content="Analyze IP addresses, domains, file hashes, URLs, malware samples, phishing emails, and network logs. AI-powered IOC investigation with MITRE ATT&CK mapping.">
+<meta name="author" content="Guru Sharan Kalyan">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://cyberguru-ai.onrender.com/">
+
+<!-- ═══════════════════════════════════════
+     OPEN GRAPH
+     ═══════════════════════════════════════ -->
+<meta property="og:type"        content="website">
+<meta property="og:site_name"   content="CyberGuru AI">
+<meta property="og:url"         content="https://cyberguru-ai.onrender.com/">
+<meta property="og:title"       content="CyberGuru AI – SOC Investigation Center | IOC & Threat Analysis">
+<meta property="og:description" content="Investigate IPs, domains, file hashes, URLs, malware, phishing emails and network logs. AI-powered threat analysis with MITRE ATT&CK mapping.">
+<meta property="og:image"       content="https://cyberguru-ai.onrender.com/static/assets/og-image.png">
+<meta property="og:image:width"  content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt"   content="CyberGuru AI Investigation Center – IOC Threat Analysis">
+<meta property="og:locale"      content="en_US">
+
+<!-- ═══════════════════════════════════════
+     TWITTER CARDS
+     ═══════════════════════════════════════ -->
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:site"        content="@CyberGuruAI">
+<meta name="twitter:title"       content="CyberGuru AI – SOC Investigation Center | IOC & Threat Analysis">
+<meta name="twitter:description" content="Investigate IPs, domains, file hashes, malware, phishing emails and network logs with AI-powered threat analysis.">
+<meta name="twitter:image"       content="https://cyberguru-ai.onrender.com/static/assets/og-image.png">
+<meta name="twitter:image:alt"   content="CyberGuru AI Investigation Center">
+
+<!-- ═══════════════════════════════════════
+     STRUCTURED DATA — JSON-LD
+     ═══════════════════════════════════════ -->
+<script type="application/ld+json" nonce="{{ g.csp_nonce }}">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://cyberguru-ai.onrender.com/#webpage",
+      "url": "https://cyberguru-ai.onrender.com/",
+      "name": "CyberGuru AI SOC Investigation Center",
+      "description": "AI-powered tool for investigating cybersecurity threats. Analyze IPs, domains, URLs, file hashes, malware, phishing emails, and network logs with MITRE ATT&CK mapping.",
+      "isPartOf": { "@id": "https://cyberguru-ai.onrender.com/#website" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "CyberGuru AI Investigation Center",
+      "applicationCategory": "SecurityApplication",
+      "url": "https://cyberguru-ai.onrender.com/",
+      "description": "Analyze cybersecurity artifacts including IP addresses, domains, file hashes, URLs, malware samples, phishing emails, and network logs. Extracts IOCs and maps to MITRE ATT&CK framework.",
+      "featureList": [
+        "IP address analysis",
+        "Domain reputation lookup",
+        "File hash investigation",
+        "URL threat analysis",
+        "Malware artifact analysis",
+        "Phishing email triage",
+        "Network log analysis",
+        "MITRE ATT&CK mapping",
+        "IOC extraction"
+      ],
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "publisher": { "@id": "https://cyberguru-ai.onrender.com/#organization" }
+    }
+  ]
+}
+</script>
+
+<!-- ═══════════════════════════════════════
+     PWA MANIFEST
+     ═══════════════════════════════════════ -->
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#8B5CF6">
+
+<!-- ═══════════════════════════════════════
+     PERFORMANCE: PRECONNECT + FONTS
+     ═══════════════════════════════════════ -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/favicon.png') }}?v=2">
@@ -361,6 +444,45 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 .ic-risk-cell { text-align:center; padding:6px; border-radius:7px; background:rgba(255,255,255,.015); }
 .ic-risk-cell .lbl { font-size:9px; color:var(--ic-text-muted); text-transform:uppercase; letter-spacing:.06em; }
 .ic-risk-cell .val { font-size:13px; font-weight:600; margin-top:1px; }
+
+/* ── AI Copilot ── */
+.ic-copilot-body { display:flex; flex-direction:column; gap:8px; padding:10px 12px 12px; }
+.ic-copilot-msgs {
+  display:flex; flex-direction:column; gap:8px;
+  max-height:260px; overflow-y:auto; min-height:56px;
+}
+.ic-copilot-msg { display:flex; gap:8px; align-items:flex-start; font-size:12px; line-height:1.5; }
+.ic-copilot-msg .cp-avatar {
+  width:22px; height:22px; border-radius:6px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; background:rgba(139,92,246,.15); border:1px solid rgba(139,92,246,.3);
+}
+.ic-copilot-msg.user .cp-avatar { background:rgba(0,229,255,.12); border-color:rgba(0,229,255,.3); }
+.ic-copilot-msg .cp-bubble {
+  background:var(--ic-card); border:1px solid var(--ic-border);
+  border-radius:10px; padding:8px 10px; white-space:pre-wrap; word-break:break-word;
+}
+.ic-copilot-msg.error .cp-bubble { border-color:rgba(255,71,87,.35); color:var(--ic-danger); }
+.ic-copilot-msg.thinking .cp-bubble::after { content:'…'; animation:ic-dots 1.2s steps(4,end) infinite; overflow:hidden; }
+.ic-copilot-input-row {
+  display:flex; gap:6px; align-items:flex-end;
+  border:1px solid var(--ic-border); border-radius:10px; padding:6px 6px 6px 10px;
+  background:var(--ic-card);
+}
+.ic-copilot-input-row:focus-within { border-color:var(--ic-border-strong); }
+.ic-copilot-input-row textarea {
+  flex:1; background:transparent; border:none; outline:none; resize:none;
+  color:var(--ic-text); font-family:var(--font-ui); font-size:12px; line-height:1.5;
+  max-height:84px; min-height:20px; padding:2px 0;
+}
+.ic-copilot-input-row textarea::placeholder { color:var(--ic-text-muted); }
+.ic-copilot-send {
+  width:28px; height:28px; border-radius:8px; flex-shrink:0; cursor:pointer;
+  border:none; color:#fff; font-size:12px;
+  background:linear-gradient(135deg,var(--ic-primary),var(--ic-secondary));
+  transition:all .18s;
+}
+.ic-copilot-send:disabled { opacity:.5; cursor:not-allowed; }
 
 /* IOC Dashboard */
 .ic-ioc-group { margin-bottom:8px; }
@@ -1759,24 +1881,22 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 </style>
 </head>
 <body>
+<a href="#ic-center" class="skip-to-content" style="position:absolute;top:-100%;left:1rem;z-index:99999;padding:8px 16px;background:#8B5CF6;color:#fff;font-weight:600;font-size:14px;border-radius:4px;text-decoration:none;">Skip to main content</a>
 <div class="ic-app">
 
   <!-- ── Topbar ── -->
   <header class="ic-topbar">
     <div class="ic-topbar-logo">
-      <svg viewBox="0 0 24 24" fill="none">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
         <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z" fill="rgba(139,92,246,.2)" stroke="#8B5CF6" stroke-width="1.5" stroke-linejoin="round"/>
         <path d="M9 12l2 2 4-4" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       Investigation Center
     </div>
     <nav class="ic-topbar-nav">
-      <a href="/">Chat</a>
-      <a href="#" class="active">Investigate</a>
-      <a href="/">Mentor</a>
+      <a href="/" class="active">Investigate</a>
     </nav>
     <div class="ic-topbar-right">
-      <a href="/" class="ic-topbar-back">← Back to Chat</a>
       <div class="ic-topbar-user"></div>
     </div>
   </header>
@@ -1822,7 +1942,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
     </aside>
 
     <!-- ═══ CENTER PANEL ═══ -->
-    <main class="ic-center">
+    <main class="ic-center" id="ic-center" aria-label="Investigation workspace">
       <div class="ic-center-hdr" id="ic-center-hdr">
         <h1 id="ic-center-title">Evidence Workspace</h1>
         <p id="ic-center-subtitle">Paste an artifact, upload a file, or drag &amp; drop evidence for analysis.</p>
@@ -1993,6 +2113,21 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
         <div class="ic-card-body" id="ic-risk-body"></div>
       </div>
 
+      <!-- AI Copilot (grounded in current investigation) -->
+      <div id="ic-copilot-card" class="ic-card" style="display:none;">
+        <div class="ic-card-hdr">
+          <span>Ask AI Copilot</span>
+          <span class="badge info">This investigation</span>
+        </div>
+        <div class="ic-copilot-body">
+          <div class="ic-copilot-msgs" id="ic-copilot-msgs" aria-live="polite"></div>
+          <form class="ic-copilot-input-row" id="ic-copilot-form">
+            <textarea id="ic-copilot-input" placeholder="Ask about the artifact, report, IOCs, or next steps…" rows="1" data-keydown="copilotKeydown" aria-label="Copilot question"></textarea>
+            <button type="submit" class="ic-copilot-send" aria-label="Ask copilot">➤</button>
+          </form>
+        </div>
+      </div>
+
     </aside>
   </div>
 
@@ -2008,7 +2143,6 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
       </svg>
       Investigation Center
     </div>
-    <a href="/" class="mob-topbar-back-link">Back to Chat</a>
   </header>
 
   <div class="mob-tabs-wrap">

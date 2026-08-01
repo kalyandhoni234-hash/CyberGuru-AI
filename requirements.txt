@@ -7,6 +7,3 @@ Flask-Limiter==3.8.0
 psycopg2-binary==2.9.12
 authlib==1.7.2
 google-genai==2.9.0
-feedparser==6.0.12
-edge-tts==7.2.8
-groq==1.4.0

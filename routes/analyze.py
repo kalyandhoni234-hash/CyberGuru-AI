@@ -2,11 +2,13 @@ import json
 import logging
 import requests
 from flask import jsonify, request, Response, stream_with_context
-from extensions import app, limiter, csrf_protect, login_required, get_user_id, jdump
-from config import API_URL_STREAM, SYSTEM_INSTRUCTION, GENERATION_CONFIG, GOOGLE_SEARCH_TOOL
+from extensions import app, limiter, csrf_protect, login_required, get_user_id, get_user_id_int, jdump
+from config import API_URL_STREAM, SYSTEM_INSTRUCTION, GENERATION_CONFIG, GOOGLE_SEARCH_TOOL, MAX_INPUT_CHARS
 from services.gemini_service import gemini_post, GeminiRateLimitError, GeminiServiceError
+from services.db_service import get_investigation_by_id
 from services.file_service import extract_pdf_text, parse_log_file, build_analysis_prompt
 from utils.grounding import needs_grounding
+from utils.sanitize import sanitize_input
 
 logger = logging.getLogger(__name__)
 MAGIC_BYTES = {
@@ -39,8 +41,8 @@ def get_magic_type(data: bytes) -> str | None:
 
 @app.route("/analyze-file", methods=["POST"])
 @limiter.limit("10 per minute; 50 per day", key_func=get_user_id)
-@csrf_protect
 @login_required
+@csrf_protect
 def analyze_file():
     uploaded_file = request.files.get("file")
     if not uploaded_file:
@@ -176,3 +178,159 @@ def analyze_file():
         def general_err():
             yield ("data: " + jdump({"error": "⚠️ An internal server error occurred. Please try again."}) + "\n\n").encode("utf-8")
         return Response(stream_with_context(general_err()), content_type="text/event-stream; charset=utf-8")
+
+
+# ==========================
+# INVESTIGATION-SCOPED AI COPILOT
+# ==========================
+
+COPILOT_SYSTEM_INSTRUCTION = """
+You are the AI copilot inside the CyberGuru AI Investigation Center, assisting a SOC
+analyst who has just run an investigation on a piece of evidence.
+
+## SCOPE
+- Answer questions strictly about the artifact under investigation, its extracted
+  Indicators of Compromise, the threat-intelligence lookups, the MITRE ATT&CK
+  mapping, and the generated incident report.
+- The analyst may ask for explanations, remediation steps, detection/sigma guidance,
+  likely attack-chains, or clarifications about a verdict.
+- Stay grounded in the provided investigation context. If the answer is not
+  contained in the context, say so plainly rather than guessing.
+
+## ETHICS
+- Never encourage illegal hacking, unauthorized access, or malware deployment.
+  Frame offensive topics around defense, detection, and authorized use.
+
+## RESPONSE STYLE
+- Be concise and practical. Use numbered lists or short headings where they help.
+- No long walls of text. Match depth to the question.
+"""
+
+
+def _stream_sse_tokens(resp):
+    """Yield SSE `data:` events from a streaming Gemini response."""
+    for raw_line in resp.iter_lines():
+        if not raw_line:
+            continue
+        line = raw_line.decode("utf-8")
+        if not line.startswith("data:"):
+            continue
+        json_str = line[5:].strip()
+        if not json_str or json_str == "[DONE]":
+            continue
+        try:
+            chunk_data = json.loads(json_str)
+            token = (
+                chunk_data.get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [{}])[0]
+                .get("text", "")
+            )
+            if token:
+                yield token
+        except (json.JSONDecodeError, IndexError, KeyError):
+            continue
+
+
+def _build_copilot_context(row) -> str:
+    """Assemble a grounded context block for the copilot from a saved investigation."""
+    iocs = row.get("iocs") or {}
+    ioc_lines = []
+    for key in ("ips", "domains", "urls", "hashes", "emails"):
+        for item in iocs.get(key, []):
+            ioc_lines.append(f"- {key}: {item}")
+
+    mitre = ""
+    if row.get("mitre_id"):
+        mitre = f"{row['mitre_id']} - {row.get('mitre_name', 'Unknown')}"
+
+    return f"""INVESTIGATION CONTEXT
+---------------------
+Verdict: {row.get("verdict", "inconclusive")}
+Severity: {row.get("severity", "low")}
+MITRE ATT&CK: {mitre or "None identified"}
+
+EXTRACTED INDICATORS
+--------------------
+{chr(10).join(ioc_lines) if ioc_lines else "None"}
+
+ORIGINAL ARTIFACT
+-----------------
+{(row.get("artifact_text") or "")[:8000]}
+
+INCIDENT REPORT
+---------------
+{(row.get("report") or "")[:8000]}
+"""
+
+
+@app.route("/api/investigate/ask", methods=["POST"])
+@limiter.limit("20 per minute; 100 per day", key_func=get_user_id)
+@login_required
+@csrf_protect
+def investigate_ask():
+    """Investigation-scoped copilot: answer a follow-up question grounded in a
+    previously run investigation.
+
+    Request:  { "investigation_id": <int>, "question": "<text>" }
+    Response: SSE stream of `data:` token events, ending with a `done` event.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        question = sanitize_input(data.get("question", ""))[:MAX_INPUT_CHARS].strip()
+        investigation_id = data.get("investigation_id")
+
+        if not question:
+            return jsonify({"error": "Please enter a question."}), 400
+
+        try:
+            investigation_id = int(investigation_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "investigation_id must be an integer."}), 400
+
+        user_id = get_user_id_int()
+        row = get_investigation_by_id(investigation_id, user_id)
+        if not row:
+            return jsonify({"error": "Investigation not found."}), 404
+
+        context = _build_copilot_context(row)
+        user_prompt = (
+            f"{context}\n\n"
+            f"ANALYST QUESTION\n"
+            f"----------------\n{question}\n\n"
+            f"Answer the analyst's question using the investigation context above."
+        )
+
+        payload = {
+            "system_instruction": {"parts": [{"text": COPILOT_SYSTEM_INSTRUCTION}]},
+            "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+            "generationConfig": GENERATION_CONFIG,
+        }
+
+        gemini_resp = gemini_post(API_URL_STREAM, payload, stream=True, timeout=60)
+
+        def generate():
+            try:
+                for token in _stream_sse_tokens(gemini_resp):
+                    yield ("data: " + jdump({"token": token}) + "\n\n").encode("utf-8")
+                yield ("data: " + jdump({"done": True}) + "\n\n").encode("utf-8")
+            except GeminiRateLimitError:
+                yield ("data: " + jdump({"error": "⚠️ Gemini rate limit reached. Please wait a minute and try again."}) + "\n\n").encode("utf-8")
+            except GeminiServiceError as e:
+                status_code = e.status_code
+                yield ("data: " + jdump({"error": f"⚠️ Gemini service error ({status_code}). Please try again shortly."}) + "\n\n").encode("utf-8")
+            except requests.exceptions.Timeout:
+                yield ("data: " + jdump({"error": "⚠️ Gemini took too long to respond. Please try again."}) + "\n\n").encode("utf-8")
+            except Exception:
+                logger.exception("Copilot streaming failed")
+                yield ("data: " + jdump({"error": "⚠️ An internal error occurred. Please try again."}) + "\n\n").encode("utf-8")
+
+        return Response(
+            stream_with_context(generate()),
+            content_type="text/event-stream; charset=utf-8",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+        )
+
+    except Exception:
+        logger.exception("Unhandled error in /api/investigate/ask")
+        return jsonify({"error": "An unexpected error occurred. Please try again."}), 500

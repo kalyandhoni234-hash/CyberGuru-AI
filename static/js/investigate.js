@@ -181,8 +181,16 @@
     var container = document.getElementById('ic-pipeline-steps');
     if (!container) return;
     container.innerHTML = PIPELINE_STEPS.map(function (s) {
-      return '<div class="ic-step" id="ic-step-' + s.step + '"><div class="ic-step-icon">●</div><span>' + s.label + '</span></div>';
+      return '<div class="ic-step" id="ic-step-' + s.step + '"><div class="ic-step-node"><div class="ic-step-icon">●</div></div><span class="ic-step-label">' + s.label + '</span></div>';
     }).join('');
+  }
+
+  function updatePipelineProgress() {
+    var fill = document.getElementById('ic-pipeline-progress-fill');
+    if (!fill) return;
+    var total = document.querySelectorAll('.ic-step').length;
+    var done = document.querySelectorAll('.ic-step.done').length;
+    fill.style.width = total ? Math.round((done / total) * 100) + '%' : '0%';
   }
 
   function setPipelineStep(step, status) {
@@ -191,6 +199,7 @@
     el.className = 'ic-step';
     if (status === 'running') { el.classList.add('running'); el.querySelector('.ic-step-icon').textContent = '◌'; }
     if (status === 'done') { el.classList.add('done'); el.querySelector('.ic-step-icon').textContent = '✓'; }
+    updatePipelineProgress();
   }
 
   function animatePipeline() {
@@ -221,6 +230,8 @@
       var el = document.getElementById('ic-step-' + (idx + 1));
       if (el) { el.className = 'ic-step'; el.querySelector('.ic-step-icon').textContent = '●'; }
     });
+    var fill = document.getElementById('ic-pipeline-progress-fill');
+    if (fill) fill.style.width = '0%';
     var st = document.getElementById('ic-pipeline-status');
     if (st) st.textContent = 'Running…';
   }
@@ -1161,12 +1172,22 @@
     var strip = $('mob-pipeline-strip');
     if (!strip) return;
     strip.innerHTML = PIPELINE_STEPS.map(function(s, i) {
-      var sep = i > 0 ? '<span class="mob-pipe-sep" aria-hidden="true">›</span>' : '';
+      var sep = i > 0 ? '<span class="mob-pipe-sep" id="mob-pipe-sep-' + (i + 1) + '" aria-hidden="true">›</span>' : '';
       return sep + '<span class="mob-pipe-step" id="' + s.id + '">'
         + '<span class="mob-pipe-dot">●</span>'
         + '<span class="mob-pipe-label">' + escHtml(s.label) + '</span>'
         + '</span>';
     }).join('');
+    var fill = $('mob-pipe-progress-fill');
+    if (fill) fill.style.width = '0%';
+  }
+
+  function mobUpdateProgress() {
+    var fill = $('mob-pipe-progress-fill');
+    if (!fill) return;
+    var total = PIPELINE_STEPS.length;
+    var done = document.querySelectorAll('.mob-pipe-step--done').length;
+    fill.style.width = total ? Math.round((done / total) * 100) + '%' : '0%';
   }
 
   function mobSetStep(id, status) {
@@ -1182,7 +1203,13 @@
     } else if (status === 'done') {
       el.classList.add('mob-pipe-step--done');
       if (dot) dot.textContent = '✓';
+      var m = id.match(/(\d+)$/);
+      if (m) {
+        var se = $('mob-pipe-sep-' + (parseInt(m[1], 10) + 1));
+        if (se) se.classList.add('mob-pipe-sep--done');
+      }
     }
+    mobUpdateProgress();
   }
 
   function mobAnimatePipeline() {

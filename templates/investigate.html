@@ -465,26 +465,54 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 }
 .ic-pipeline-hdr {
   font-size:10px; font-weight:600; text-transform:uppercase;
-  letter-spacing:.1em; color:var(--ic-text-muted); margin-bottom:8px;
+  letter-spacing:.1em; color:var(--ic-text-muted); margin-bottom:6px;
   display:flex; align-items:center; justify-content:space-between;
 }
-.ic-pipeline-steps { display:flex; flex-direction:column; gap:3px; }
+.ic-pipeline-progress { height:3px; border-radius:99px; background:var(--ic-border); overflow:hidden; margin-bottom:8px; }
+.ic-pipeline-progress-fill {
+  height:100%; width:0%;
+  background:linear-gradient(90deg,var(--ic-secondary),var(--ic-success));
+  border-radius:99px; transition:width .4s cubic-bezier(.16,1,.3,1);
+}
+.ic-pipeline-steps { display:flex; flex-direction:column; }
 .ic-step {
-  display:flex; align-items:center; gap:9px; padding:5px 0;
+  display:flex; align-items:flex-start; gap:10px; padding:2px 0;
   font-size:11.5px; color:var(--ic-text-muted); transition:all .3s;
 }
+.ic-step-node {
+  position:relative; flex-shrink:0; width:20px;
+  display:flex; flex-direction:column; align-items:center;
+}
+.ic-step-node::after {
+  content:''; position:absolute; top:18px; bottom:-2px; width:2px;
+  background:var(--ic-border); transition:background .3s;
+}
+.ic-step:last-child .ic-step-node::after { display:none; }
 .ic-step-icon {
+  position:relative; z-index:1;
   width:18px; height:18px; border-radius:50%; flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
   font-size:8px; font-weight:700;
   border:1.5px solid var(--ic-text-muted); color:var(--ic-text-muted);
+  background:var(--ic-card);
   transition:all .3s;
 }
-.ic-step.done .ic-step-icon { border-color:var(--ic-success); background:var(--ic-success); color:#000; }
+.ic-step-label { padding-top:1px; line-height:16px; }
 .ic-step.done { color:var(--ic-success); }
+.ic-step.done .ic-step-node::after { background:var(--ic-success); }
+.ic-step.done .ic-step-icon {
+  border-color:var(--ic-success); background:var(--ic-success); color:#000;
+  animation:ic-pop .35s cubic-bezier(.16,1,.3,1);
+}
+.ic-step.running .ic-step-node::after { background:var(--ic-secondary); }
 .ic-step.running .ic-step-icon { border-color:var(--ic-secondary); color:var(--ic-secondary); animation:ic-spin .8s linear infinite; box-shadow:0 0 8px rgba(0,229,255,.3); }
 .ic-step.running { color:var(--ic-secondary); animation:ic-pulse-glow .8s ease-in-out infinite alternate; }
 @keyframes ic-spin { 100% { transform:rotate(360deg); } }
+@keyframes ic-pop {
+  0% { transform:scale(.6); }
+  60% { transform:scale(1.18); }
+  100% { transform:scale(1); }
+}
 @keyframes ic-pulse-glow {
   from { text-shadow:0 0 4px rgba(0,229,255,.1); }
   to { text-shadow:0 0 12px rgba(0,229,255,.3); }
@@ -1472,6 +1500,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
     background: var(--ic-success);
     border-color: var(--ic-success);
     color: #000;
+    animation: mob-pop 0.35s cubic-bezier(0.16,1,0.3,1);
   }
   .mob-pipe-sep {
     font-size: 9px;
@@ -1479,8 +1508,30 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
     opacity: 0.35;
     padding: 0 4px;
     flex-shrink: 0;
+    transition: color 0.3s, opacity 0.3s;
+  }
+  .mob-pipe-sep--done {
+    color: var(--ic-success);
+    opacity: 0.9;
+    animation: mob-pop 0.35s cubic-bezier(0.16,1,0.3,1);
+  }
+  .mob-pipe-progress {
+    flex-shrink: 0;
+    height: 2px;
+    background: var(--ic-border);
+  }
+  .mob-pipe-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--ic-secondary), var(--ic-success));
+    transition: width 0.35s ease;
   }
   @keyframes mob-spin { 100% { transform: rotate(360deg); } }
+  @keyframes mob-pop {
+    0%   { transform: scale(0.6); }
+    60%  { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
   @keyframes mob-glow {
     from { text-shadow: 0 0 4px rgba(0,229,255,0.1); }
     to   { text-shadow: 0 0 12px rgba(0,229,255,0.35); }
@@ -2279,6 +2330,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
           <span>Investigation Pipeline</span>
           <span id="ic-pipeline-status" style="font-size:10px;color:var(--ic-text-muted);font-weight:400;">Running…</span>
         </div>
+        <div class="ic-pipeline-progress"><div class="ic-pipeline-progress-fill" id="ic-pipeline-progress-fill"></div></div>
         <div class="ic-pipeline-steps" id="ic-pipeline-steps"></div>
       </div>
 
@@ -2370,6 +2422,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   </header>
 
   <div class="mob-pipeline-strip" id="mob-pipeline-strip" aria-label="Investigation pipeline"></div>
+  <div class="mob-pipe-progress"><div class="mob-pipe-progress-fill" id="mob-pipe-progress-fill"></div></div>
 
   <div class="mob-report-scroll" id="mob-report-scroll">
     <section class="mob-card">

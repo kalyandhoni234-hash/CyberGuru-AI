@@ -493,6 +493,21 @@
     if (badge) badge.textContent = techniques.length;
   }
 
+  function abuseVerdict(score) {
+    if (score >= 80) return { label: 'High Risk', sev: 'critical' };
+    if (score >= 50) return { label: 'Elevated', sev: 'high' };
+    if (score > 0) return { label: 'Low Risk', sev: 'medium' };
+    return { label: 'Clean', sev: 'low' };
+  }
+  window.abuseVerdict = abuseVerdict;
+
+  function vtVerdict(malicious, suspicious) {
+    if (malicious > 0) return { label: 'Malicious', sev: 'critical' };
+    if (suspicious > 0) return { label: 'Suspicious', sev: 'high' };
+    return { label: 'Clean', sev: 'low' };
+  }
+  window.vtVerdict = vtVerdict;
+
   function populateDashboardTI(data) {
     var ti = data.threat_intel || {};
     var body = document.getElementById('ic-dash-ti-body');
@@ -512,26 +527,37 @@
     var html = '';
     abuse.forEach(function (entry) {
       var ip = entry.ip || 'unknown';
-      var result = entry.result || {};
-      var d2 = result.data || {};
+      var d2 = (entry.result || {}).data || {};
       var score = d2.abuseConfidenceScore || 0;
       var reports = d2.totalReports || 0;
       var country = d2.countryCode || '--';
-      var color = score > 80 ? '#FF4757' : score > 50 ? '#FFA502' : score > 0 ? '#00FF88' : '#555570';
-      html += '<div class="ic-ti-entry"><div class="ic-ti-source">' + escapeHtml(ip) + '</div><div class="ic-ti-stats"><span class="ic-ti-stat" style="color:' + color + '">⚠ Score: ' + score + '</span><span class="ic-ti-stat">📊 Reports: ' + reports + '</span><span class="ic-ti-stat">🌍 ' + country + '</span></div></div>';
+      var v = abuseVerdict(score);
+      html += '<div class="ic-ti-card">'
+        + '<div class="ic-ti-card-top"><span class="ic-ti-source">' + escapeHtml(ip) + '</span>'
+        + '<span class="ic-ti-src-badge ic-ti-src-badge--abuse">AbuseIPDB</span></div>'
+        + '<div class="ic-ti-verdict-row"><span class="ic-ti-verdict sev-' + v.sev + '">' + v.label + '</span>'
+        + '<span class="ic-ti-score">Score ' + score + '</span></div>'
+        + '<div class="ic-ti-meter"><div class="ic-ti-meter-fill" style="width:' + Math.max(0, Math.min(100, score)) + '%;background:var(--sev-' + v.sev + ');"></div></div>'
+        + '<div class="ic-ti-stats"><span class="ic-ti-stat">📊 ' + reports + ' reports</span><span class="ic-ti-stat">🌍 ' + escapeHtml(country) + '</span></div>'
+        + '</div>';
     });
     vt.forEach(function (entry) {
       var ip = entry.ip || 'unknown';
-      var result = entry.result || {};
-      var d2 = result.data || {};
-      var attrs = d2.attributes || {};
+      var attrs = ((entry.result || {}).data || {}).attributes || {};
       var stats = attrs.last_analysis_stats || {};
       var malicious = stats.malicious || 0;
       var suspicious = stats.suspicious || 0;
-      var harmless = stats.harmless || 0;
-      var total2 = malicious + suspicious + harmless + (stats.undetected || 0);
-      var vcolor = malicious > 0 ? '#FF4757' : suspicious > 0 ? '#FFA502' : '#00FF88';
-      html += '<div class="ic-ti-entry"><div class="ic-ti-source">' + escapeHtml(ip) + ' <span style="font-weight:400;font-size:10px;color:var(--ic-text-muted)">[VirusTotal]</span></div><div class="ic-ti-stats"><span class="ic-ti-stat" style="color:' + vcolor + '">🛡️ ' + malicious + '/' + total2 + ' malicious</span><span class="ic-ti-stat" style="color:#FFA502">⚠ ' + suspicious + ' suspicious</span></div></div>';
+      var total2 = malicious + suspicious + (stats.harmless || 0) + (stats.undetected || 0);
+      var v = vtVerdict(malicious, suspicious);
+      var det = total2 > 0 ? Math.round((malicious / total2) * 100) : 0;
+      html += '<div class="ic-ti-card">'
+        + '<div class="ic-ti-card-top"><span class="ic-ti-source">' + escapeHtml(ip) + '</span>'
+        + '<span class="ic-ti-src-badge ic-ti-src-badge--vt">VirusTotal</span></div>'
+        + '<div class="ic-ti-verdict-row"><span class="ic-ti-verdict sev-' + v.sev + '">' + v.label + '</span>'
+        + '<span class="ic-ti-score">🛡️ ' + malicious + '/' + total2 + ' flagged</span></div>'
+        + '<div class="ic-ti-meter"><div class="ic-ti-meter-fill" style="width:' + Math.max(0, Math.min(100, det)) + '%;background:var(--sev-' + v.sev + ');"></div></div>'
+        + '<div class="ic-ti-stats"><span class="ic-ti-stat">⚠ ' + suspicious + ' suspicious</span></div>'
+        + '</div>';
     });
 
     body.innerHTML = html;
@@ -1523,14 +1549,15 @@
       var score   = d2.abuseConfidenceScore || 0;
       var reports = d2.totalReports || 0;
       var country = d2.countryCode || '--';
-      var col  = score > 80 ? '#FF4757' : score > 50 ? '#FFA502' : '#00FF88';
-      html += '<div class="mob-ti-entry">'
-        + '<div class="mob-ti-source">' + escHtml(ip) + '</div>'
-        + '<div class="mob-ti-row">'
-        + '<span style="color:' + col + '">⚠ ' + score + '</span>'
-        + '<span>📊 ' + reports + ' reports</span>'
-        + '<span>🌍 ' + country + '</span>'
-        + '</div></div>';
+      var v = window.abuseVerdict ? window.abuseVerdict(score) : { label: 'Unknown', sev: 'unknown' };
+      html += '<div class="mob-ti-card">'
+        + '<div class="mob-ti-card-top"><span class="mob-ti-source">' + escHtml(ip) + '</span>'
+        + '<span class="mob-ti-src-badge mob-ti-src-badge--abuse">AbuseIPDB</span></div>'
+        + '<div class="mob-ti-verdict-row"><span class="mob-ti-verdict sev-' + v.sev + '">' + v.label + '</span>'
+        + '<span class="mob-ti-score">Score ' + score + '</span></div>'
+        + '<div class="mob-ti-meter"><div class="mob-ti-meter-fill" style="width:' + Math.max(0, Math.min(100, score)) + '%;background:var(--sev-' + v.sev + ');"></div></div>'
+        + '<div class="mob-ti-stats"><span>📊 ' + reports + ' reports</span><span>🌍 ' + escHtml(country) + '</span></div>'
+        + '</div>';
     });
     vt.forEach(function(entry) {
       var ip    = entry.ip || 'unknown';
@@ -1539,13 +1566,16 @@
       var mal   = stats.malicious || 0;
       var sus   = stats.suspicious || 0;
       var tot   = mal + sus + (stats.harmless||0) + (stats.undetected||0);
-      var col   = mal > 0 ? '#FF4757' : sus > 0 ? '#FFA502' : '#00FF88';
-      html += '<div class="mob-ti-entry">'
-        + '<div class="mob-ti-source">' + escHtml(ip) + ' <span style="font-size:9px;color:var(--ic-text-muted)">[VT]</span></div>'
-        + '<div class="mob-ti-row">'
-        + '<span style="color:' + col + '">🛡 ' + mal + '/' + tot + ' malicious</span>'
-        + '<span>⚠ ' + sus + ' suspicious</span>'
-        + '</div></div>';
+      var v = window.vtVerdict ? window.vtVerdict(mal, sus) : { label: 'Unknown', sev: 'unknown' };
+      var det = tot > 0 ? Math.round((mal / tot) * 100) : 0;
+      html += '<div class="mob-ti-card">'
+        + '<div class="mob-ti-card-top"><span class="mob-ti-source">' + escHtml(ip) + '</span>'
+        + '<span class="mob-ti-src-badge mob-ti-src-badge--vt">VirusTotal</span></div>'
+        + '<div class="mob-ti-verdict-row"><span class="mob-ti-verdict sev-' + v.sev + '">' + v.label + '</span>'
+        + '<span class="mob-ti-score">🛡 ' + mal + '/' + tot + ' flagged</span></div>'
+        + '<div class="mob-ti-meter"><div class="mob-ti-meter-fill" style="width:' + Math.max(0, Math.min(100, det)) + '%;background:var(--sev-' + v.sev + ');"></div></div>'
+        + '<div class="mob-ti-stats"><span>⚠ ' + sus + ' suspicious</span></div>'
+        + '</div>';
     });
     body.innerHTML = html;
   }

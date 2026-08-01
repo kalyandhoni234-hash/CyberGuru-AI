@@ -662,12 +662,35 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 }
 
 /* Threat Intel */
-.ic-ti-entry {
-  padding:7px 0; border-bottom:1px solid var(--ic-border);
+.ic-ti-card {
+  padding:9px 11px; border-radius:9px;
+  background:var(--ic-card); border:1px solid var(--ic-border);
+  transition:border-color .15s, transform .15s;
 }
-.ic-ti-entry:last-child { border-bottom:none; padding-bottom:0; }
-.ic-ti-source { font-family:var(--font-mono); font-size:11px; font-weight:500; }
-.ic-ti-stats { display:flex; gap:8px; margin-top:3px; flex-wrap:wrap; }
+.ic-ti-card + .ic-ti-card { margin-top:6px; }
+.ic-ti-card:hover { border-color:var(--ic-border-strong); transform:translateY(-1px); }
+.ic-ti-card-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ic-ti-source { font-family:var(--font-mono); font-size:11px; font-weight:500; word-break:break-all; }
+.ic-ti-src-badge {
+  flex-shrink:0; font-size:8px; font-weight:600; text-transform:uppercase;
+  letter-spacing:.06em; padding:1px 6px; border-radius:4px;
+}
+.ic-ti-src-badge--abuse { background:var(--ioc-domain-soft); color:var(--ioc-domain); }
+.ic-ti-src-badge--vt { background:var(--ioc-ip-soft); color:var(--ioc-ip); }
+.ic-ti-verdict-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px; }
+.ic-ti-verdict {
+  font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+  padding:2px 9px; border-radius:99px;
+}
+.ic-ti-verdict.sev-critical { background:var(--sev-critical-soft); color:var(--sev-critical); }
+.ic-ti-verdict.sev-high { background:var(--sev-high-soft); color:var(--sev-high); }
+.ic-ti-verdict.sev-medium { background:var(--sev-medium-soft); color:var(--sev-medium); }
+.ic-ti-verdict.sev-low { background:var(--sev-low-soft); color:var(--sev-low); }
+.ic-ti-verdict.sev-unknown { background:var(--sev-unknown-soft); color:var(--sev-unknown); }
+.ic-ti-score { font-size:10px; font-family:var(--font-mono); color:var(--ic-text-secondary); }
+.ic-ti-meter { height:5px; border-radius:99px; background:var(--ic-border); overflow:hidden; margin-top:7px; }
+.ic-ti-meter-fill { height:100%; border-radius:99px; transition:width .8s cubic-bezier(.16,1,.3,1); }
+.ic-ti-stats { display:flex; gap:10px; margin-top:6px; flex-wrap:wrap; }
 .ic-ti-stat { font-size:10px; display:flex; align-items:center; gap:3px; color:var(--ic-text-muted); }
 
 /* Report / Raw Findings */
@@ -1755,11 +1778,24 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   .mob-tl-text { font-size: 11.5px; color: var(--ic-text-secondary); margin-top: 1px; line-height: 1.4; }
 
   /* 20. Threat Intel */
-  .mob-ti-entry { padding: 7px 0; border-bottom: 1px solid var(--ic-border); }
-  .mob-ti-entry:last-child { border-bottom: none; }
-  .mob-ti-source { font-family: var(--font-mono); font-size: 11px; font-weight: 500; }
-  .mob-ti-row { display: flex; gap: 10px; margin-top: 3px; flex-wrap: wrap; }
-  .mob-ti-row span { font-size: 10px; color: var(--ic-text-muted); }
+  .mob-ti-card { padding: 9px 10px; border-radius: 9px; background: var(--ic-card); border: 1px solid var(--ic-border); }
+  .mob-ti-card + .mob-ti-card { margin-top: 6px; }
+  .mob-ti-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .mob-ti-source { font-family: var(--font-mono); font-size: 11px; font-weight: 500; word-break: break-all; }
+  .mob-ti-src-badge { flex-shrink: 0; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 6px; border-radius: 4px; }
+  .mob-ti-src-badge--abuse { background: var(--ioc-domain-soft); color: var(--ioc-domain); }
+  .mob-ti-src-badge--vt { background: var(--ioc-ip-soft); color: var(--ioc-ip); }
+  .mob-ti-verdict-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 7px; }
+  .mob-ti-verdict { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 9px; border-radius: 99px; }
+  .mob-ti-verdict.sev-critical { background: var(--sev-critical-soft); color: var(--sev-critical); }
+  .mob-ti-verdict.sev-high { background: var(--sev-high-soft); color: var(--sev-high); }
+  .mob-ti-verdict.sev-medium { background: var(--sev-medium-soft); color: var(--sev-medium); }
+  .mob-ti-verdict.sev-low { background: var(--sev-low-soft); color: var(--sev-low); }
+  .mob-ti-score { font-size: 10px; font-family: var(--font-mono); color: var(--ic-text-secondary); }
+  .mob-ti-meter { height: 5px; border-radius: 99px; background: var(--ic-border); overflow: hidden; margin-top: 7px; }
+  .mob-ti-meter-fill { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(0.16,1,0.3,1); }
+  .mob-ti-stats { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+  .mob-ti-stats span { font-size: 10px; color: var(--ic-text-muted); }
 
   /* 21. Raw findings */
   .mob-raw-hdr { cursor: pointer; -webkit-tap-highlight-color: transparent; }

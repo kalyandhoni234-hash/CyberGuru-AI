@@ -32,15 +32,6 @@ async function showUserProfile(user) {
     hideLoginOverlay();
     await fetchCsrfToken();
 
-    // ── Namespace localStorage by user ID so accounts don't share history ──
-    STORAGE_KEY = `cybguru_chats_v1_${user.id}`;
-    ACTIVE_KEY  = `cybguru_active_v1_${user.id}`;
-
-    // Load history for chat page (safe guard — only defined when chat.js is loaded)
-    if (typeof loadFromStorage === 'function') { chats = {}; activeChatId = null; loadFromStorage(); }
-    if (typeof renderHistoryList === 'function') renderHistoryList();
-    if (typeof newChat === 'function') newChat();
-
     const row = document.getElementById('user-profile-row');
     if (row) {
       document.getElementById('user-avatar').src = user.avatar || '';
@@ -49,26 +40,6 @@ async function showUserProfile(user) {
       document.getElementById('user-email').textContent = user.email;
       row.style.display = 'flex';
     }
-
-    // ── Load profile & check onboarding ──
-    try {
-      const pRes = await fetch('/api/profile', { credentials: 'include' });
-      if (pRes.ok) {
-        const profileData = await pRes.json();
-        window.__userData = window.__userData || {};
-        window.__userData.profile = profileData.profile || profileData;
-        // Show onboarding if not completed
-        if (!window.__userData.profile.onboarding_completed) {
-          if (typeof showOnboarding === 'function') setTimeout(showOnboarding, 600);
-        }
-      }
-    } catch (pErr) {
-      console.warn('Could not load profile:', pErr);
-    }
-
-    if (typeof updateSendBtn === 'function') updateSendBtn();
-    const inputEl = document.getElementById('user-input');
-    if (inputEl) inputEl.focus();
 
   } catch(err) {
     console.error('showUserProfile error:', err);

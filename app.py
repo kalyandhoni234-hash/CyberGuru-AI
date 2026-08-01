@@ -7,8 +7,7 @@ from services.db_service import init_db  # noqa: E402
 init_db()
 
 # Import route modules to register their @app.route handlers
-from routes import auth, chat, analyze, misc, triage, news, tts, ctf, threat_pulse, quiz, profile, investigate_center  # add news # noqa: F401,E402
-# ↑ Added 'triage' to import the new security triage agent routes
+from routes import auth, analyze, misc, triage, investigate_center, seo  # noqa: F401,E402
 
 # ==========================
 # START SERVER

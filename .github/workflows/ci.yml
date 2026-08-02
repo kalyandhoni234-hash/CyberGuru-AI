@@ -30,7 +30,15 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
       - name: Run tests
-        run: pytest tests/ -q
+        run: |
+          set -o pipefail
+          output=$(pytest tests/ -q 2>&1)
+          rc=$?
+          echo "$output"
+          if [ "$rc" -ne 0 ]; then
+            echo "$output" | grep -Ei 'error|failed|traceback|ImportError|ModuleNotFoundError' | head -40 | while IFS= read -r line; do echo "::error::$line"; done
+          fi
+          exit "$rc"
 
   lint:
     name: Lint (flake8)

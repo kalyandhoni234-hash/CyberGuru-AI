@@ -645,6 +645,11 @@
     var offset = circumference - (score / 100) * circumference;
     var severityColor = severity === 'critical' ? '#FF4757' : severity === 'high' ? '#FF6348' : severity === 'medium' ? '#FFA502' : severity === 'low' ? '#00FF88' : '#555570';
 
+    // Confidence is a separate evidence-strength metric, so it uses its own
+    // blue/indigo scale rather than the red→green severity palette.
+    var confColor = confidence >= 70 ? '#4DA3FF' : confidence >= 40 ? '#8B7CF6' : '#5A5A75';
+    var confLabel = confidence >= 70 ? 'High' : confidence >= 40 ? 'Medium' : 'Low';
+
     body.innerHTML = '<div class="ic-risk-score">'
       + '<div class="ic-risk-ring">'
       + '<svg width="72" height="72" viewBox="0 0 72 72">'
@@ -655,11 +660,15 @@
       + '</div>'
       + '<div class="ic-risk-label" style="color:' + severityColor + '">' + severity.toUpperCase() + '</div>'
       + '</div>'
+      + '<div class="ic-risk-conf">'
+      + '<div class="ic-risk-conf-hdr"><span class="ic-risk-conf-lbl">Confidence</span><span class="ic-risk-conf-val" style="color:' + confColor + '">' + confidence + '% · ' + confLabel + '</span></div>'
+      + '<div class="ic-risk-conf-track"><div class="ic-risk-conf-fill" style="width:' + Math.max(4, Math.min(100, confidence)) + '%;background:' + confColor + ';"></div></div>'
+      + '</div>'
       + '<div class="ic-risk-grid">'
-      + '<div class="ic-risk-cell"><div class="lbl">Confidence</div><div class="val" style="color:' + (confidence > 70 ? '#00FF88' : confidence > 40 ? '#FFA502' : '#555570') + '">' + confidence + '%</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">IOCs</div><div class="val">' + iocCount + '</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">Category</div><div class="val" style="font-size:11px">' + escapeHtml(category) + '</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">Source</div><div class="val" style="font-size:11px">' + (data.from_cache ? 'Cached' : 'Fresh') + '</div></div>'
+      + '<div class="ic-risk-cell"><div class="lbl">Evidence</div><div class="val">' + confidence + '%</div></div>'
       + '</div>';
   }
 
@@ -730,12 +739,11 @@
       var sev = data.severity || 'low';
       var verdict = data.verdict || 'inconclusive';
       var scoreMap = { critical: 90, high: 70, medium: 50, low: 20 };
-      var confMap = { likely_malicious: 85, suspicious: 60, inconclusive: 30, benign: 10 };
       var catMap = { likely_malicious: 'Suspicious Activity', suspicious: 'Anomalous Behavior', benign: 'Benign' };
       var iocCount = data.ioc_count || 0;
 
       var riskData = {
-        risk: { score: scoreMap[sev] || 0, severity: sev, confidence: confMap[verdict] || 30, threat_category: catMap[verdict] || 'Inconclusive', ioc_count: iocCount },
+        risk: { score: scoreMap[sev] || 0, severity: sev, confidence: data.confidence || 0, threat_category: catMap[verdict] || 'Inconclusive', ioc_count: iocCount },
         from_cache: false,
       };
       var reportText = data.report || '';

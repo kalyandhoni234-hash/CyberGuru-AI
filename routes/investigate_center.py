@@ -109,15 +109,15 @@ def investigate_analyze():
         verdict = analysis.get("verdict", "inconclusive")
         severity = analysis.get("severity", "low")
 
-        # Risk scoring
+        # Risk scoring — risk.score is severity-driven (the gauge); confidence
+        # is a separate, evidence-strength score computed by the pipeline.
         severity_scores = {"critical": 90, "high": 70, "medium": 50, "low": 20, "unknown": 0}
-        confidence_map = {"likely_malicious": 85, "suspicious": 60, "inconclusive": 30, "benign": 10}
         base_score = severity_scores.get(severity, 0)
-        confidence = confidence_map.get(verdict, 30)
-        total_iocs = len(iocs.get("ips", [])) + len(iocs.get("urls", [])) + len(iocs.get("emails", []))
+        total_iocs = len(iocs.get("ips", [])) + len(iocs.get("domains", [])) + len(iocs.get("urls", [])) + len(iocs.get("hashes", [])) + len(iocs.get("emails", []))
         if total_iocs > 5:
             base_score = min(100, base_score + 10)
-        risk_score = min(100, base_score + (confidence // 10))
+        risk_score = min(100, base_score)
+        confidence = result.get("confidence", 0)
 
         threat_category = _classify_threat(verdict, severity, mitre_techniques)
 
@@ -201,6 +201,7 @@ def investigate_history():
                 "id": row["id"],
                 "verdict": row.get("verdict"),
                 "severity": row.get("severity"),
+                "confidence": row.get("confidence") or 0,
                 "mitre_id": row.get("mitre_id"),
                 "mitre_name": row.get("mitre_name"),
                 "ioc_count": _count_iocs(row.get("iocs")),
@@ -232,6 +233,7 @@ def investigate_detail(investigation_id):
         report = row.get("report", "")
         verdict = row.get("verdict", "inconclusive")
         severity = row.get("severity", "low")
+        confidence = row.get("confidence") or 0
 
         total_iocs = _count_iocs(iocs)
 
@@ -239,6 +241,7 @@ def investigate_detail(investigation_id):
             "id": row["id"],
             "verdict": verdict,
             "severity": severity,
+            "confidence": confidence,
             "iocs": iocs,
             "iocs_defanged": defang_iocs(iocs),
             "threat_intel": threat_intel,
@@ -343,4 +346,4 @@ def export_investigation_json(investigation_id):
 def _count_iocs(iocs) -> int:
     if not iocs:
         return 0
-    return len(iocs.get("ips", [])) + len(iocs.get("urls", [])) + len(iocs.get("emails", []))
+    return sum(len(iocs.get(k) or []) for k in ("ips", "domains", "urls", "hashes", "emails"))

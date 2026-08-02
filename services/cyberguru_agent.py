@@ -2,6 +2,7 @@ import hashlib
 
 from utils.ioc_extractor import extract_iocs
 from utils.report_generator import generate_incident_report
+from utils.confidence import compute_confidence
 from services.db_service import save_investigation, find_recent_investigation
 
 from services.triage_service import analyze_artifact
@@ -83,6 +84,17 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
         ]
     )
 
+    # Step 5b: Deterministic, evidence-based confidence in the assessment.
+    # Independent of severity — reflects corroboration across threat-intel
+    # sources, MITRE mapping and extracted IOCs.
+    confidence = compute_confidence(
+        verdict=verdict,
+        severity=severity,
+        threat_intel=threat_intel,
+        mitre_techniques=mitre_techniques,
+        iocs=iocs,
+    )
+
     # Step 6: Persist
     investigation_id = None
     if user_id is not None:
@@ -92,6 +104,7 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
             artifact_text=artifact_text,
             verdict=verdict,
             severity=severity,
+            confidence=confidence,
             mitre=mitre,
             iocs=iocs,
             threat_intel=threat_intel,
@@ -106,6 +119,7 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
         "threat_intel": threat_intel,
         "mitre": mitre,
         "mitre_techniques": mitre_techniques,
+        "confidence": confidence,
         "report": report,
         "from_cache": False,
         "investigation_id": investigation_id,
@@ -129,6 +143,7 @@ def _result_from_db_row(row, from_cache=False):
         "threat_intel": row.get("threat_intel") or {},
         "mitre": mitre,
         "mitre_techniques": [mitre] if mitre else [],
+        "confidence": row.get("confidence") or 0,
         "report": row.get("report", ""),
         "from_cache": from_cache,
     }

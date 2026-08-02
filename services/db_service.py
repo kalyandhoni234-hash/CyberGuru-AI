@@ -126,6 +126,7 @@ def init_db():
                     artifact_text   TEXT NOT NULL,
                     verdict         TEXT,
                     severity        TEXT,
+                    confidence      INTEGER NOT NULL DEFAULT 0,
                     mitre_id        TEXT,
                     mitre_name      TEXT,
                     iocs            JSONB,
@@ -135,6 +136,14 @@ def init_db():
                     created_at      TIMESTAMPTZ DEFAULT NOW()
                 )
             """)
+            # Idempotent column additions for databases created before a column
+            # existed (there is no migration system — raw SQL DDL only, so this
+            # is the smallest safe upgrade path). ADD COLUMN IF NOT EXISTS makes
+            # boot self-healing on existing deployments.
+            cur.execute(
+                "ALTER TABLE investigations "
+                "ADD COLUMN IF NOT EXISTS confidence INTEGER NOT NULL DEFAULT 0"
+            )
             cur.execute("""
                 CREATE INDEX IF NOT EXISTS idx_investigations_hash
                 ON investigations (artifact_hash)
@@ -181,7 +190,8 @@ def save_investigation(
     iocs,
     threat_intel,
     report,
-    analysis_error=None
+    analysis_error=None,
+    confidence=None,
 ):
     """Persist an investigation result, return the row as a dict."""
     with get_db() as conn:
@@ -189,9 +199,10 @@ def save_investigation(
             cur.execute("""
                 INSERT INTO investigations (
                     user_id, artifact_hash, artifact_text, verdict, severity,
-                    mitre_id, mitre_name, iocs, threat_intel, report, analysis_error
+                    confidence, mitre_id, mitre_name, iocs, threat_intel,
+                    report, analysis_error
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
             """, (
                 user_id,
@@ -199,6 +210,7 @@ def save_investigation(
                 artifact_text,
                 verdict,
                 severity,
+                confidence if confidence is not None else 0,
                 mitre.get("id") if mitre else None,
                 mitre.get("name") if mitre else None,
                 psycopg2.extras.Json(iocs or {}),

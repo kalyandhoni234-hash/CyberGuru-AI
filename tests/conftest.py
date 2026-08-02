@@ -21,6 +21,7 @@ def _install_route_stubs():
     db_stub.get_investigation_history = lambda user_id, limit=20: []
     db_stub.get_investigation_by_id = lambda investigation_id, user_id: None
     db_stub.delete_investigation = lambda investigation_id, user_id: False
+    db_stub.update_investigation_analyst = lambda investigation_id, user_id, status, notes: None
     db_stub.find_recent_investigation = lambda artifact_hash, user_id, max_age_hours=24: None
     db_stub.save_investigation = lambda *args, **kwargs: {"id": 1}
     db_stub.upsert_user = lambda google_id, email, name, avatar: {"id": 1}

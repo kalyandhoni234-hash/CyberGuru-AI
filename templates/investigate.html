@@ -440,6 +440,12 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 .ic-risk-ring .rfg { fill:none; stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 1s ease; }
 .ic-risk-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; }
 .ic-risk-label { font-size:11px; color:var(--ic-text-secondary); margin-top:4px; font-weight:600; }
+.ic-risk-conf { margin:8px 2px 0; }
+.ic-risk-conf-hdr { display:flex; align-items:center; justify-content:space-between; font-size:10px; margin-bottom:3px; }
+.ic-risk-conf-lbl { color:var(--ic-text-muted); text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+.ic-risk-conf-val { font-weight:700; }
+.ic-risk-conf-track { height:6px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden; }
+.ic-risk-conf-fill { height:100%; border-radius:99px; transition:width .5s ease; }
 .ic-risk-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
 .ic-risk-cell { text-align:center; padding:6px; border-radius:7px; background:rgba(255,255,255,.015); }
 .ic-risk-cell .lbl { font-size:9px; color:var(--ic-text-muted); text-transform:uppercase; letter-spacing:.06em; }
@@ -840,6 +846,68 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 }
 .ic-dash-raw-body::-webkit-scrollbar { width:4px; }
 .ic-dash-raw-body::-webkit-scrollbar-thumb { background:var(--ic-border); border-radius:2px; }
+
+/* ── Analyst workflow ── */
+.ic-analyst-label {
+  display:block; font-size:9px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--ic-text-muted); margin:8px 0 4px;
+}
+.ic-analyst-select {
+  width:100%; padding:7px 9px; font-size:12px; font-family:var(--font-ui);
+  color:var(--ic-text); background:var(--ic-bg);
+  border:1px solid var(--ic-border); border-radius:7px; outline:none; cursor:pointer;
+}
+.ic-analyst-select:focus { border-color:var(--ic-border-strong); }
+.ic-analyst-notes {
+  width:100%; padding:7px 9px; font-size:12px; font-family:var(--font-ui);
+  color:var(--ic-text); background:var(--ic-bg);
+  border:1px solid var(--ic-border); border-radius:7px; outline:none; resize:vertical;
+}
+.ic-analyst-notes:focus { border-color:var(--ic-border-strong); }
+.ic-analyst-actions { margin-top:8px; display:flex; justify-content:flex-end; }
+.ic-analyst-save {
+  padding:6px 16px; font-size:11px; font-weight:500; cursor:pointer;
+  border:1px solid var(--ic-border); border-radius:7px;
+  background:var(--ic-card); color:var(--ic-text-secondary); font-family:var(--font-ui);
+  transition:all .15s;
+}
+.ic-analyst-save:hover { background:var(--ic-hover); color:var(--ic-text); }
+.ic-analyst-save:disabled { opacity:.5; cursor:not-allowed; }
+
+/* Status chips — a separate palette from severity (blue/neutral/purple,
+   never the red→green severity scale) so the two never get conflated. */
+.ic-dash-status-chip, .ic-status-chip {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:2px 8px; border-radius:99px; font-size:10px; font-weight:600;
+  letter-spacing:.04em; white-space:nowrap;
+  border:1px solid var(--ic-border);
+}
+.ic-status-chip--new           { color:#A6A6C0; background:rgba(90,90,117,.15); border-color:rgba(90,90,117,.4); }
+.ic-status-chip--in-review     { color:#4DA3FF; background:rgba(77,163,255,.12); border-color:rgba(77,163,255,.35); }
+.ic-status-chip--resolved      { color:#00C896; background:rgba(0,200,150,.12); border-color:rgba(0,200,150,.35); }
+.ic-status-chip--false-positive{ color:#8B7CF6; background:rgba(139,124,246,.12); border-color:rgba(139,124,246,.35); }
+.ic-status-chip--escalated     { color:#FF6B81; background:rgba(255,107,129,.12); border-color:rgba(255,107,129,.35); }
+
+/* ── Evidence legend ── */
+.ic-evidence-list { display:flex; flex-direction:column; gap:6px; }.ic-evidence-item {
+  display:flex; align-items:flex-start; gap:8px;
+  padding:7px 9px; border:1px solid var(--ic-border); border-radius:8px;
+  background:var(--ic-bg); font-size:11px;
+}
+.ic-evidence-id {
+  flex:0 0 auto; min-width:34px; text-align:center;
+  font-family:var(--font-mono); font-weight:600; font-size:10px;
+  color:#4DA3FF; background:rgba(77,163,255,.12);
+  border:1px solid rgba(77,163,255,.35); border-radius:5px; padding:2px 4px;
+}
+.ic-evidence-item .ic-evidence-type {
+  flex:0 0 auto; color:var(--ic-text-muted); font-size:9px;
+  text-transform:uppercase; letter-spacing:.05em; margin-top:1px;
+}
+.ic-evidence-item .ic-evidence-detail {
+  color:var(--ic-text-secondary); line-height:1.5;
+  font-family:var(--font-mono); word-break:break-all;
+}
 
 /* ── New analysis button ── */
 .ic-new-analysis {
@@ -1766,13 +1834,15 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   }
   /* Reorder dashboard sections for mobile report layout */
   .ic-verdict-banner { order:1; }
-  #ic-dash-exec       { order:2; }
-  #ic-dash-recs       { order:3; }
-  #ic-dash-ioc        { order:4; }
-  #ic-dash-mitre      { order:5; }
-  #ic-dash-tl         { order:6; }
-  #ic-dash-ti         { order:7; }
-  #ic-dash-raw        { order:8; }
+  #ic-dash-analyst    { order:2; }
+  #ic-dash-exec       { order:3; }
+  #ic-dash-recs       { order:4; }
+  #ic-dash-ioc        { order:5; }
+  #ic-dash-mitre      { order:6; }
+  #ic-dash-tl         { order:7; }
+  #ic-dash-ti         { order:8; }
+  #ic-dash-evidence   { order:9; }
+  #ic-dash-raw        { order:10; }
 
   /* ── Verdict Banner - compact ── */
   .ic-verdict-banner { padding:10px 12px; margin-bottom:0; }
@@ -2003,6 +2073,29 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
           </div>
         </div>
 
+        <!-- Analyst Workflow -->
+        <div class="ic-dash-card" id="ic-dash-analyst">
+          <div class="ic-dash-hdr">
+            <span>Analyst Status</span>
+            <span class="ic-dash-status-chip" id="ic-analyst-status-chip">New</span>
+          </div>
+          <div class="ic-dash-body">
+            <label class="ic-analyst-label" for="ic-analyst-status">Status</label>
+            <select class="ic-analyst-select" id="ic-analyst-status" data-action="analystStatusChange">
+              <option>New</option>
+              <option>In Review</option>
+              <option>Resolved</option>
+              <option>False Positive</option>
+              <option>Escalated</option>
+            </select>
+            <label class="ic-analyst-label" for="ic-analyst-notes">Notes</label>
+            <textarea class="ic-analyst-notes" id="ic-analyst-notes" placeholder="Add analyst notes…" rows="2"></textarea>
+            <div class="ic-analyst-actions">
+              <button class="ic-analyst-save" id="ic-analyst-save" data-action="saveAnalystState">Save</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Executive Summary -->
         <div class="ic-dash-card" id="ic-dash-exec">
           <div class="ic-dash-hdr">Executive Summary</div>
@@ -2051,6 +2144,17 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
           <div class="ic-dash-body" id="ic-dash-ti-body"></div>
         </div>
 
+        <!-- Evidence Legend -->
+        <div class="ic-dash-card" id="ic-dash-evidence">
+          <div class="ic-dash-hdr">
+            <span>Evidence</span>
+            <span class="badge info" id="ic-dash-evidence-badge">0</span>
+          </div>
+          <div class="ic-dash-body" id="ic-dash-evidence-body">
+            <p style="color:var(--ic-text-muted);font-style:italic;margin:0;">Evidence IDs (E-01, E-02, …) cited by the AI copilot map to the sources below.</p>
+          </div>
+        </div>
+
         <!-- Timeline -->
         <div class="ic-dash-card" id="ic-dash-tl">
           <div class="ic-dash-hdr">Investigation Timeline</div>
@@ -2073,6 +2177,8 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
             <div class="ic-export-bar" id="ic-dash-export-bar" style="display:none;margin-top:8px;">
               <a class="ic-export-btn" id="ic-dash-export-md" target="_blank">📄 Markdown</a>
               <a class="ic-export-btn" id="ic-dash-export-json" target="_blank">📋 JSON</a>
+              <a class="ic-export-btn" id="ic-dash-export-sigma" target="_blank">Σ Sigma</a>
+              <a class="ic-export-btn" id="ic-dash-export-yara" target="_blank">☠ YARA</a>
               <button class="ic-export-btn" data-action="printReport">🖨️ Print</button>
             </div>
           </div>
@@ -2122,7 +2228,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
         <div class="ic-copilot-body">
           <div class="ic-copilot-msgs" id="ic-copilot-msgs" aria-live="polite"></div>
           <form class="ic-copilot-input-row" id="ic-copilot-form">
-            <textarea id="ic-copilot-input" placeholder="Ask about the artifact, report, IOCs, or next steps…" rows="1" data-keydown="copilotKeydown" aria-label="Copilot question"></textarea>
+            <textarea id="ic-copilot-input" placeholder="Ask about the artifact, report, IOCs, or next steps… (answers cite evidence IDs)" rows="1" data-keydown="copilotKeydown" aria-label="Copilot question"></textarea>
             <button type="submit" class="ic-copilot-send" aria-label="Ask copilot">➤</button>
           </form>
         </div>

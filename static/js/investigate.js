@@ -293,9 +293,11 @@
       populateDashboardIOC(data);
       populateDashboardMITRE(data);
       populateDashboardTI(data);
+      populateEvidenceLegend(data);
       populateDashboardTimeline(data);
       populateDashboardRaw(data);
       renderRiskAssessment(data);
+      populateAnalystState(data);
 
       loadHistory();
       loadInvestigateSuggestions();
@@ -530,31 +532,115 @@
     if (badge) badge.textContent = total;
   }
 
+  function populateEvidenceLegend(data) {
+    var body = document.getElementById('ic-dash-evidence-body');
+    var badge = document.getElementById('ic-dash-evidence-badge');
+    if (!body) return;
+
+    var evidence = data.evidence || [];
+    if (evidence.length === 0) {
+      body.innerHTML = '<p style="color:var(--ic-text-muted);font-style:italic;margin:0;">No structured evidence was collected for this investigation.</p>';
+      if (badge) badge.textContent = '0';
+      return;
+    }
+
+    body.innerHTML = evidence.map(function (item) {
+      var id = item.id || 'E-??';
+      var type = item.type || 'Evidence';
+      var detail = item.detail || '';
+      return '<div class="ic-evidence-item">'
+        + '<span class="ic-evidence-id">' + escapeHtml(id) + '</span>'
+        + '<span class="ic-evidence-type">' + escapeHtml(type) + '</span>'
+        + '<span class="ic-evidence-detail">' + escapeHtml(detail) + '</span>'
+        + '</div>';
+    }).join('');
+    if (badge) badge.textContent = evidence.length;
+  }
+
+  function statusChipClass(status) {
+    return 'ic-status-chip--' + String(status || 'New').toLowerCase().replace(/\s+/g, '-');
+  }
+
+  function populateAnalystState(data) {
+    var chip = document.getElementById('ic-analyst-status-chip');
+    var select = document.getElementById('ic-analyst-status');
+    var notes = document.getElementById('ic-analyst-notes');
+    var saveBtn = document.getElementById('ic-analyst-save');
+    var status = data.analyst_status || 'New';
+    if (chip) {
+      chip.textContent = status;
+      chip.className = 'ic-dash-status-chip ' + statusChipClass(status);
+    }
+    if (select && select.value !== status) select.value = status;
+    if (notes) notes.value = data.analyst_notes || '';
+    if (saveBtn) saveBtn.disabled = false;
+  }
+
+  window.analystStatusChange = function () {
+    var select = document.getElementById('ic-analyst-status');
+    var chip = document.getElementById('ic-analyst-status-chip');
+    if (!select || !chip) return;
+    chip.textContent = select.value;
+    chip.className = 'ic-dash-status-chip ' + statusChipClass(select.value);
+  };
+
+  window.saveAnalystState = async function () {
+    if (!currentInvestigationId) { showToast('No investigation to update.', 'error'); return; }
+    var select = document.getElementById('ic-analyst-status');
+    var notes = document.getElementById('ic-analyst-notes');
+    var saveBtn = document.getElementById('ic-analyst-save');
+    var status = select ? select.value : 'New';
+    if (saveBtn) saveBtn.disabled = true;
+    try {
+      var res = await fetch('/api/investigate/' + currentInvestigationId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: status, notes: notes ? notes.value : '' }),
+      });
+      if (!res.ok) throw new Error('save failed with ' + res.status);
+      var data = await res.json();
+      populateAnalystState({ analyst_status: data.analyst_status, analyst_notes: data.analyst_notes });
+      showToast('Analyst status saved.', 'success');
+      loadHistory();
+    } catch (e) {
+      console.error('Analyst save error:', e);
+      showToast('Could not save analyst state.', 'error');
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  };
+
   function populateDashboardRecs(data) {
     var body = document.getElementById('ic-dash-recs-body');
     if (!body) return;
 
     var recs = [];
-    var analysis = data.analysis || {};
-    var summary = analysis.summary || '';
 
-    if (summary) {
-      var lines = summary.split('\n');
-      lines.forEach(function (line) {
-        var t = line.trim();
-        if (t.match(/^\d+[\.\)]/) || t.match(/^[-*]/) || t.match(/^(recommend|suggest|ensure|implement|use|enable|configure|review|investigate|block|monitor|patch|update|restrict)/i)) {
-          recs.push(t.replace(/^[\d\.\-\*\s]+/, '').trim());
-        }
-      });
-    }
+    if (Array.isArray(data.recommendations) && data.recommendations.length) {
+      recs = data.recommendations.slice(0, 8);
+    } else {
+      var analysis = data.analysis || {};
+      var summary = analysis.summary || '';
 
-    if (recs.length === 0) {
-      var verdict = analysis.verdict || 'inconclusive';
-      var sev = analysis.severity || 'low';
-      recs.push('Review the investigation report for full details.');
-      if (sev !== 'low') recs.push('Block any identified malicious indicators.');
-      recs.push('Monitor affected systems for suspicious activity.');
-      if (verdict === 'likely_malicious') recs.push('Escalate to incident response team if not already engaged.');
+      if (summary) {
+        var lines = summary.split('\n');
+        lines.forEach(function (line) {
+          var t = line.trim();
+          if (t.match(/^\d+[\.\)]/) || t.match(/^[-*]/) || t.match(/^(recommend|suggest|ensure|implement|use|enable|configure|review|investigate|block|monitor|patch|update|restrict)/i)) {
+            recs.push(t.replace(/^[\d\.\-\*\s]+/, '').trim());
+          }
+        });
+      }
+
+      if (recs.length === 0) {
+        var verdict = analysis.verdict || 'inconclusive';
+        var sev = analysis.severity || 'low';
+        recs.push('Review the investigation report for full details.');
+        if (sev !== 'low') recs.push('Block any identified malicious indicators.');
+        recs.push('Monitor affected systems for suspicious activity.');
+        if (verdict === 'likely_malicious') recs.push('Escalate to incident response team if not already engaged.');
+      }
     }
 
     body.innerHTML = recs.slice(0, 8).map(function (r, i) {
@@ -618,8 +704,12 @@
     if (currentInvestigationId) {
       var mdEl = document.getElementById('ic-dash-export-md');
       var jsonEl = document.getElementById('ic-dash-export-json');
+      var sigmaEl = document.getElementById('ic-dash-export-sigma');
+      var yaraEl = document.getElementById('ic-dash-export-yara');
       if (mdEl) mdEl.href = '/api/investigate/' + currentInvestigationId + '/export/md';
       if (jsonEl) jsonEl.href = '/api/investigate/' + currentInvestigationId + '/export/json';
+      if (sigmaEl) sigmaEl.href = '/api/investigate/' + currentInvestigationId + '/export/rule/sigma';
+      if (yaraEl) yaraEl.href = '/api/investigate/' + currentInvestigationId + '/export/rule/yara';
       if (exportBar) exportBar.style.display = '';
     } else {
       if (exportBar) exportBar.style.display = 'none';
@@ -645,6 +735,11 @@
     var offset = circumference - (score / 100) * circumference;
     var severityColor = severity === 'critical' ? '#FF4757' : severity === 'high' ? '#FF6348' : severity === 'medium' ? '#FFA502' : severity === 'low' ? '#00FF88' : '#555570';
 
+    // Confidence is a separate evidence-strength metric, so it uses its own
+    // blue/indigo scale rather than the red→green severity palette.
+    var confColor = confidence >= 70 ? '#4DA3FF' : confidence >= 40 ? '#8B7CF6' : '#5A5A75';
+    var confLabel = confidence >= 70 ? 'High' : confidence >= 40 ? 'Medium' : 'Low';
+
     body.innerHTML = '<div class="ic-risk-score">'
       + '<div class="ic-risk-ring">'
       + '<svg width="72" height="72" viewBox="0 0 72 72">'
@@ -655,11 +750,15 @@
       + '</div>'
       + '<div class="ic-risk-label" style="color:' + severityColor + '">' + severity.toUpperCase() + '</div>'
       + '</div>'
+      + '<div class="ic-risk-conf">'
+      + '<div class="ic-risk-conf-hdr"><span class="ic-risk-conf-lbl">Confidence</span><span class="ic-risk-conf-val" style="color:' + confColor + '">' + confidence + '% · ' + confLabel + '</span></div>'
+      + '<div class="ic-risk-conf-track"><div class="ic-risk-conf-fill" style="width:' + Math.max(4, Math.min(100, confidence)) + '%;background:' + confColor + ';"></div></div>'
+      + '</div>'
       + '<div class="ic-risk-grid">'
-      + '<div class="ic-risk-cell"><div class="lbl">Confidence</div><div class="val" style="color:' + (confidence > 70 ? '#00FF88' : confidence > 40 ? '#FFA502' : '#555570') + '">' + confidence + '%</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">IOCs</div><div class="val">' + iocCount + '</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">Category</div><div class="val" style="font-size:11px">' + escapeHtml(category) + '</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">Source</div><div class="val" style="font-size:11px">' + (data.from_cache ? 'Cached' : 'Fresh') + '</div></div>'
+      + '<div class="ic-risk-cell"><div class="lbl">Evidence</div><div class="val">' + confidence + '%</div></div>'
       + '</div>';
   }
 
@@ -699,9 +798,11 @@
         var d = new Date(h.created_at);
         var dateStr = d.toLocaleDateString();
         var iocCount = h.ioc_count || 0;
+        var status = h.analyst_status || 'New';
         return '<div class="ic-hist-item" data-action="loadInvestigation" data-inv-id="' + h.id + '">'
           + '<div class="h-sev ' + sev + '"></div>'
-          + '<div class="h-info"><div class="h-verdict">' + escapeHtml(h.verdict || '—') + '</div>'
+          + '<div class="h-info"><div class="h-verdict">' + escapeHtml(h.verdict || '—')
+          + ' <span class="ic-status-chip ' + statusChipClass(status) + '">' + escapeHtml(status) + '</span></div>'
           + '<div class="h-meta"><span>' + dateStr + '</span><span>' + time + '</span><span>' + iocCount + ' IOCs</span></div></div>'
           + '<button class="ic-hist-delete" data-action="deleteInvestigation" data-inv-id="' + h.id + '" title="Delete">✕</button>'
           + '</div>';
@@ -730,12 +831,11 @@
       var sev = data.severity || 'low';
       var verdict = data.verdict || 'inconclusive';
       var scoreMap = { critical: 90, high: 70, medium: 50, low: 20 };
-      var confMap = { likely_malicious: 85, suspicious: 60, inconclusive: 30, benign: 10 };
       var catMap = { likely_malicious: 'Suspicious Activity', suspicious: 'Anomalous Behavior', benign: 'Benign' };
       var iocCount = data.ioc_count || 0;
 
       var riskData = {
-        risk: { score: scoreMap[sev] || 0, severity: sev, confidence: confMap[verdict] || 30, threat_category: catMap[verdict] || 'Inconclusive', ioc_count: iocCount },
+        risk: { score: scoreMap[sev] || 0, severity: sev, confidence: data.confidence || 0, threat_category: catMap[verdict] || 'Inconclusive', ioc_count: iocCount },
         from_cache: false,
       };
       var reportText = data.report || '';
@@ -743,13 +843,15 @@
       populateEvidenceBar(reportText.slice(0, 300));
       populateVerdictBanner(riskData);
       populateExecutiveSummary({ analysis: { summary: reportText.slice(0, 500) } });
-      populateDashboardRecs({ analysis: { summary: reportText.slice(0, 500), verdict: verdict, severity: sev } });
+      populateDashboardRecs({ recommendations: data.recommendations, analysis: { summary: reportText.slice(0, 500), verdict: verdict, severity: sev } });
       populateDashboardIOC(data);
       populateDashboardMITRE(data);
       populateDashboardTI(data);
+      populateEvidenceLegend(data);
       populateDashboardTimeline({ analysis: { summary: reportText.slice(0, 300), verdict: verdict, severity: sev }, from_cache: true });
       populateDashboardRaw({ report: reportText, analysis: { verdict: verdict, severity: sev, summary: '' } });
       renderRiskAssessment(riskData);
+      populateAnalystState(data);
 
     } catch (e) { console.error('Error loading investigation:', e); showToast('Error loading investigation.', 'error'); }
   };

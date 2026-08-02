@@ -8,9 +8,11 @@ Endpoints:
   POST /api/investigate/analyze        — Run full investigation pipeline.
   GET  /api/investigate/history        — List past investigations.
   GET  /api/investigate/<id>           — Get single investigation details.
+  PATCH /api/investigate/<id>          — Update analyst status + notes.
   DELETE /api/investigate/<id>         — Delete an investigation.
   GET  /api/investigate/<id>/export/md   — Export as Markdown.
   GET  /api/investigate/<id>/export/json — Export as JSON.
+  GET  /api/investigate/<id>/export/rule/<sigma|yara> — Export detection rule.
 
 Reuses existing:
   - services/cyberguru_agent.investigate()
@@ -30,10 +32,20 @@ from services.db_service import (
     get_investigation_history,
     get_investigation_by_id,
     delete_investigation,
+    update_investigation_analyst,
 )
 from utils.defang import defang_iocs
+from utils.evidence import build_evidence
+from utils.recommendations import build_specific_recommendations
+from utils.rule_generator import generate_sigma_rule, generate_yara_rule
 
 logger = logging.getLogger(__name__)
+
+
+# Analyst triage workflow states. Distinct from severity (which is a risk
+# measure produced by the pipeline) — these reflect where the case sits in
+# the analyst's review process.
+ANALYST_STATUSES = ["New", "In Review", "Resolved", "False Positive", "Escalated"]
 
 
 INVESTIGATION_TYPES = [
@@ -109,15 +121,15 @@ def investigate_analyze():
         verdict = analysis.get("verdict", "inconclusive")
         severity = analysis.get("severity", "low")
 
-        # Risk scoring
+        # Risk scoring — risk.score is severity-driven (the gauge); confidence
+        # is a separate, evidence-strength score computed by the pipeline.
         severity_scores = {"critical": 90, "high": 70, "medium": 50, "low": 20, "unknown": 0}
-        confidence_map = {"likely_malicious": 85, "suspicious": 60, "inconclusive": 30, "benign": 10}
         base_score = severity_scores.get(severity, 0)
-        confidence = confidence_map.get(verdict, 30)
-        total_iocs = len(iocs.get("ips", [])) + len(iocs.get("urls", [])) + len(iocs.get("emails", []))
+        total_iocs = len(iocs.get("ips", [])) + len(iocs.get("domains", [])) + len(iocs.get("urls", [])) + len(iocs.get("hashes", [])) + len(iocs.get("emails", []))
         if total_iocs > 5:
             base_score = min(100, base_score + 10)
-        risk_score = min(100, base_score + (confidence // 10))
+        risk_score = min(100, base_score)
+        confidence = result.get("confidence", 0)
 
         threat_category = _classify_threat(verdict, severity, mitre_techniques)
 
@@ -145,6 +157,8 @@ def investigate_analyze():
             "threat_intel": threat_intel,
             "mitre": mitre,
             "mitre_techniques": mitre_techniques,
+            "evidence": result.get("evidence", []),
+            "recommendations": result.get("recommendations", []),
             "report": report,
             "risk": {
                 "score": risk_score,
@@ -154,6 +168,8 @@ def investigate_analyze():
                 "ioc_count": total_iocs,
             },
             "pipeline": pipeline_steps,
+            "analyst_status": "New",
+            "analyst_notes": "",
             "investigation_id": result.get("investigation_id"),
         })
 
@@ -201,6 +217,9 @@ def investigate_history():
                 "id": row["id"],
                 "verdict": row.get("verdict"),
                 "severity": row.get("severity"),
+                "confidence": row.get("confidence") or 0,
+                "analyst_status": row.get("analyst_status") or "New",
+                "analyst_notes": row.get("analyst_notes"),
                 "mitre_id": row.get("mitre_id"),
                 "mitre_name": row.get("mitre_name"),
                 "ioc_count": _count_iocs(row.get("iocs")),
@@ -232,13 +251,34 @@ def investigate_detail(investigation_id):
         report = row.get("report", "")
         verdict = row.get("verdict", "inconclusive")
         severity = row.get("severity", "low")
+        confidence = row.get("confidence") or 0
 
         total_iocs = _count_iocs(iocs)
+
+        mitre_techniques = [mitre] if mitre else []
+        evidence = build_evidence(
+            iocs=iocs,
+            threat_intel=threat_intel,
+            mitre_techniques=mitre_techniques,
+        )
+        recommendations = build_specific_recommendations(
+            iocs=iocs,
+            threat_intel=threat_intel,
+            mitre_techniques=mitre_techniques,
+            verdict=verdict,
+            severity=severity,
+            confidence=confidence,
+        )
 
         return jsonify({
             "id": row["id"],
             "verdict": verdict,
             "severity": severity,
+            "confidence": confidence,
+            "evidence": evidence,
+            "recommendations": recommendations,
+            "analyst_status": row.get("analyst_status") or "New",
+            "analyst_notes": row.get("analyst_notes"),
             "iocs": iocs,
             "iocs_defanged": defang_iocs(iocs),
             "threat_intel": threat_intel,
@@ -267,6 +307,46 @@ def investigate_delete(investigation_id):
     except Exception:
         logger.exception("Error deleting investigation")
         return jsonify({"error": "Could not delete investigation."}), 500
+
+
+@app.route("/api/investigate/<int:investigation_id>", methods=["PATCH"])
+@limiter.limit("30 per minute", key_func=get_user_id)
+@login_required
+@csrf_protect
+def investigate_update_analyst(investigation_id):
+    """Update analyst workflow state for an investigation.
+
+    Request:  { "status": "In Review" | "New" | "Resolved" | "False Positive" | "Escalated",
+                "notes": "<optional analyst note>" }
+    Response: the updated investigation summary.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        status = (data.get("status") or "").strip()
+        notes = data.get("notes")
+
+        if not status:
+            return jsonify({"error": "status is required."}), 400
+        if status not in ANALYST_STATUSES:
+            return jsonify({"error": "Unknown status."}), 400
+        if notes is not None and not isinstance(notes, str):
+            return jsonify({"error": "notes must be a string."}), 400
+        notes = (notes or "").strip()
+
+        user_id = get_user_id_int()
+        row = update_investigation_analyst(investigation_id, user_id, status, notes)
+        if not row:
+            return jsonify({"error": "Investigation not found."}), 404
+
+        return jsonify({
+            "ok": True,
+            "id": row["id"],
+            "analyst_status": row.get("analyst_status"),
+            "analyst_notes": row.get("analyst_notes"),
+        })
+    except Exception:
+        logger.exception("Error updating investigation analyst state")
+        return jsonify({"error": "Could not update investigation."}), 500
 
 
 # ── Export endpoints ────────────────────────────────────────────────────────
@@ -315,7 +395,6 @@ def export_investigation_json(investigation_id):
         row = get_investigation_by_id(investigation_id, user_id)
         if not row:
             return jsonify({"error": "Investigation not found."}), 404
-
         iocs = row.get("iocs") or {}
         threat_intel = row.get("threat_intel") or {}
 
@@ -340,7 +419,40 @@ def export_investigation_json(investigation_id):
         return jsonify({"error": "Could not export report."}), 500
 
 
+@app.route("/api/investigate/<int:investigation_id>/export/rule/<rule_format>", methods=["GET"])
+@limiter.limit("20 per minute", key_func=get_user_id)
+@login_required
+def export_investigation_rule(investigation_id, rule_format):
+    """Export a detection rule (Sigma or YARA) for the investigation."""
+    try:
+        if rule_format not in ("sigma", "yara"):
+            return jsonify({"error": "Unknown rule format."}), 400
+
+        user_id = get_user_id_int()
+        row = get_investigation_by_id(investigation_id, user_id)
+        if not row:
+            return jsonify({"error": "Investigation not found."}), 404
+
+        if rule_format == "sigma":
+            body = generate_sigma_rule(row)
+            mimetype = "text/yaml"
+            filename = f"cyberguru-sigma-{investigation_id}.yml"
+        else:
+            body = generate_yara_rule(row)
+            mimetype = "text/x-yara"
+            filename = f"cyberguru-yara-{investigation_id}.yar"
+
+        return Response(
+            body,
+            mimetype=mimetype,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception:
+        logger.exception("Error exporting detection rule")
+        return jsonify({"error": "Could not export rule."}), 500
+
+
 def _count_iocs(iocs) -> int:
     if not iocs:
         return 0
-    return len(iocs.get("ips", [])) + len(iocs.get("urls", [])) + len(iocs.get("emails", []))
+    return sum(len(iocs.get(k) or []) for k in ("ips", "domains", "urls", "hashes", "emails"))

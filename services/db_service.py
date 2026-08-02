@@ -126,15 +126,34 @@ def init_db():
                     artifact_text   TEXT NOT NULL,
                     verdict         TEXT,
                     severity        TEXT,
+                    confidence      INTEGER NOT NULL DEFAULT 0,
                     mitre_id        TEXT,
                     mitre_name      TEXT,
                     iocs            JSONB,
                     threat_intel    JSONB,
                     report          TEXT,
                     analysis_error  TEXT,
+                    analyst_status  TEXT NOT NULL DEFAULT 'New',
+                    analyst_notes   TEXT,
                     created_at      TIMESTAMPTZ DEFAULT NOW()
                 )
             """)
+            # Idempotent column additions for databases created before a column
+            # existed (there is no migration system — raw SQL DDL only, so this
+            # is the smallest safe upgrade path). ADD COLUMN IF NOT EXISTS makes
+            # boot self-healing on existing deployments.
+            cur.execute(
+                "ALTER TABLE investigations "
+                "ADD COLUMN IF NOT EXISTS confidence INTEGER NOT NULL DEFAULT 0"
+            )
+            cur.execute(
+                "ALTER TABLE investigations "
+                "ADD COLUMN IF NOT EXISTS analyst_status TEXT NOT NULL DEFAULT 'New'"
+            )
+            cur.execute(
+                "ALTER TABLE investigations "
+                "ADD COLUMN IF NOT EXISTS analyst_notes TEXT"
+            )
             cur.execute("""
                 CREATE INDEX IF NOT EXISTS idx_investigations_hash
                 ON investigations (artifact_hash)
@@ -181,7 +200,8 @@ def save_investigation(
     iocs,
     threat_intel,
     report,
-    analysis_error=None
+    analysis_error=None,
+    confidence=None,
 ):
     """Persist an investigation result, return the row as a dict."""
     with get_db() as conn:
@@ -189,9 +209,10 @@ def save_investigation(
             cur.execute("""
                 INSERT INTO investigations (
                     user_id, artifact_hash, artifact_text, verdict, severity,
-                    mitre_id, mitre_name, iocs, threat_intel, report, analysis_error
+                    confidence, mitre_id, mitre_name, iocs, threat_intel,
+                    report, analysis_error
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
             """, (
                 user_id,
@@ -199,6 +220,7 @@ def save_investigation(
                 artifact_text,
                 verdict,
                 severity,
+                confidence if confidence is not None else 0,
                 mitre.get("id") if mitre else None,
                 mitre.get("name") if mitre else None,
                 psycopg2.extras.Json(iocs or {}),
@@ -236,13 +258,32 @@ def get_investigation_history(user_id, limit=20):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT id, artifact_hash, verdict, severity, mitre_id, mitre_name,
-                       iocs, created_at
+                       iocs, confidence, analyst_status, analyst_notes, created_at
                 FROM investigations
                 WHERE user_id = %s
                 ORDER BY created_at DESC
                 LIMIT %s
             """, (user_id, limit))
             return cur.fetchall()
+
+
+def update_investigation_analyst(investigation_id, user_id, status, notes):
+    """Update an investigation's analyst status and notes (scoped to user).
+
+    Returns the updated row as a dict, or None if the investigation is not
+    found / not owned by the user.
+    """
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE investigations
+                SET analyst_status = %s,
+                    analyst_notes  = %s
+                WHERE id = %s AND user_id = %s
+                RETURNING *
+            """, (status, notes, investigation_id, user_id))
+            conn.commit()
+            return cur.fetchone()
 
 
 def get_investigation_by_id(investigation_id, user_id):

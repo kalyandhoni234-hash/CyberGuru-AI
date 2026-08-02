@@ -699,8 +699,12 @@
     if (currentInvestigationId) {
       var mdEl = document.getElementById('ic-dash-export-md');
       var jsonEl = document.getElementById('ic-dash-export-json');
+      var sigmaEl = document.getElementById('ic-dash-export-sigma');
+      var yaraEl = document.getElementById('ic-dash-export-yara');
       if (mdEl) mdEl.href = '/api/investigate/' + currentInvestigationId + '/export/md';
       if (jsonEl) jsonEl.href = '/api/investigate/' + currentInvestigationId + '/export/json';
+      if (sigmaEl) sigmaEl.href = '/api/investigate/' + currentInvestigationId + '/export/rule/sigma';
+      if (yaraEl) yaraEl.href = '/api/investigate/' + currentInvestigationId + '/export/rule/yara';
       if (exportBar) exportBar.style.display = '';
     } else {
       if (exportBar) exportBar.style.display = 'none';

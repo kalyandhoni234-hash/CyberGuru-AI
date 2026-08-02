@@ -44,6 +44,8 @@ AUTH_REQUIRED_ENDPOINTS = [
     ("GET",    "/api/investigate/1"),
     ("GET",    "/api/investigate/1/export/md"),
     ("GET",    "/api/investigate/1/export/json"),
+    ("GET",    "/api/investigate/1/export/rule/sigma"),
+    ("GET",    "/api/investigate/1/export/rule/yara"),
     ("POST",   "/api/investigate/analyze"),
     ("POST",   "/api/investigate/ask"),
     ("DELETE", "/api/investigate/1"),

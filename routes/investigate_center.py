@@ -34,6 +34,7 @@ from services.db_service import (
 )
 from utils.defang import defang_iocs
 from utils.evidence import build_evidence
+from utils.rule_generator import generate_sigma_rule, generate_yara_rule
 
 logger = logging.getLogger(__name__)
 
@@ -381,7 +382,6 @@ def export_investigation_json(investigation_id):
         row = get_investigation_by_id(investigation_id, user_id)
         if not row:
             return jsonify({"error": "Investigation not found."}), 404
-
         iocs = row.get("iocs") or {}
         threat_intel = row.get("threat_intel") or {}
 
@@ -404,6 +404,39 @@ def export_investigation_json(investigation_id):
     except Exception:
         logger.exception("Error exporting JSON")
         return jsonify({"error": "Could not export report."}), 500
+
+
+@app.route("/api/investigate/<int:investigation_id>/export/rule/<rule_format>", methods=["GET"])
+@limiter.limit("20 per minute", key_func=get_user_id)
+@login_required
+def export_investigation_rule(investigation_id, rule_format):
+    """Export a detection rule (Sigma or YARA) for the investigation."""
+    try:
+        if rule_format not in ("sigma", "yara"):
+            return jsonify({"error": "Unknown rule format."}), 400
+
+        user_id = get_user_id_int()
+        row = get_investigation_by_id(investigation_id, user_id)
+        if not row:
+            return jsonify({"error": "Investigation not found."}), 404
+
+        if rule_format == "sigma":
+            body = generate_sigma_rule(row)
+            mimetype = "text/yaml"
+            filename = f"cyberguru-sigma-{investigation_id}.yml"
+        else:
+            body = generate_yara_rule(row)
+            mimetype = "text/x-yara"
+            filename = f"cyberguru-yara-{investigation_id}.yar"
+
+        return Response(
+            body,
+            mimetype=mimetype,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception:
+        logger.exception("Error exporting detection rule")
+        return jsonify({"error": "Could not export rule."}), 500
 
 
 def _count_iocs(iocs) -> int:

@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values only — no real credentials. tests/conftest.py stubs out
+      # the database and AI client, and Flask-Limiter runs against memory://.
+      DATABASE_URL: postgresql://example.invalid/test
+      REDIS_URL: memory://
+      GEMINI_API_KEY: ci-placeholder
+      FLASK_SECRET_KEY: ci-placeholder-secret
+      GOOGLE_CLIENT_ID: ci-placeholder
+      GOOGLE_CLIENT_SECRET: ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run tests
+        run: pytest tests/ -q
+
+  lint:
+    name: Lint (flake8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install flake8==7.3.0
+      - name: Run flake8
+        # Soft report for now: the codebase carries pre-existing style debt
+        # (long prompt/error strings). Findings are shown in this log; flip
+        # continue-on-error to false once they are cleaned up.
+        continue-on-error: true
+        run: flake8 .
+
+  security:
+    name: Security (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: pip install bandit==1.9.4
+      - name: Run bandit
+        # Fails the build on Medium+ severity; Low-severity findings are
+        # reported but do not block.
+        run: bandit -r app.py config.py extensions.py routes services utils -x tests --severity-level medium

@@ -12,6 +12,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791?style=flat&logo=postgresql&logoColor=white)](https://neon.tech)
 [![Redis](https://img.shields.io/badge/Rate_Limit-Upstash-DC382D?style=flat&logo=redis&logoColor=white)](https://upstash.com)
 [![Render](https://img.shields.io/badge/Deployed_on-Render-46E3B7?style=flat&logo=render&logoColor=white)](https://render.com)
+[![CI](https://github.com/kalyandhoni234-hash/CyberGuru-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/kalyandhoni234-hash/CyberGuru-AI/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-22c55e?style=flat)](LICENSE)
 
 [**Live App**](https://cyberguru-ai.onrender.com) · [**Report Bug**](https://github.com/kalyandhoni234-hash/CyberGuru-AI/issues) · [**Request Feature**](https://github.com/kalyandhoni234-hash/CyberGuru-AI/issues)

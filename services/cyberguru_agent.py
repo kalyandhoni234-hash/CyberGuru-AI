@@ -3,6 +3,7 @@ import hashlib
 from utils.ioc_extractor import extract_iocs
 from utils.report_generator import generate_incident_report
 from utils.confidence import compute_confidence
+from utils.evidence import build_evidence
 from services.db_service import save_investigation, find_recent_investigation
 
 from services.triage_service import analyze_artifact
@@ -95,6 +96,13 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
         iocs=iocs,
     )
 
+    # Step 5c: Traceable evidence registry (E-01, E-02, ...) for citations.
+    evidence = build_evidence(
+        iocs=iocs,
+        threat_intel=threat_intel,
+        mitre_techniques=mitre_techniques,
+    )
+
     # Step 6: Persist
     investigation_id = None
     if user_id is not None:
@@ -120,6 +128,7 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
         "mitre": mitre,
         "mitre_techniques": mitre_techniques,
         "confidence": confidence,
+        "evidence": evidence,
         "report": report,
         "from_cache": False,
         "investigation_id": investigation_id,
@@ -144,6 +153,11 @@ def _result_from_db_row(row, from_cache=False):
         "mitre": mitre,
         "mitre_techniques": [mitre] if mitre else [],
         "confidence": row.get("confidence") or 0,
+        "evidence": build_evidence(
+            iocs=row.get("iocs"),
+            threat_intel=row.get("threat_intel"),
+            mitre_techniques=[mitre] if mitre else [],
+        ),
         "report": row.get("report", ""),
         "from_cache": from_cache,
     }

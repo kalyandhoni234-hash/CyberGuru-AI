@@ -9,6 +9,7 @@ from services.db_service import get_investigation_by_id
 from services.file_service import extract_pdf_text, parse_log_file, build_analysis_prompt
 from utils.grounding import needs_grounding
 from utils.sanitize import sanitize_input
+from utils.evidence import build_evidence, format_evidence_block
 
 logger = logging.getLogger(__name__)
 MAGIC_BYTES = {
@@ -197,6 +198,14 @@ analyst who has just run an investigation on a piece of evidence.
 - Stay grounded in the provided investigation context. If the answer is not
   contained in the context, say so plainly rather than guessing.
 
+## CITATIONS
+- The investigation context includes an EVIDENCE REGISTRY with IDs such as E-01,
+  E-02, ... one per threat-intel lookup, MITRE technique or IOC.
+- Every factual claim you make MUST cite the evidence it rests on by appending the
+  E-ID in brackets, e.g. "the IP is 91% abusive per AbuseIPDB [E-01]".
+- Do not invent E-IDs that are not in the registry, and do not cite an E-ID unless
+  the claim actually follows from that entry.
+
 ## ETHICS
 - Never encourage illegal hacking, unauthorized access, or malware deployment.
   Frame offensive topics around defense, detection, and authorized use.
@@ -244,11 +253,21 @@ def _build_copilot_context(row) -> str:
     if row.get("mitre_id"):
         mitre = f"{row['mitre_id']} - {row.get('mitre_name', 'Unknown')}"
 
+    mitre_techniques = [{"id": row["mitre_id"], "name": row.get("mitre_name")}] if row.get("mitre_id") else []
+    evidence = build_evidence(
+        iocs=iocs,
+        threat_intel=row.get("threat_intel") or {},
+        mitre_techniques=mitre_techniques,
+    )
+
     return f"""INVESTIGATION CONTEXT
 ---------------------
 Verdict: {row.get("verdict", "inconclusive")}
 Severity: {row.get("severity", "low")}
+Confidence: {row.get("confidence") or 0}/100 (evidence-based)
 MITRE ATT&CK: {mitre or "None identified"}
+
+{format_evidence_block(evidence)}
 
 EXTRACTED INDICATORS
 --------------------

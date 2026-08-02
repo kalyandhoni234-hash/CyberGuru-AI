@@ -32,6 +32,7 @@ from services.db_service import (
     delete_investigation,
 )
 from utils.defang import defang_iocs
+from utils.evidence import build_evidence
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +146,7 @@ def investigate_analyze():
             "threat_intel": threat_intel,
             "mitre": mitre,
             "mitre_techniques": mitre_techniques,
+            "evidence": result.get("evidence", []),
             "report": report,
             "risk": {
                 "score": risk_score,
@@ -237,11 +239,19 @@ def investigate_detail(investigation_id):
 
         total_iocs = _count_iocs(iocs)
 
+        mitre_techniques = [mitre] if mitre else []
+        evidence = build_evidence(
+            iocs=iocs,
+            threat_intel=threat_intel,
+            mitre_techniques=mitre_techniques,
+        )
+
         return jsonify({
             "id": row["id"],
             "verdict": verdict,
             "severity": severity,
             "confidence": confidence,
+            "evidence": evidence,
             "iocs": iocs,
             "iocs_defanged": defang_iocs(iocs),
             "threat_intel": threat_intel,

@@ -86,6 +86,18 @@ service creation, outbound callbacks.
 4. **IOCs** — indicators of compromise
 5. **Likely technique** — MITRE-style behavior, formatted as "T#### - Name"
 6. **Next steps** — containment, validation, hunting actions
+
+## Evidence citations
+Every "Why" bullet must be traceable. Ground each claim in the concrete
+threat-intel or extraction result behind it and name that source explicitly,
+for example:
+- "AbuseIPDB reports 91% abuse confidence for 45.77.65.211"
+- "VirusTotal shows 3 malicious / 1 suspicious vendor flags for 45.77.65.211"
+- "Behavior matches T1110 - Brute Force"
+
+Cite the source, the value, and the metric (not just "threat intel flagged it").
+Separate observed facts from inference, and if a verdict rests on inference
+alone, say that the supporting evidence is thin.
  
 After your narrative analysis, append a machine-readable JSON block on its own line
 so the application can parse verdict and severity reliably. Format it exactly like this:

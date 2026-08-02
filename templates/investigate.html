@@ -847,6 +847,28 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
 .ic-dash-raw-body::-webkit-scrollbar { width:4px; }
 .ic-dash-raw-body::-webkit-scrollbar-thumb { background:var(--ic-border); border-radius:2px; }
 
+/* ── Evidence legend ── */
+.ic-evidence-list { display:flex; flex-direction:column; gap:6px; }
+.ic-evidence-item {
+  display:flex; align-items:flex-start; gap:8px;
+  padding:7px 9px; border:1px solid var(--ic-border); border-radius:8px;
+  background:var(--ic-bg); font-size:11px;
+}
+.ic-evidence-id {
+  flex:0 0 auto; min-width:34px; text-align:center;
+  font-family:var(--font-mono); font-weight:600; font-size:10px;
+  color:#4DA3FF; background:rgba(77,163,255,.12);
+  border:1px solid rgba(77,163,255,.35); border-radius:5px; padding:2px 4px;
+}
+.ic-evidence-item .ic-evidence-type {
+  flex:0 0 auto; color:var(--ic-text-muted); font-size:9px;
+  text-transform:uppercase; letter-spacing:.05em; margin-top:1px;
+}
+.ic-evidence-item .ic-evidence-detail {
+  color:var(--ic-text-secondary); line-height:1.5;
+  font-family:var(--font-mono); word-break:break-all;
+}
+
 /* ── New analysis button ── */
 .ic-new-analysis {
   margin-top:12px; text-align:center;
@@ -1778,7 +1800,8 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
   #ic-dash-mitre      { order:5; }
   #ic-dash-tl         { order:6; }
   #ic-dash-ti         { order:7; }
-  #ic-dash-raw        { order:8; }
+  #ic-dash-evidence   { order:8; }
+  #ic-dash-raw        { order:9; }
 
   /* ── Verdict Banner - compact ── */
   .ic-verdict-banner { padding:10px 12px; margin-bottom:0; }
@@ -2057,6 +2080,17 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
           <div class="ic-dash-body" id="ic-dash-ti-body"></div>
         </div>
 
+        <!-- Evidence Legend -->
+        <div class="ic-dash-card" id="ic-dash-evidence">
+          <div class="ic-dash-hdr">
+            <span>Evidence</span>
+            <span class="badge info" id="ic-dash-evidence-badge">0</span>
+          </div>
+          <div class="ic-dash-body" id="ic-dash-evidence-body">
+            <p style="color:var(--ic-text-muted);font-style:italic;margin:0;">Evidence IDs (E-01, E-02, …) cited by the AI copilot map to the sources below.</p>
+          </div>
+        </div>
+
         <!-- Timeline -->
         <div class="ic-dash-card" id="ic-dash-tl">
           <div class="ic-dash-hdr">Investigation Timeline</div>
@@ -2128,7 +2162,7 @@ button:focus-visible, a:focus-visible, label:focus-visible { outline:2px solid v
         <div class="ic-copilot-body">
           <div class="ic-copilot-msgs" id="ic-copilot-msgs" aria-live="polite"></div>
           <form class="ic-copilot-input-row" id="ic-copilot-form">
-            <textarea id="ic-copilot-input" placeholder="Ask about the artifact, report, IOCs, or next steps…" rows="1" data-keydown="copilotKeydown" aria-label="Copilot question"></textarea>
+            <textarea id="ic-copilot-input" placeholder="Ask about the artifact, report, IOCs, or next steps… (answers cite evidence IDs)" rows="1" data-keydown="copilotKeydown" aria-label="Copilot question"></textarea>
             <button type="submit" class="ic-copilot-send" aria-label="Ask copilot">➤</button>
           </form>
         </div>

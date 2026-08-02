@@ -293,6 +293,7 @@
       populateDashboardIOC(data);
       populateDashboardMITRE(data);
       populateDashboardTI(data);
+      populateEvidenceLegend(data);
       populateDashboardTimeline(data);
       populateDashboardRaw(data);
       renderRiskAssessment(data);
@@ -530,6 +531,31 @@
     if (badge) badge.textContent = total;
   }
 
+  function populateEvidenceLegend(data) {
+    var body = document.getElementById('ic-dash-evidence-body');
+    var badge = document.getElementById('ic-dash-evidence-badge');
+    if (!body) return;
+
+    var evidence = data.evidence || [];
+    if (evidence.length === 0) {
+      body.innerHTML = '<p style="color:var(--ic-text-muted);font-style:italic;margin:0;">No structured evidence was collected for this investigation.</p>';
+      if (badge) badge.textContent = '0';
+      return;
+    }
+
+    body.innerHTML = evidence.map(function (item) {
+      var id = item.id || 'E-??';
+      var type = item.type || 'Evidence';
+      var detail = item.detail || '';
+      return '<div class="ic-evidence-item">'
+        + '<span class="ic-evidence-id">' + escapeHtml(id) + '</span>'
+        + '<span class="ic-evidence-type">' + escapeHtml(type) + '</span>'
+        + '<span class="ic-evidence-detail">' + escapeHtml(detail) + '</span>'
+        + '</div>';
+    }).join('');
+    if (badge) badge.textContent = evidence.length;
+  }
+
   function populateDashboardRecs(data) {
     var body = document.getElementById('ic-dash-recs-body');
     if (!body) return;
@@ -755,6 +781,7 @@
       populateDashboardIOC(data);
       populateDashboardMITRE(data);
       populateDashboardTI(data);
+      populateEvidenceLegend(data);
       populateDashboardTimeline({ analysis: { summary: reportText.slice(0, 300), verdict: verdict, severity: sev }, from_cache: true });
       populateDashboardRaw({ report: reportText, analysis: { verdict: verdict, severity: sev, summary: '' } });
       renderRiskAssessment(riskData);

@@ -133,6 +133,8 @@ def init_db():
                     threat_intel    JSONB,
                     report          TEXT,
                     analysis_error  TEXT,
+                    analyst_status  TEXT NOT NULL DEFAULT 'New',
+                    analyst_notes   TEXT,
                     created_at      TIMESTAMPTZ DEFAULT NOW()
                 )
             """)
@@ -143,6 +145,14 @@ def init_db():
             cur.execute(
                 "ALTER TABLE investigations "
                 "ADD COLUMN IF NOT EXISTS confidence INTEGER NOT NULL DEFAULT 0"
+            )
+            cur.execute(
+                "ALTER TABLE investigations "
+                "ADD COLUMN IF NOT EXISTS analyst_status TEXT NOT NULL DEFAULT 'New'"
+            )
+            cur.execute(
+                "ALTER TABLE investigations "
+                "ADD COLUMN IF NOT EXISTS analyst_notes TEXT"
             )
             cur.execute("""
                 CREATE INDEX IF NOT EXISTS idx_investigations_hash
@@ -248,13 +258,32 @@ def get_investigation_history(user_id, limit=20):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT id, artifact_hash, verdict, severity, mitre_id, mitre_name,
-                       iocs, created_at
+                       iocs, confidence, analyst_status, analyst_notes, created_at
                 FROM investigations
                 WHERE user_id = %s
                 ORDER BY created_at DESC
                 LIMIT %s
             """, (user_id, limit))
             return cur.fetchall()
+
+
+def update_investigation_analyst(investigation_id, user_id, status, notes):
+    """Update an investigation's analyst status and notes (scoped to user).
+
+    Returns the updated row as a dict, or None if the investigation is not
+    found / not owned by the user.
+    """
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE investigations
+                SET analyst_status = %s,
+                    analyst_notes  = %s
+                WHERE id = %s AND user_id = %s
+                RETURNING *
+            """, (status, notes, investigation_id, user_id))
+            conn.commit()
+            return cur.fetchone()
 
 
 def get_investigation_by_id(investigation_id, user_id):

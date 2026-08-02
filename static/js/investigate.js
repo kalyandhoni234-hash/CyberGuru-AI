@@ -297,6 +297,7 @@
       populateDashboardTimeline(data);
       populateDashboardRaw(data);
       renderRiskAssessment(data);
+      populateAnalystState(data);
 
       loadHistory();
       loadInvestigateSuggestions();
@@ -556,6 +557,60 @@
     if (badge) badge.textContent = evidence.length;
   }
 
+  function statusChipClass(status) {
+    return 'ic-status-chip--' + String(status || 'New').toLowerCase().replace(/\s+/g, '-');
+  }
+
+  function populateAnalystState(data) {
+    var chip = document.getElementById('ic-analyst-status-chip');
+    var select = document.getElementById('ic-analyst-status');
+    var notes = document.getElementById('ic-analyst-notes');
+    var saveBtn = document.getElementById('ic-analyst-save');
+    var status = data.analyst_status || 'New';
+    if (chip) {
+      chip.textContent = status;
+      chip.className = 'ic-dash-status-chip ' + statusChipClass(status);
+    }
+    if (select && select.value !== status) select.value = status;
+    if (notes) notes.value = data.analyst_notes || '';
+    if (saveBtn) saveBtn.disabled = false;
+  }
+
+  window.analystStatusChange = function () {
+    var select = document.getElementById('ic-analyst-status');
+    var chip = document.getElementById('ic-analyst-status-chip');
+    if (!select || !chip) return;
+    chip.textContent = select.value;
+    chip.className = 'ic-dash-status-chip ' + statusChipClass(select.value);
+  };
+
+  window.saveAnalystState = async function () {
+    if (!currentInvestigationId) { showToast('No investigation to update.', 'error'); return; }
+    var select = document.getElementById('ic-analyst-status');
+    var notes = document.getElementById('ic-analyst-notes');
+    var saveBtn = document.getElementById('ic-analyst-save');
+    var status = select ? select.value : 'New';
+    if (saveBtn) saveBtn.disabled = true;
+    try {
+      var res = await fetch('/api/investigate/' + currentInvestigationId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: status, notes: notes ? notes.value : '' }),
+      });
+      if (!res.ok) throw new Error('save failed with ' + res.status);
+      var data = await res.json();
+      populateAnalystState({ analyst_status: data.analyst_status, analyst_notes: data.analyst_notes });
+      showToast('Analyst status saved.', 'success');
+      loadHistory();
+    } catch (e) {
+      console.error('Analyst save error:', e);
+      showToast('Could not save analyst state.', 'error');
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  };
+
   function populateDashboardRecs(data) {
     var body = document.getElementById('ic-dash-recs-body');
     if (!body) return;
@@ -734,9 +789,11 @@
         var d = new Date(h.created_at);
         var dateStr = d.toLocaleDateString();
         var iocCount = h.ioc_count || 0;
+        var status = h.analyst_status || 'New';
         return '<div class="ic-hist-item" data-action="loadInvestigation" data-inv-id="' + h.id + '">'
           + '<div class="h-sev ' + sev + '"></div>'
-          + '<div class="h-info"><div class="h-verdict">' + escapeHtml(h.verdict || '—') + '</div>'
+          + '<div class="h-info"><div class="h-verdict">' + escapeHtml(h.verdict || '—')
+          + ' <span class="ic-status-chip ' + statusChipClass(status) + '">' + escapeHtml(status) + '</span></div>'
           + '<div class="h-meta"><span>' + dateStr + '</span><span>' + time + '</span><span>' + iocCount + ' IOCs</span></div></div>'
           + '<button class="ic-hist-delete" data-action="deleteInvestigation" data-inv-id="' + h.id + '" title="Delete">✕</button>'
           + '</div>';
@@ -785,6 +842,7 @@
       populateDashboardTimeline({ analysis: { summary: reportText.slice(0, 300), verdict: verdict, severity: sev }, from_cache: true });
       populateDashboardRaw({ report: reportText, analysis: { verdict: verdict, severity: sev, summary: '' } });
       renderRiskAssessment(riskData);
+      populateAnalystState(data);
 
     } catch (e) { console.error('Error loading investigation:', e); showToast('Error loading investigation.', 'error'); }
   };

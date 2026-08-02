@@ -47,6 +47,7 @@ AUTH_REQUIRED_ENDPOINTS = [
     ("POST",   "/api/investigate/analyze"),
     ("POST",   "/api/investigate/ask"),
     ("DELETE", "/api/investigate/1"),
+    ("PATCH",  "/api/investigate/1"),
     ("POST",   "/analyze-file"),
     ("POST",   "/api/triage/analyze"),
 ]
@@ -59,6 +60,7 @@ CSRF_PROTECTED_ENDPOINTS = [
     ("POST",   "/api/investigate/analyze", {"artifact": "test log"}),
     ("POST",   "/api/investigate/ask",     {"investigation_id": 1, "question": "hi"}),
     ("DELETE", "/api/investigate/1",       None),
+    ("PATCH",  "/api/investigate/1",       {"status": "In Review"}),
     ("POST",   "/api/triage/analyze",      {"artifact": "test log"}),
     ("POST",   "/auth/logout",             None),
     ("POST",   "/analyze-file",            None),      # multipart — body not needed to hit CSRF gate

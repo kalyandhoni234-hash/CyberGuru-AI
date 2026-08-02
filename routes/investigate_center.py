@@ -30,11 +30,18 @@ from services.db_service import (
     get_investigation_history,
     get_investigation_by_id,
     delete_investigation,
+    update_investigation_analyst,
 )
 from utils.defang import defang_iocs
 from utils.evidence import build_evidence
 
 logger = logging.getLogger(__name__)
+
+
+# Analyst triage workflow states. Distinct from severity (which is a risk
+# measure produced by the pipeline) — these reflect where the case sits in
+# the analyst's review process.
+ANALYST_STATUSES = ["New", "In Review", "Resolved", "False Positive", "Escalated"]
 
 
 INVESTIGATION_TYPES = [
@@ -156,6 +163,8 @@ def investigate_analyze():
                 "ioc_count": total_iocs,
             },
             "pipeline": pipeline_steps,
+            "analyst_status": "New",
+            "analyst_notes": "",
             "investigation_id": result.get("investigation_id"),
         })
 
@@ -204,6 +213,8 @@ def investigate_history():
                 "verdict": row.get("verdict"),
                 "severity": row.get("severity"),
                 "confidence": row.get("confidence") or 0,
+                "analyst_status": row.get("analyst_status") or "New",
+                "analyst_notes": row.get("analyst_notes"),
                 "mitre_id": row.get("mitre_id"),
                 "mitre_name": row.get("mitre_name"),
                 "ioc_count": _count_iocs(row.get("iocs")),
@@ -252,6 +263,8 @@ def investigate_detail(investigation_id):
             "severity": severity,
             "confidence": confidence,
             "evidence": evidence,
+            "analyst_status": row.get("analyst_status") or "New",
+            "analyst_notes": row.get("analyst_notes"),
             "iocs": iocs,
             "iocs_defanged": defang_iocs(iocs),
             "threat_intel": threat_intel,
@@ -280,6 +293,46 @@ def investigate_delete(investigation_id):
     except Exception:
         logger.exception("Error deleting investigation")
         return jsonify({"error": "Could not delete investigation."}), 500
+
+
+@app.route("/api/investigate/<int:investigation_id>", methods=["PATCH"])
+@limiter.limit("30 per minute", key_func=get_user_id)
+@login_required
+@csrf_protect
+def investigate_update_analyst(investigation_id):
+    """Update analyst workflow state for an investigation.
+
+    Request:  { "status": "In Review" | "New" | "Resolved" | "False Positive" | "Escalated",
+                "notes": "<optional analyst note>" }
+    Response: the updated investigation summary.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        status = (data.get("status") or "").strip()
+        notes = data.get("notes")
+
+        if not status:
+            return jsonify({"error": "status is required."}), 400
+        if status not in ANALYST_STATUSES:
+            return jsonify({"error": "Unknown status."}), 400
+        if notes is not None and not isinstance(notes, str):
+            return jsonify({"error": "notes must be a string."}), 400
+        notes = (notes or "").strip()
+
+        user_id = get_user_id_int()
+        row = update_investigation_analyst(investigation_id, user_id, status, notes)
+        if not row:
+            return jsonify({"error": "Investigation not found."}), 404
+
+        return jsonify({
+            "ok": True,
+            "id": row["id"],
+            "analyst_status": row.get("analyst_status"),
+            "analyst_notes": row.get("analyst_notes"),
+        })
+    except Exception:
+        logger.exception("Error updating investigation analyst state")
+        return jsonify({"error": "Could not update investigation."}), 500
 
 
 # ── Export endpoints ────────────────────────────────────────────────────────

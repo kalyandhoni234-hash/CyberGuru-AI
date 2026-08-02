@@ -30,20 +30,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
       - name: Run tests
-        run: |
-          set -o pipefail
-          output=$(pytest tests/ -q 2>&1)
-          rc=$?
-          echo "$output"
-          echo "$output" > pytest-output.log
-          exit "$rc"
-      - name: Upload pytest log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-output
-          path: pytest-output.log
-          retention-days: 1
+        run: python -m pytest tests/ -q
 
   lint:
     name: Lint (flake8)

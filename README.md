@@ -27,7 +27,12 @@ CyberGuru AI is a dedicated **SOC Investigation Center**. Analysts paste or uplo
 - **IOC extraction** (IPs, domains, URLs, hashes, emails) with defanging
 - **Threat-intelligence lookups** (AbuseIPDB, VirusTotal) with TTL caching
 - **MITRE ATT&CK mapping** to technique IDs and tactic names
-- **Risk scoring** and a **structured incident report** you can export (Markdown/JSON) or print
+- **Risk scoring** with a severity gauge and a *separate* evidence-based **confidence score**
+- **Traceable AI output** — every claim maps to an evidence ID (E-01, E-02, …) rendered in an Evidence legend
+- **Analyst triage workflow** — status (New / In Review / Resolved / False Positive / Escalated) + notes per investigation
+- **Detection rule export** — one-click **Sigma / YARA** rules generated from the investigation's IOCs and MITRE technique
+- **Evidence-specific recommendations** — deterministic next steps grounded in threat-intel scores, IOCs, and technique
+- A **structured incident report** you can export (Markdown/JSON) or print
 - An **investigation-grounded AI copilot** to ask follow-up questions about the artifact, IOCs, report, or next steps
 
 Built with Flask, powered by **Gemini 2.5 Flash**, and deployed on Render with PostgreSQL (Neon) and Redis (Upstash).
@@ -42,15 +47,33 @@ Every analysis runs a deterministic pipeline before the AI verdict:
 2. **Parsing Evidence** — type-aware parsing (URLs, phishing emails, logs, malware reports, hashes)
 3. **Threat Intelligence Lookup** — AbuseIPDB + VirusTotal reputation, RFC-1918/private IPs skipped before external calls
 4. **MITRE ATT&CK Mapping** — keyword → T-ID / tactic lookup
-5. **Risk Assessment** — severity + confidence → risk score
-6. **AI Analysis** — Gemini verdict and summary
-7. **Report Generation** — full incident report
+5. **Risk Assessment** — severity gauge + separate evidence-based confidence score
+6. **AI Analysis** — Gemini verdict and summary (grounded in cited evidence)
+7. **Report Generation** — full incident report with evidence-specific recommendations
 
 ### 🤖 Investigation-Grounded Copilot
 A panel beside the results lets you ask questions *scoped to the current investigation*:
 - Grounded in the artifact, extracted IOCs, threat-intel results, MITRE mapping, and generated report
+- The prompt includes the full **EVIDENCE REGISTRY** (E-01, E-02, …) and the model must cite these IDs when it makes claims
 - SSE streaming responses, CSRF + rate-limited, `@login_required`
 - `POST /api/investigate/ask` with `{ "investigation_id": <id>, "question": "<text>" }`
+
+### 📊 Analyst Triage Workflow
+Each investigation carries analyst-owned state, kept visually distinct from the pipeline's severity scale:
+- `analyst_status`: **New → In Review → Resolved / False Positive / Escalated** (dedicated blue/teal/violet badge palette)
+- `analyst_notes`: free-text notes per case
+- Status dropdown + notes editor on the dashboard, status chips in the history list
+- `PATCH /api/investigate/<id>` with `{ "status": "In Review", "notes": "…" }`
+
+### 🎯 Evidence, Confidence & Recommendations
+- **Confidence** is a deterministic 0–100 score derived from AbuseIPDB/VirusTotal results, MITRE matches and IOC corroboration — independent of severity, and unit-tested (`utils/confidence.py`)
+- **Evidence legend** lists every source behind the AI's claims with stable E-IDs
+- **Recommendations** are generated deterministically (`utils/recommendations.py`) — e.g. block an IP with ≥75% abuse confidence, DNS-sinkhole a domain, hunt a hash in the EDR, or apply the T1110 lockout/MFA playbook
+
+### 🛡️ Detection Rule Export
+- `GET /api/investigate/<id>/export/rule/sigma` — Sigma YAML mapping IPs → `net.source.ip`, domains → `dns.query.name`, URLs → `http.request.url`, hashes → `file.sha256`, with `attack.*` tags and severity-derived level
+- `GET /api/investigate/<id>/export/rule/yara` — one YARA string per raw indicator
+- Deterministic: same investigation always yields the same rule (stable rule IDs); no LLM involved
 
 ### 🏠 Smart Root
 - Anonymous visitors get a lightweight **landing page** with a sign-in CTA
@@ -61,8 +84,9 @@ A panel beside the results lets you ask questions *scoped to the current investi
 Upload files for AI-powered security review. Supported: `.txt`, `.log`, `.pdf`, `.py`, `.js`, `.json`, `.yaml`, `.conf`, `.sh`, `.csv`, `.md` — up to 5 MB. Magic-byte validation blocks disguised executables, archives, and images.
 
 ### 🗂️ Investigation History & Exports
-- Per-user history (scoped to `user_id` in every query)
+- Per-user history (scoped to `user_id` in every query), with analyst-status chips
 - One-click Markdown / JSON export and print
+- Detection rule export: Sigma / YARA (see above)
 
 ### 🔒 Security-First Backend
 - Rate limiting on all API routes (Flask-Limiter, per-user keys; Redis/Upstash in production)

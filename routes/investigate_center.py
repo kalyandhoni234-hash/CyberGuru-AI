@@ -8,9 +8,11 @@ Endpoints:
   POST /api/investigate/analyze        — Run full investigation pipeline.
   GET  /api/investigate/history        — List past investigations.
   GET  /api/investigate/<id>           — Get single investigation details.
+  PATCH /api/investigate/<id>          — Update analyst status + notes.
   DELETE /api/investigate/<id>         — Delete an investigation.
   GET  /api/investigate/<id>/export/md   — Export as Markdown.
   GET  /api/investigate/<id>/export/json — Export as JSON.
+  GET  /api/investigate/<id>/export/rule/<sigma|yara> — Export detection rule.
 
 Reuses existing:
   - services/cyberguru_agent.investigate()

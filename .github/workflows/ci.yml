@@ -35,10 +35,15 @@ jobs:
           output=$(pytest tests/ -q 2>&1)
           rc=$?
           echo "$output"
-          if [ "$rc" -ne 0 ]; then
-            echo "$output" | grep -Ei 'error|failed|traceback|ImportError|ModuleNotFoundError' | head -40 | while IFS= read -r line; do echo "::error::$line"; done
-          fi
+          echo "$output" > pytest-output.log
           exit "$rc"
+      - name: Upload pytest log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-output
+          path: pytest-output.log
+          retention-days: 1
 
   lint:
     name: Lint (flake8)

@@ -4,6 +4,7 @@ from utils.ioc_extractor import extract_iocs
 from utils.report_generator import generate_incident_report
 from utils.confidence import compute_confidence
 from utils.evidence import build_evidence
+from utils.recommendations import build_specific_recommendations
 from services.db_service import save_investigation, find_recent_investigation
 
 from services.triage_service import analyze_artifact
@@ -71,6 +72,13 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
     severity = analysis.get("severity")
 
     # Step 5: Incident Report
+    recommendations = build_specific_recommendations(
+        iocs=iocs,
+        threat_intel=threat_intel,
+        mitre_techniques=mitre_techniques,
+        verdict=verdict,
+        severity=severity,
+    )
     report = generate_incident_report(
         verdict=verdict,
         severity=severity,
@@ -78,11 +86,7 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
         mitre=mitre,
         threat_intel=threat_intel,
         analysis_error=analysis_error,
-        recommendations=[
-            "Review affected systems",
-            "Investigate related events",
-            "Block malicious indicators if confirmed"
-        ]
+        recommendations=recommendations,
     )
 
     # Step 5b: Deterministic, evidence-based confidence in the assessment.
@@ -129,6 +133,7 @@ def investigate(artifact_text, user_id=None, allow_cached=True):
         "mitre_techniques": mitre_techniques,
         "confidence": confidence,
         "evidence": evidence,
+        "recommendations": recommendations,
         "report": report,
         "from_cache": False,
         "investigation_id": investigation_id,
@@ -157,6 +162,14 @@ def _result_from_db_row(row, from_cache=False):
             iocs=row.get("iocs"),
             threat_intel=row.get("threat_intel"),
             mitre_techniques=[mitre] if mitre else [],
+        ),
+        "recommendations": build_specific_recommendations(
+            iocs=row.get("iocs"),
+            threat_intel=row.get("threat_intel"),
+            mitre_techniques=[mitre] if mitre else [],
+            verdict=row.get("verdict"),
+            severity=row.get("severity"),
+            confidence=row.get("confidence"),
         ),
         "report": row.get("report", ""),
         "from_cache": from_cache,

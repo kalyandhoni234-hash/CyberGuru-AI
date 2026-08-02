@@ -34,6 +34,7 @@ from services.db_service import (
 )
 from utils.defang import defang_iocs
 from utils.evidence import build_evidence
+from utils.recommendations import build_specific_recommendations
 from utils.rule_generator import generate_sigma_rule, generate_yara_rule
 
 logger = logging.getLogger(__name__)
@@ -155,6 +156,7 @@ def investigate_analyze():
             "mitre": mitre,
             "mitre_techniques": mitre_techniques,
             "evidence": result.get("evidence", []),
+            "recommendations": result.get("recommendations", []),
             "report": report,
             "risk": {
                 "score": risk_score,
@@ -257,6 +259,14 @@ def investigate_detail(investigation_id):
             threat_intel=threat_intel,
             mitre_techniques=mitre_techniques,
         )
+        recommendations = build_specific_recommendations(
+            iocs=iocs,
+            threat_intel=threat_intel,
+            mitre_techniques=mitre_techniques,
+            verdict=verdict,
+            severity=severity,
+            confidence=confidence,
+        )
 
         return jsonify({
             "id": row["id"],
@@ -264,6 +274,7 @@ def investigate_detail(investigation_id):
             "severity": severity,
             "confidence": confidence,
             "evidence": evidence,
+            "recommendations": recommendations,
             "analyst_status": row.get("analyst_status") or "New",
             "analyst_notes": row.get("analyst_notes"),
             "iocs": iocs,

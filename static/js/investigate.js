@@ -616,26 +616,31 @@
     if (!body) return;
 
     var recs = [];
-    var analysis = data.analysis || {};
-    var summary = analysis.summary || '';
 
-    if (summary) {
-      var lines = summary.split('\n');
-      lines.forEach(function (line) {
-        var t = line.trim();
-        if (t.match(/^\d+[\.\)]/) || t.match(/^[-*]/) || t.match(/^(recommend|suggest|ensure|implement|use|enable|configure|review|investigate|block|monitor|patch|update|restrict)/i)) {
-          recs.push(t.replace(/^[\d\.\-\*\s]+/, '').trim());
-        }
-      });
-    }
+    if (Array.isArray(data.recommendations) && data.recommendations.length) {
+      recs = data.recommendations.slice(0, 8);
+    } else {
+      var analysis = data.analysis || {};
+      var summary = analysis.summary || '';
 
-    if (recs.length === 0) {
-      var verdict = analysis.verdict || 'inconclusive';
-      var sev = analysis.severity || 'low';
-      recs.push('Review the investigation report for full details.');
-      if (sev !== 'low') recs.push('Block any identified malicious indicators.');
-      recs.push('Monitor affected systems for suspicious activity.');
-      if (verdict === 'likely_malicious') recs.push('Escalate to incident response team if not already engaged.');
+      if (summary) {
+        var lines = summary.split('\n');
+        lines.forEach(function (line) {
+          var t = line.trim();
+          if (t.match(/^\d+[\.\)]/) || t.match(/^[-*]/) || t.match(/^(recommend|suggest|ensure|implement|use|enable|configure|review|investigate|block|monitor|patch|update|restrict)/i)) {
+            recs.push(t.replace(/^[\d\.\-\*\s]+/, '').trim());
+          }
+        });
+      }
+
+      if (recs.length === 0) {
+        var verdict = analysis.verdict || 'inconclusive';
+        var sev = analysis.severity || 'low';
+        recs.push('Review the investigation report for full details.');
+        if (sev !== 'low') recs.push('Block any identified malicious indicators.');
+        recs.push('Monitor affected systems for suspicious activity.');
+        if (verdict === 'likely_malicious') recs.push('Escalate to incident response team if not already engaged.');
+      }
     }
 
     body.innerHTML = recs.slice(0, 8).map(function (r, i) {
@@ -838,7 +843,7 @@
       populateEvidenceBar(reportText.slice(0, 300));
       populateVerdictBanner(riskData);
       populateExecutiveSummary({ analysis: { summary: reportText.slice(0, 500) } });
-      populateDashboardRecs({ analysis: { summary: reportText.slice(0, 500), verdict: verdict, severity: sev } });
+      populateDashboardRecs({ recommendations: data.recommendations, analysis: { summary: reportText.slice(0, 500), verdict: verdict, severity: sev } });
       populateDashboardIOC(data);
       populateDashboardMITRE(data);
       populateDashboardTI(data);

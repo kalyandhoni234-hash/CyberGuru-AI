@@ -1,0 +1,13 @@
+[flake8]
+max-line-length = 120
+extend-exclude =
+    .git,
+    .pytest_cache,
+    __pycache__,
+    build,
+    dist,
+    venv,
+    .venv
+# Whitepace/alignment codes ignored to match existing codebase style;
+# remaining findings (E501 >120, F811) are reported but do not fail CI yet.
+ignore = E221,W293,W292,W391,E114,E116,E302,E306,E241,E226,W503

@@ -1,3 +1,5 @@
+import os
+
 from dotenv import load_dotenv
 load_dotenv()  # load .env before ANY os.getenv() call
 
@@ -10,12 +12,13 @@ init_db()
 from routes import auth, analyze, misc, triage, investigate_center, seo  # noqa: F401,E402
 
 # ==========================
-# START SERVER
+# START SERVER (dev entrypoint; production runs under Gunicorn)
 # ==========================
 
 if __name__ == "__main__":
     app.run(
-        host="0.0.0.0",
-        port=5000,
+        # Dev entrypoint only — production binds via Gunicorn on Render.
+        host=os.getenv("HOST", "0.0.0.0"),  # nosec B104
+        port=int(os.getenv("PORT", "5000")),
         debug=False
     )

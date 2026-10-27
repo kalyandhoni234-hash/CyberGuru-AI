@@ -274,6 +274,7 @@
       }
 
       var data = await res.json();
+      window.__icLastData = data;
       completePipeline();
       var bar = document.querySelector('.ic-btn-bar');
       if (bar) bar.style.width = '100%';
@@ -288,6 +289,7 @@
 
       populateEvidenceBar(artifact);
       populateVerdictBanner(data);
+      populateDashboardRationale(data);
       populateExecutiveSummary(data);
       populateDashboardRecs(data);
       populateDashboardIOC(data);
@@ -406,6 +408,94 @@
     if (confEl) confEl.textContent = (typeof confidence === 'number' ? confidence : 0) + '%';
     if (threatEl) threatEl.textContent = typeof category === 'string' ? category : 'Inconclusive';
     if (iocEl) iocEl.textContent = iocCount;
+
+    /* Incident header subline: real case metadata only — fields are omitted
+       when the response does not carry them (never fabricated). */
+    var sub = document.getElementById('ic-vb-subline');
+    if (sub) {
+      var parts = [];
+      if (data.investigation_id) parts.push('Case #' + escapeHtml(String(data.investigation_id)));
+      if (data.created_at) {
+        var when = new Date(data.created_at);
+        if (!isNaN(when.getTime())) parts.push(escapeHtml(when.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })));
+      }
+      var valid = (typeof data.analysis_valid === 'boolean') ? data.analysis_valid
+        : (typeof analysis.assessment_valid === 'boolean') ? analysis.assessment_valid
+        : (typeof analysis.valid === 'boolean') ? analysis.valid : null;
+      var assess = '';
+      if (valid === true) assess = '<span class="ic-vb-assess ok">Assessment validated</span>';
+      else if (valid === false) assess = '<span class="ic-vb-assess bad">Assessment unavailable</span>';
+      if (parts.length || assess) {
+        sub.innerHTML = parts.join(' <span aria-hidden="true">·</span> ') + assess;
+        sub.hidden = false;
+      } else {
+        sub.hidden = true;
+      }
+    }
+  }
+
+  /* Verdict rationale — assembled strictly from recorded pipeline data.
+     When the pipeline cannot justify a verdict, say so instead of
+     inventing one. */
+  function populateDashboardRationale(data) {
+    var body = document.getElementById('ic-rationale-body');
+    var badge = document.getElementById('ic-rationale-badge');
+    if (!body) return;
+    var risk = data.risk || {};
+    var analysis = data.analysis || {};
+    var valid = (typeof data.analysis_valid === 'boolean') ? data.analysis_valid
+      : (typeof analysis.assessment_valid === 'boolean') ? analysis.assessment_valid
+      : (typeof analysis.valid === 'boolean') ? analysis.valid : null;
+    var items = [];
+
+    if (valid === false) {
+      var reason = data.analysis_error || analysis.error || 'the assessment did not produce a valid verdict';
+      items.push({ cls: 'bad', text: 'No verdict rationale: the AI assessment failed (' + reason + '). Verdict and severity display as "unknown" — they are not a risk rating.' });
+    } else {
+      if (valid === true) {
+        items.push({ text: 'Verdict and severity were extracted independently from the AI assessment and cross-checked against its narrative; disagreement invalidates the assessment.' });
+      }
+      var factors = risk.confidence_factors;
+      if (Array.isArray(factors) && factors.length) {
+        items.push({ text: 'Confidence ' + (typeof risk.confidence === 'number' ? risk.confidence : 0) + '/100 — deterministic heuristic, not a calibrated probability. Factors:' });
+        factors.forEach(function (f) { items.push({ sub: true, text: String(f) }); });
+      } else if (typeof risk.confidence === 'number' && risk.assessed !== false) {
+        items.push({ cls: 'limit', text: 'Confidence factors were not recorded for this investigation, so the displayed score cannot be explained from stored data.' });
+      }
+    }
+
+    /* Provider-lookup outcome counts — computed only from recorded statuses. */
+    var ti = data.threat_intel || {};
+    var counts = { checked: 0, no_record: 0, skipped: 0, failed: 0, unknown: 0 };
+    ['abuseipdb', 'virustotal'].forEach(function (p) {
+      (ti[p] || []).forEach(function (e) {
+        if (!e || typeof e !== 'object') { counts.unknown++; return; }
+        var s = e.status;
+        if (s === 'ok' || (!s && e.result && typeof e.result === 'object')) counts.checked++;
+        else if (s === 'not_found') counts.no_record++;
+        else if (s === 'not_applicable') counts.skipped++;
+        else if (s === 'error') counts.failed++;
+        else counts.unknown++;
+      });
+    });
+    var total = counts.checked + counts.no_record + counts.skipped + counts.failed + counts.unknown;
+    if (total > 0) {
+      items.push({ text: 'Provider lookups: ' + counts.checked + ' checked, ' + counts.no_record + ' with no record, ' + counts.skipped + ' skipped, ' + counts.failed + ' failed, ' + counts.unknown + ' undetermined.' });
+      if (counts.failed) items.push({ cls: 'limit', text: counts.failed + ' lookup(s) failed — their results are missing, not clean.' });
+    } else {
+      items.push({ text: 'No external provider lookups were performed for this investigation.' });
+    }
+
+    var techs = data.mitre_techniques || [];
+    if (techs.length && valid !== false) {
+      items.push({ text: 'Heuristic MITRE ATT&CK mapping: ' + techs.map(function (t) { return (t.id || '') + (t.name ? ' (' + t.name + ')' : ''); }).join(', ') + ' — a mapping, not external proof.' });
+    }
+
+    body.innerHTML = '<ul class="ic-rationale-list">' + items.map(function (it) {
+      return '<li class="' + (it.cls || '') + (it.sub ? ' sub' : '') + '">' + escapeHtml(it.text) + '</li>';
+    }).join('') + '</ul>'
+      + '<div class="ic-rationale-note">Rationale is assembled from recorded pipeline outcomes only; no confidence values or findings are generated here.</div>';
+    if (badge) badge.textContent = valid === false ? 'Unavailable' : valid === true ? 'Validated' : 'Partial';
   }
 
   function populateExecutiveSummary(data) {
@@ -487,6 +577,31 @@
     if (badge) badge.textContent = techniques.length;
   }
 
+  /* Threat-intel entry status view. Defensive: legacy stored entries have
+     no status field but carry a result payload (treated as checked); an
+     unknown shape is reported as undetermined, never as a clean result. */
+  function tiEntryView(entry) {
+    if (!entry || typeof entry !== 'object') {
+      return { kind: 'unknown', label: 'Status unavailable', color: '#FFA502', detail: 'Lookup status could not be determined.' };
+    }
+    var status = entry.status;
+    // If status is missing, infer only when the legacy payload actually carries
+    // provider data (the modern contract). An informational entry such as
+    // { "info": "..." } has no .data and must stay uncertain.
+    if (!status) {
+      if (entry.error) {
+        status = 'error';
+      } else if (entry.result && typeof entry.result === 'object' && entry.result.data && typeof entry.result.data === 'object') {
+        status = 'ok';
+      }
+    }
+    if (status === 'ok')             return { kind: 'ok',             label: 'Checked',   color: '#00FF88', detail: '' };
+    if (status === 'not_found')      return { kind: 'not_found',      label: 'No record', color: '#555570', detail: entry.message || 'Provider has no record for this IP.' };
+    if (status === 'not_applicable') return { kind: 'not_applicable', label: 'Skipped',   color: '#555570', detail: entry.reason || 'Provider not queried for this address.' };
+    if (status === 'error')          return { kind: 'error',          label: 'Failed',    color: '#FF4757', detail: entry.error || 'Lookup failed.' };
+    return { kind: 'unknown', label: 'Status unavailable', color: '#FFA502', detail: 'Lookup status could not be determined.' };
+  }
+
   function populateDashboardTI(data) {
     var ti = data.threat_intel || {};
     var body = document.getElementById('ic-dash-ti-body');
@@ -498,34 +613,53 @@
     var total = abuse.length + vt.length;
 
     if (total === 0) {
-      body.innerHTML = '<div style="text-align:center;padding:12px;color:var(--ic-text-muted);font-size:12px;">No threat intelligence data available.</div>';
+      body.innerHTML = '<div style="text-align:center;padding:12px;color:var(--ic-text-muted);font-size:12px;">No public IP indicators required a threat-intel lookup.</div>';
       if (badge) badge.textContent = '0';
       return;
     }
 
     var html = '';
     abuse.forEach(function (entry) {
-      var ip = entry.ip || 'unknown';
-      var result = entry.result || {};
-      var d2 = result.data || {};
-      var score = d2.abuseConfidenceScore || 0;
-      var reports = d2.totalReports || 0;
-      var country = d2.countryCode || '--';
-      var color = score > 80 ? '#FF4757' : score > 50 ? '#FFA502' : score > 0 ? '#00FF88' : '#555570';
-      html += '<div class="ic-ti-entry"><div class="ic-ti-source">' + escapeHtml(ip) + '</div><div class="ic-ti-stats"><span class="ic-ti-stat" style="color:' + color + '">⚠ Score: ' + score + '</span><span class="ic-ti-stat">📊 Reports: ' + reports + '</span><span class="ic-ti-stat">🌍 ' + country + '</span></div></div>';
+      var view = tiEntryView(entry);
+      var ip = (entry && entry.ip) || 'unknown';
+      html += '<div class="ic-ti-entry"><div class="ic-ti-source">' + escapeHtml(ip) + '</div><div class="ic-ti-stats">'
+        + '<span class="ic-ti-stat" style="color:' + view.color + '">● ' + escapeHtml(view.label) + '</span>';
+      if (view.kind === 'ok') {
+        var result = entry.result || {};
+        var d2 = result.data || {};
+        var score = d2.abuseConfidenceScore !== null && d2.abuseConfidenceScore !== undefined ? d2.abuseConfidenceScore : 'N/A';
+        var reports = d2.totalReports !== null && d2.totalReports !== undefined ? d2.totalReports : 'N/A';
+        var country = d2.countryCode !== null && d2.countryCode !== undefined ? d2.countryCode : '--';
+        var color = (typeof score === 'number' && score > 80) ? '#FF4757' : (typeof score === 'number' && score > 50) ? '#FFA502' : (typeof score === 'number' && score > 0) ? '#00FF88' : '#555570';
+        html += '<span class="ic-ti-stat" style="color:' + color + '">⚠ Score: ' + escapeHtml(score) + '</span>'
+          + '<span class="ic-ti-stat">📊 Reports: ' + escapeHtml(reports) + '</span>'
+          + '<span class="ic-ti-stat">🌍 ' + escapeHtml(country) + '</span>';
+      } else if (view.detail) {
+        html += '<span class="ic-ti-stat" style="color:var(--ic-text-muted)">' + escapeHtml(view.detail) + '</span>';
+      }
+      html += '</div></div>';
     });
     vt.forEach(function (entry) {
-      var ip = entry.ip || 'unknown';
-      var result = entry.result || {};
-      var d2 = result.data || {};
-      var attrs = d2.attributes || {};
-      var stats = attrs.last_analysis_stats || {};
-      var malicious = stats.malicious || 0;
-      var suspicious = stats.suspicious || 0;
-      var harmless = stats.harmless || 0;
-      var total2 = malicious + suspicious + harmless + (stats.undetected || 0);
-      var vcolor = malicious > 0 ? '#FF4757' : suspicious > 0 ? '#FFA502' : '#00FF88';
-      html += '<div class="ic-ti-entry"><div class="ic-ti-source">' + escapeHtml(ip) + ' <span style="font-weight:400;font-size:10px;color:var(--ic-text-muted)">[VirusTotal]</span></div><div class="ic-ti-stats"><span class="ic-ti-stat" style="color:' + vcolor + '">🛡️ ' + malicious + '/' + total2 + ' malicious</span><span class="ic-ti-stat" style="color:#FFA502">⚠ ' + suspicious + ' suspicious</span></div></div>';
+      var view = tiEntryView(entry);
+      var ip = (entry && entry.ip) || 'unknown';
+      html += '<div class="ic-ti-entry"><div class="ic-ti-source">' + escapeHtml(ip) + ' <span style="font-weight:400;font-size:10px;color:var(--ic-text-muted)">[VirusTotal]</span></div><div class="ic-ti-stats">'
+        + '<span class="ic-ti-stat" style="color:' + view.color + '">● ' + escapeHtml(view.label) + '</span>';
+      if (view.kind === 'ok') {
+        var result = entry.result || {};
+        var d2 = result.data || {};
+        var attrs = d2.attributes || {};
+        var stats = attrs.last_analysis_stats || {};
+        var malicious = stats.malicious || 0;
+        var suspicious = stats.suspicious || 0;
+        var harmless = stats.harmless || 0;
+        var total2 = malicious + suspicious + harmless + (stats.undetected || 0);
+        var vcolor = malicious > 0 ? '#FF4757' : suspicious > 0 ? '#FFA502' : '#00FF88';
+        html += '<span class="ic-ti-stat" style="color:' + vcolor + '">🛡️ ' + malicious + '/' + total2 + ' malicious</span>'
+          + '<span class="ic-ti-stat" style="color:#FFA502">⚠ ' + suspicious + ' suspicious</span>';
+      } else if (view.detail) {
+        html += '<span class="ic-ti-stat" style="color:var(--ic-text-muted)">' + escapeHtml(view.detail) + '</span>';
+      }
+      html += '</div></div>';
     });
 
     body.innerHTML = html;
@@ -548,10 +682,13 @@
       var id = item.id || 'E-??';
       var type = item.type || 'Evidence';
       var detail = item.detail || '';
+      var verified = !!item.verified;
+      var prov = item.provenance || 'unknown';
       return '<div class="ic-evidence-item">'
         + '<span class="ic-evidence-id">' + escapeHtml(id) + '</span>'
         + '<span class="ic-evidence-type">' + escapeHtml(type) + '</span>'
         + '<span class="ic-evidence-detail">' + escapeHtml(detail) + '</span>'
+        + '<span class="ic-ev-flag ' + (verified ? 'verified' : 'unverified') + '" title="Provenance: ' + escapeHtml(prov) + (verified ? ' (external provider lookup)' : ' (not externally confirmed)') + '">' + (verified ? 'verified' : 'unverified') + '</span>'
         + '</div>';
     }).join('');
     if (badge) badge.textContent = evidence.length;
@@ -643,44 +780,56 @@
       }
     }
 
-    body.innerHTML = recs.slice(0, 8).map(function (r, i) {
-      return '<div class="ic-dash-rec"><div class="ic-dash-rec-num">' + (i + 1) + '</div><div class="ic-dash-rec-text">' + escapeHtml(r) + '</div></div>';
-    }).join('') || '<div style="text-align:center;padding:12px;color:var(--ic-text-muted);font-size:12px;">No recommendations available.</div>';
+    body.innerHTML = recs.slice(0, 8).length
+      ? renderRecGroups(recs.slice(0, 8))
+      : '<div style="text-align:center;padding:12px;color:var(--ic-text-muted);font-size:12px;">No recommendations available.</div>';
+  }
+
+  /* Presentation-only grouping: investigation/validation steps are kept
+     visually separate from disruptive containment actions. */
+  function recIsContainment(r) {
+    return /^Block /.test(r) || /^Escalate /.test(r) || /^Treat .* as hostile/i.test(r) ||
+      /quarantine/i.test(r) || /sinkhole/i.test(r) || /deny-list/i.test(r) ||
+      /revoke any sessions/i.test(r) || /contain affected hosts/i.test(r) ||
+      /high-priority case/i.test(r);
+  }
+
+  function renderRecGroups(recs) {
+    var inv = [], con = [];
+    recs.forEach(function (r) { (recIsContainment(r) ? con : inv).push(r); });
+    var n = 0;
+    function group(cls, label, arr) {
+      if (!arr.length) return '';
+      var h = '<div class="ic-rec-group ' + cls + '"><div class="ic-rec-group-hdr">' + label + '</div>';
+      arr.forEach(function (r) {
+        n++;
+        h += '<div class="ic-dash-rec"><div class="ic-dash-rec-num">' + n + '</div><div class="ic-dash-rec-text">' + escapeHtml(r) + '</div></div>';
+      });
+      return h + '</div>';
+    }
+    return group('', 'Investigation & validation', inv) + group('ic-rec-group--contain', 'Containment actions', con);
   }
 
   function populateDashboardTimeline(data) {
     var body = document.getElementById('ic-dash-timeline');
     if (!body) return;
-
-    var analysis = data.analysis || {};
-    var summary = analysis.summary || '';
-    var verdict = analysis.verdict || 'inconclusive';
-    var severity = analysis.severity || 'low';
-    var now = new Date();
-
-    var events = [
-      { time: toTimeStr(new Date(now - 7000)), text: 'Evidence submitted for investigation', cls: '' },
-    ];
-
-    if (summary) {
-      var lines = summary.split('\n').filter(function (l) { return l.trim().length > 0; });
-      lines.forEach(function (line, i) {
-        var t = line.trim();
-        if (t.length > 10 && i < 5) {
-          var ts = new Date(now - (lines.length - i) * 2000);
-          var cls = '';
-          if (/fail|block|malicious|attack|breach|comprom/i.test(t)) cls = ' malicious';
-          else if (/suspicious|anomal|unusual|warning/i.test(t)) cls = ' suspicious';
-          else if (/success|clean|benign|resolved|mitigat/i.test(t)) cls = ' benign';
-          events.push({ time: toTimeStr(ts), text: t.slice(0, 120) + (t.length > 120 ? '…' : ''), cls: cls });
-        }
-      });
+    /* Render the RECORDED pipeline stages. Clock times are intentionally
+       omitted because the pipeline does not record per-stage timestamps —
+       showing invented times would misrepresent provenance. */
+    var stages = Array.isArray(data.pipeline) ? data.pipeline : [];
+    if (stages.length === 0) {
+      body.innerHTML = '<div style="text-align:center;padding:12px;color:var(--ic-text-muted);font-size:12px;">No stage outcomes were recorded for this investigation.</div>';
+      return;
     }
-
-    events.push({ time: toTimeStr(now), text: 'Investigation completed — Verdict: ' + verdict + ', Severity: ' + severity, cls: verdict === 'likely_malicious' ? ' malicious' : verdict === 'benign' ? ' benign' : '' });
-
-    body.innerHTML = events.map(function (e) {
-      return '<div class="ic-dash-tl-item' + e.cls + '"><div class="ic-dash-tl-time">' + e.time + '</div><div class="ic-dash-tl-text">' + escapeHtml(e.text) + '</div></div>';
+    var glyph = { completed: '✓', partial: '◐', failed: '✕', skipped: '—', running: '◌' };
+    var cls = { completed: ' benign', partial: ' suspicious', failed: ' malicious', skipped: '', running: '' };
+    body.innerHTML = stages.map(function (s) {
+      var st = s.status || 'unknown';
+      return '<div class="ic-dash-tl-item' + (cls[st] || '') + '">'
+        + '<div class="ic-dash-tl-time ic-tl-status" title="Stage ' + escapeHtml(st) + '">' + (glyph[st] || '?') + '</div>'
+        + '<div class="ic-dash-tl-text">' + escapeHtml(s.label || s.name || 'Stage')
+        + (s.detail ? ' — ' + escapeHtml(s.detail) : '') + '</div>'
+        + '</div>';
     }).join('');
   }
 
@@ -757,7 +906,7 @@
       + '<div class="ic-risk-grid">'
       + '<div class="ic-risk-cell"><div class="lbl">IOCs</div><div class="val">' + iocCount + '</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">Category</div><div class="val" style="font-size:11px">' + escapeHtml(category) + '</div></div>'
-      + '<div class="ic-risk-cell"><div class="lbl">Source</div><div class="val" style="font-size:11px">' + (data.from_cache ? 'Cached' : 'Fresh') + '</div></div>'
+      + '<div class="ic-risk-cell"><div class="lbl">Source</div><div class="val" style="font-size:11px">' + (data.stored ? 'Stored' : data.from_cache ? 'Cached' : 'Fresh') + '</div></div>'
       + '<div class="ic-risk-cell"><div class="lbl">Evidence</div><div class="val">' + confidence + '%</div></div>'
       + '</div>';
   }
@@ -765,15 +914,112 @@
   // ── Print ──
 
   window.printReport = function () {
-    var report = document.getElementById('ic-dash-raw-body');
-    if (!report || !report.textContent) return;
+    var d = window.__icLastData;
+    var raw = document.getElementById('ic-dash-raw-body');
+
+    /* Structured print view built from the SAME investigation data the
+       dashboard renders; falls back to the verbatim stored report text. */
+    if (!d) {
+      if (!raw || !raw.textContent) return;
+      var win0 = window.open('', '_blank');
+      if (!win0) { showToast('Please allow popups for printing.', 'error'); return; }
+      win0.document.write('<html><head><title>Investigation Report</title>');
+      win0.document.write('<style>body{font-family:monospace;font-size:13px;line-height:1.7;padding:40px;white-space:pre-wrap;max-width:800px;margin:0 auto;color:#222;}</style>');
+      win0.document.write('</head><body>');
+      win0.document.write('<pre style="white-space:pre-wrap;word-wrap:break-word;">' + escapeHtml(raw.textContent) + '</pre>');
+      win0.document.write('</body></html>');
+      win0.document.close();
+      win0.print();
+      return;
+    }
+
     var win = window.open('', '_blank');
     if (!win) { showToast('Please allow popups for printing.', 'error'); return; }
-    win.document.write('<html><head><title>Investigation Report</title>');
-    win.document.write('<style>body{font-family:monospace;font-size:13px;line-height:1.7;padding:40px;white-space:pre-wrap;max-width:800px;margin:0 auto;color:#222;}</style>');
-    win.document.write('</head><body>');
-    win.document.write('<pre style="white-space:pre-wrap;word-wrap:break-word;">' + escapeHtml(report.textContent) + '</pre>');
-    win.document.write('</body></html>');
+
+    var analysis = d.analysis || {};
+    var risk = d.risk || {};
+    var verdict = analysis.verdict || 'unavailable';
+    var severity = analysis.severity || 'unavailable';
+    var valid = (typeof d.analysis_valid === 'boolean') ? d.analysis_valid : !!analysis.valid;
+    var e = function (s) { return escapeHtml(String(s == null ? '' : s)); };
+
+    var h = '<!doctype html><html><head><meta charset="utf-8"><title>Investigation Report</title><style>'
+      + 'body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a24;padding:36px 40px;max-width:840px;margin:0 auto;line-height:1.55;}'
+      + 'h1{font-size:20px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px;}'
+      + 'h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#5a5a75;border-bottom:1px solid #e3e3ee;padding-bottom:4px;margin:26px 0 10px;}'
+      + '.meta{font-size:12px;color:#5a5a75;margin-bottom:14px;}'
+      + '.badges span{display:inline-block;padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border:1px solid #d5d5e2;margin-right:6px;}'
+      + '.sec{font-size:13px;white-space:pre-wrap;}'
+      + 'ul{padding-left:18px;font-size:13px;} li{margin:4px 0;}'
+      + '.warn{background:#fff4f2;border:1px solid #ffb4a8;color:#8a1f11;padding:8px 12px;border-radius:6px;font-size:12px;white-space:pre-wrap;}'
+      + '.note{font-size:11px;color:#757589;margin-top:6px;}'
+      + '@media print{body{padding:0;}}'
+      + '</style></head><body>';
+
+    h += '<h1>Incident Report</h1>';
+    h += '<div class="meta">'
+      + (d.investigation_id ? 'Case #' + e(d.investigation_id) + ' &middot; ' : '')
+      + (d.created_at && !isNaN(new Date(d.created_at).getTime()) ? e(new Date(d.created_at).toLocaleString()) + ' &middot; ' : '')
+      + (d.artifact_type ? 'Artifact: ' + e(d.artifact_type) + ' &middot; ' : '')
+      + (d.from_cache ? 'Source: cached' : d.stored ? 'Source: stored' : 'Source: fresh')
+      + '</div>';
+    h += '<div class="badges"><span>' + e(verdict) + '</span><span>' + e(severity) + '</span>'
+      + '<span>' + (valid ? 'Assessment validated' : 'Assessment unavailable') + '</span></div>';
+    if (!valid && (d.analysis_error || analysis.error)) {
+      h += '<div class="warn">Assessment failed: ' + e(d.analysis_error || analysis.error)
+        + '\nVerdict/severity above are "unknown" and are NOT a risk rating.</div>';
+    }
+
+    var summary = analysis.summary || analysis.analysis || '';
+    h += '<h2>Executive Summary</h2><div class="sec">'
+      + (summary ? e(summary) : '<i>No narrative was produced by the assessment.</i>') + '</div>';
+
+    var ioc = d.iocs_defanged || {};
+    var iocHtml = '';
+    [['ips', 'IPs'], ['domains', 'Domains'], ['urls', 'URLs'], ['hashes', 'Hashes'], ['emails', 'Emails']].forEach(function (pair) {
+      var vals = ioc[pair[0]] || [];
+      if (vals.length) {
+        iocHtml += '<h2 style="border:0;margin-bottom:2px;">' + pair[1] + '</h2><ul>'
+          + vals.map(function (v) { return '<li>' + e(v) + '</li>'; }).join('') + '</ul>';
+      }
+    });
+    h += '<h2>Indicators of Compromise (defanged)</h2>'
+      + (iocHtml || '<div class="sec"><i>None identified.</i></div>');
+
+    var ti = d.threat_intel || {};
+    var tiHtml = '';
+    [['abuseipdb', 'AbuseIPDB'], ['virustotal', 'VirusTotal']].forEach(function (p) {
+      (ti[p[0]] || []).forEach(function (entry) {
+        var view = tiEntryView(entry);
+        tiHtml += '<li><strong>' + p[1] + ' (' + e((entry && entry.ip) || 'unknown') + '):</strong> '
+          + e(view.label) + (view.detail ? ' — ' + e(view.detail) : '');
+        if (view.kind === 'ok') {
+          var dd = (entry.result || {}).data || {};
+          if (p[0] === 'abuseipdb') {
+            tiHtml += ' — confidence ' + e(dd.abuseConfidenceScore != null ? dd.abuseConfidenceScore : 'N/A')
+              + ', ' + e(dd.totalReports != null ? dd.totalReports : 'N/A') + ' reports';
+          } else {
+            var st = (dd.attributes || {}).last_analysis_stats || {};
+            tiHtml += ' — ' + e(st.malicious != null ? st.malicious : 'N/A') + ' malicious / '
+              + e(st.suspicious != null ? st.suspicious : 'N/A') + ' suspicious';
+          }
+        }
+        tiHtml += '</li>';
+      });
+    });
+    h += '<h2>Threat Intelligence</h2>' + (tiHtml
+      ? '<ul>' + tiHtml + '</ul>'
+      : '<div class="sec"><i>No public IP indicators required a threat-intel lookup.</i></div>');
+
+    var recs = d.recommendations || [];
+    h += '<h2>Recommended Actions</h2>' + (recs.length
+      ? '<ul>' + recs.map(function (r) { return '<li>' + e(r) + '</li>'; }).join('') + '</ul>'
+      : '<div class="sec"><i>None.</i></div>');
+    h += '<div class="note">Recommendations are ordered: investigation/validation first, containment after. '
+      + 'Confidence values shown in the dashboard are deterministic heuristics, not calibrated probabilities.</div>';
+
+    h += '</body></html>';
+    win.document.write(h);
     win.document.close();
     win.print();
   };
@@ -821,6 +1067,8 @@
       var res = await fetch('/api/investigate/' + id, { credentials: 'include' });
       if (!res.ok) { showToast('Investigation not found.', 'error'); return; }
       var data = await res.json();
+      data.stored = true; /* detail responses are loaded from storage */
+      window.__icLastData = data;
       currentInvestigationId = id;
       syncCopilotVisibility();
 
@@ -837,18 +1085,36 @@
       var riskData = {
         risk: { score: scoreMap[sev] || 0, severity: sev, confidence: data.confidence || 0, threat_category: catMap[verdict] || 'Inconclusive', ioc_count: iocCount },
         from_cache: false,
+        stored: true,
+        investigation_id: id,
+        created_at: data.created_at || null,
+        analysis_valid: data.analysis_valid,
+        analysis_error: data.analysis_error || null,
+        analysis: { verdict: verdict, severity: sev, assessment_valid: data.analysis_valid },
+        threat_intel: data.threat_intel || {},
+        mitre_techniques: data.mitre_techniques || [],
       };
+      /* Prefer the recorded factors (now part of the detail contract); the
+         synthetic risk above keeps score/severity behavior unchanged. */
+      if (data.risk && Array.isArray(data.risk.confidence_factors)) {
+        riskData.risk.confidence_factors = data.risk.confidence_factors;
+        if (typeof data.risk.confidence === 'number') riskData.risk.confidence = data.risk.confidence;
+      }
       var reportText = data.report || '';
 
       populateEvidenceBar(reportText.slice(0, 300));
       populateVerdictBanner(riskData);
+      populateDashboardRationale(riskData);
       populateExecutiveSummary({ analysis: { summary: reportText.slice(0, 500) } });
       populateDashboardRecs({ recommendations: data.recommendations, analysis: { summary: reportText.slice(0, 500), verdict: verdict, severity: sev } });
       populateDashboardIOC(data);
       populateDashboardMITRE(data);
       populateDashboardTI(data);
       populateEvidenceLegend(data);
-      populateDashboardTimeline({ analysis: { summary: reportText.slice(0, 300), verdict: verdict, severity: sev }, from_cache: true });
+      /* The detail contract includes the recorded pipeline stages; the old
+         renderer synthesized a timeline, the new one renders recorded
+         outcomes, so pass them through. */
+      populateDashboardTimeline({ pipeline: data.pipeline || [], from_cache: true });
       populateDashboardRaw({ report: reportText, analysis: { verdict: verdict, severity: sev, summary: '' } });
       renderRiskAssessment(riskData);
       populateAnalystState(data);
@@ -1157,13 +1423,28 @@
   };
 
   /* ── textarea auto-expand ── */
+  /* Coalesced: at most one measurement per animation frame. Rapid input
+     events skip scheduling; the pending callback reads live scrollHeight,
+     so the latest content is always what gets measured. The height reset
+     lives inside the callback so keystrokes do no layout-invalidating
+     writes on their own. */
+  var mobExpandRaf = 0;
   function mobAutoExpand() {
+    if (mobExpandRaf) return;
     var ta = $('mob-textarea');
     if (!ta) return;
-    ta.style.height = 'auto';
-    var next = Math.max(120, Math.min(ta.scrollHeight, 220));
-    ta.style.height = next + 'px';
+    mobExpandRaf = requestAnimationFrame(function () {
+      mobExpandRaf = 0;
+      var ta = $('mob-textarea');
+      if (!ta) return;
+      ta.style.height = 'auto';
+      var next = Math.max(120, Math.min(ta.scrollHeight, 220));
+      ta.style.height = next + 'px';
+    });
   }
+  window.addEventListener('pagehide', function () {
+    if (mobExpandRaf) { cancelAnimationFrame(mobExpandRaf); mobExpandRaf = 0; }
+  });
 
   function mobUpdateCharCount() {
     var ta = $('mob-textarea');
@@ -1553,25 +1834,46 @@
   function mobPopulateTimeline(data) {
     var body = $('mob-timeline');
     if (!body) return;
-    var analysis = data.analysis || {};
-    var verdict  = analysis.verdict || 'inconclusive';
-    var severity = analysis.severity || 'low';
-    var now = new Date();
-    var fmt = function(d) { return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}); };
-
-    var sevClass = { likely_malicious:'malicious', suspicious:'suspicious', benign:'benign' }[verdict] || 'info';
-    var items = [
-      { time: fmt(new Date(now - 180000)), cls:'', text:'Evidence received for analysis' },
-      { time: fmt(new Date(now - 120000)), cls:'', text:'Indicators extracted' },
-      { time: fmt(new Date(now - 60000)),  cls:sevClass, text: 'Verdict: ' + verdict.replace(/_/g,' ').replace(/\b\w/g,function(l){return l.toUpperCase();}) },
-      { time: fmt(now), cls:'', text:'Report generated' },
-    ];
-    body.innerHTML = items.map(function(item) {
-      return '<div class="mob-tl-item' + (item.cls ? ' mob-tl-item--' + item.cls : '') + '">'
-        + '<div class="mob-tl-time">' + item.time + '</div>'
-        + '<div class="mob-tl-text">' + escHtml(item.text) + '</div>'
+    /* Recorded pipeline stages only — no invented clock times. */
+    var stages = Array.isArray(data.pipeline) ? data.pipeline : [];
+    if (stages.length === 0) {
+      body.innerHTML = '<div style="font-size:11px;color:var(--ic-text-muted);padding:4px 0;">No stage outcomes were recorded for this investigation.</div>';
+      return;
+    }
+    var glyph = { completed: '✓', partial: '◐', failed: '✕', skipped: '—', running: '◌' };
+    var clsMap = { completed: 'benign', partial: 'suspicious', failed: 'malicious', skipped: 'info', running: 'info' };
+    body.innerHTML = stages.map(function (s) {
+      var st = s.status || 'unknown';
+      return '<div class="mob-tl-item mob-tl-item--' + (clsMap[st] || 'info') + '">'
+        + '<div class="mob-tl-time">' + (glyph[st] || '?') + '</div>'
+        + '<div class="mob-tl-text">' + escHtml(s.label || s.name || 'Stage')
+        + (s.detail ? ' — ' + escHtml(s.detail) : '') + '</div>'
         + '</div>';
     }).join('');
+  }
+
+  /* Threat-intel entry status view (mobile mirror of the desktop helper).
+     Unknown shapes are reported as undetermined, never as a clean result. */
+  function mobTiEntryView(entry) {
+    if (!entry || typeof entry !== 'object') {
+      return { kind: 'unknown', label: 'Status unavailable', color: '#FFA502', detail: 'Lookup status could not be determined.' };
+    }
+    var status = entry.status;
+    // If status is missing, infer only when the legacy payload actually carries
+    // provider data (the modern contract). An informational entry such as
+    // { "info": "..." } has no .data and must stay uncertain.
+    if (!status) {
+      if (entry.error) {
+        status = 'error';
+      } else if (entry.result && typeof entry.result === 'object' && entry.result.data && typeof entry.result.data === 'object') {
+        status = 'ok';
+      }
+    }
+    if (status === 'ok')             return { kind: 'ok',             label: 'Checked',   color: '#00FF88', detail: '' };
+    if (status === 'not_found')      return { kind: 'not_found',      label: 'No record', color: '#555570', detail: entry.message || 'Provider has no record for this IP.' };
+    if (status === 'not_applicable') return { kind: 'not_applicable', label: 'Skipped',   color: '#555570', detail: entry.reason || 'Provider not queried for this address.' };
+    if (status === 'error')          return { kind: 'error',          label: 'Failed',    color: '#FF4757', detail: entry.error || 'Lookup failed.' };
+    return { kind: 'unknown', label: 'Status unavailable', color: '#FFA502', detail: 'Lookup status could not be determined.' };
   }
 
   function mobPopulateTI(data) {
@@ -1584,39 +1886,51 @@
     var total = abuse.length + vt.length;
     if (badge) badge.textContent = total;
     if (total === 0) {
-      body.innerHTML = '<div style="font-size:11px;color:var(--ic-text-muted);padding:4px 0;">No threat intelligence data.</div>';
+      body.innerHTML = '<div style="font-size:11px;color:var(--ic-text-muted);padding:4px 0;">No public IP indicators required a threat-intel lookup.</div>';
       return;
     }
     var html = '';
     abuse.forEach(function(entry) {
-      var ip   = entry.ip || 'unknown';
-      var d2   = (entry.result || {}).data || {};
-      var score   = d2.abuseConfidenceScore || 0;
-      var reports = d2.totalReports || 0;
-      var country = d2.countryCode || '--';
-      var col  = score > 80 ? '#FF4757' : score > 50 ? '#FFA502' : '#00FF88';
+      var view = mobTiEntryView(entry);
+      var ip   = (entry && entry.ip) || 'unknown';
       html += '<div class="mob-ti-entry">'
         + '<div class="mob-ti-source">' + escHtml(ip) + '</div>'
         + '<div class="mob-ti-row">'
-        + '<span style="color:' + col + '">⚠ ' + score + '</span>'
-        + '<span>📊 ' + reports + ' reports</span>'
-        + '<span>🌍 ' + country + '</span>'
-        + '</div></div>';
+        + '<span style="color:' + view.color + '">● ' + escHtml(view.label) + '</span>';
+      if (view.kind === 'ok') {
+        var d2   = (entry.result || {}).data || {};
+        var score   = d2.abuseConfidenceScore !== null && d2.abuseConfidenceScore !== undefined ? d2.abuseConfidenceScore : 'N/A';
+        var reports = d2.totalReports !== null && d2.totalReports !== undefined ? d2.totalReports : 'N/A';
+        var country = d2.countryCode !== null && d2.countryCode !== undefined ? d2.countryCode : '--';
+        var col  = (typeof score === 'number' && score > 80) ? '#FF4757' : (typeof score === 'number' && score > 50) ? '#FFA502' : '#00FF88';
+        html += '<span style="color:' + col + '">⚠ ' + escapeHtml(score) + '</span>'
+          + '<span>📊 ' + escapeHtml(reports) + ' reports</span>'
+          + '<span>🌍 ' + escHtml(country) + '</span>';
+      } else if (view.detail) {
+        html += '<span style="color:var(--ic-text-muted)">' + escHtml(view.detail) + '</span>';
+      }
+      html += '</div></div>';
     });
     vt.forEach(function(entry) {
-      var ip    = entry.ip || 'unknown';
-      var attrs = ((entry.result || {}).data || {}).attributes || {};
-      var stats = attrs.last_analysis_stats || {};
-      var mal   = stats.malicious || 0;
-      var sus   = stats.suspicious || 0;
-      var tot   = mal + sus + (stats.harmless||0) + (stats.undetected||0);
-      var col   = mal > 0 ? '#FF4757' : sus > 0 ? '#FFA502' : '#00FF88';
+      var view  = mobTiEntryView(entry);
+      var ip    = (entry && entry.ip) || 'unknown';
       html += '<div class="mob-ti-entry">'
         + '<div class="mob-ti-source">' + escHtml(ip) + ' <span style="font-size:9px;color:var(--ic-text-muted)">[VT]</span></div>'
         + '<div class="mob-ti-row">'
-        + '<span style="color:' + col + '">🛡 ' + mal + '/' + tot + ' malicious</span>'
-        + '<span>⚠ ' + sus + ' suspicious</span>'
-        + '</div></div>';
+        + '<span style="color:' + view.color + '">● ' + escHtml(view.label) + '</span>';
+      if (view.kind === 'ok') {
+        var attrs = ((entry.result || {}).data || {}).attributes || {};
+        var stats = attrs.last_analysis_stats || {};
+        var mal   = stats.malicious || 0;
+        var sus   = stats.suspicious || 0;
+        var tot   = mal + sus + (stats.harmless||0) + (stats.undetected||0);
+        var col   = mal > 0 ? '#FF4757' : sus > 0 ? '#FFA502' : '#00FF88';
+        html += '<span style="color:' + col + '">🛡 ' + mal + '/' + tot + ' malicious</span>'
+          + '<span>⚠ ' + sus + ' suspicious</span>';
+      } else if (view.detail) {
+        html += '<span style="color:var(--ic-text-muted)">' + escHtml(view.detail) + '</span>';
+      }
+      html += '</div></div>';
     });
     body.innerHTML = html;
   }

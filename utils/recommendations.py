@@ -11,7 +11,15 @@ hash, technique id) so an analyst can act on it directly.
 """
 
 
-def _abuse_recs(threat_intel) -> list:
+def _containment_allowed(verdict, analysis_valid) -> bool:
+    """Disruptive actions (block/quarantine/revoke) are only recommended
+    for a validated assessment that actually concluded likely_malicious.
+    Suspicious, benign, inconclusive, or failed assessments get
+    investigation-first phrasing instead — never silent containment."""
+    return bool(analysis_valid) and verdict == "likely_malicious"
+
+
+def _abuse_recs(threat_intel, allow_containment) -> list:
     recs = []
     for entry in threat_intel.get("abuseipdb") or []:
         if "error" in entry:
@@ -19,7 +27,7 @@ def _abuse_recs(threat_intel) -> list:
         data = (entry.get("result") or {}).get("data") or {}
         score = data.get("abuseConfidenceScore") or 0
         ip = entry.get("ip")
-        if score >= 75:
+        if score >= 75 and allow_containment:
             recs.append(
                 f"Block {ip} at the perimeter and revoke any sessions from it "
                 f"(AbuseIPDB confidence {score}%)."
@@ -32,7 +40,7 @@ def _abuse_recs(threat_intel) -> list:
     return recs
 
 
-def _vt_recs(threat_intel) -> list:
+def _vt_recs(threat_intel, allow_containment) -> list:
     recs = []
     for entry in threat_intel.get("virustotal") or []:
         if "error" in entry:
@@ -41,25 +49,40 @@ def _vt_recs(threat_intel) -> list:
         stats = (data.get("attributes") or {}).get("last_analysis_stats") or {}
         malicious = stats.get("malicious") or 0
         ip = entry.get("ip")
-        if malicious > 0:
+        if malicious > 0 and allow_containment:
             recs.append(
                 f"Treat {ip} as hostile and quarantine traffic to it "
                 f"(VirusTotal: {malicious} malicious vendor flags)."
             )
+        elif malicious > 0:
+            recs.append(
+                f"Validate the {malicious} VirusTotal malicious detections for {ip} "
+                f"before acting on them."
+            )
     return recs
 
 
-def _ioc_recs(iocs) -> list:
+def _ioc_recs(iocs, allow_containment) -> list:
     iocs = iocs or {}
     recs = []
     for domain in iocs.get("domains") or []:
-        recs.append(f"Block {domain} via DNS sinkhole and deny-list it on the mail gateway.")
+        if allow_containment:
+            recs.append(f"Block {domain} via DNS sinkhole and deny-list it on the mail gateway.")
+        else:
+            recs.append(f"Review DNS and proxy logs for {domain} before deciding on blocking.")
     for url in iocs.get("urls") or []:
-        recs.append(f"Block {url} at the web proxy and email gateway, then scan the sender's domain.")
+        if allow_containment:
+            recs.append(f"Block {url} at the web proxy and email gateway, then scan the sender's domain.")
+        else:
+            recs.append(f"Review web-proxy and mail-gateway logs for {url} before deciding on blocking.")
     for h in iocs.get("hashes") or []:
+        # Hash hunting is read-only validation and is safe for any assessment.
         recs.append(f"Hunt for the file hash {h} across endpoints with EDR hash search.")
     for email in iocs.get("emails") or []:
-        recs.append(f"Search mail logs for inbound messages from {email} and quarantine them.")
+        if allow_containment:
+            recs.append(f"Search mail logs for inbound messages from {email} and quarantine them.")
+        else:
+            recs.append(f"Search mail logs for inbound messages from {email} and review them before quarantining.")
     return recs
 
 
@@ -93,17 +116,31 @@ def _mitre_recs(mitre_techniques) -> list:
 
 
 def build_specific_recommendations(
-    iocs=None, threat_intel=None, mitre_techniques=None, verdict=None, severity=None, confidence=None
+    iocs=None, threat_intel=None, mitre_techniques=None, verdict=None, severity=None,
+    confidence=None, analysis_valid=True,
 ) -> list:
-    """Ordered, deduplicated, evidence-specific next steps."""
+    """Ordered, deduplicated, evidence-specific next steps.
+
+    When ``analysis_valid`` is False (AI failure or unvalidated output), the
+    verdict-specific advice is skipped and an explicit unverified-assessment
+    warning is returned instead.  Never present a failed analysis as a benign
+    closeout.
+    """
     verdict = verdict or "inconclusive"
     severity = severity or "low"
-    threat_intel = threat_intel or {}
-    mitre_techniques = mitre_techniques or []
+    threat_intel = threat_intel if isinstance(threat_intel, dict) else {}
+    mitre_techniques = mitre_techniques if isinstance(mitre_techniques, list) else []
+    iocs = iocs if isinstance(iocs, dict) else {}
 
     recs = []
+    allow_containment = _containment_allowed(verdict, analysis_valid)
 
-    if verdict == "likely_malicious":
+    if not analysis_valid:
+        recs.append(
+            "Automated assessment is unavailable — treat all indicators as "
+            "unverified and review the artifact manually before acting."
+        )
+    elif verdict == "likely_malicious":
         recs.append("Escalate to incident response and contain affected hosts immediately.")
     elif verdict == "suspicious":
         recs.append("Correlate with surrounding log activity before taking blocking actions.")
@@ -118,9 +155,9 @@ def build_specific_recommendations(
     if confidence is not None and confidence < 40:
         recs.append("Confidence is low — gather corroborating telemetry before actioning indicators.")
 
-    recs += _abuse_recs(threat_intel)
-    recs += _vt_recs(threat_intel)
-    recs += _ioc_recs(iocs)
+    recs += _abuse_recs(threat_intel, allow_containment)
+    recs += _vt_recs(threat_intel, allow_containment)
+    recs += _ioc_recs(iocs, allow_containment)
     recs += _mitre_recs(mitre_techniques)
 
     seen, ordered = set(), []

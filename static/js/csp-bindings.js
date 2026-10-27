@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
         loadInvestigateSuggestion(el.dataset.text); break;
 
       // ── Mobile investigate ───────────────────────────────────
-      case 'mobSelectType':      mobSelectType(el.dataset.typeId || el.dataset.type, el); break;
+      case 'mobSelectType':      if (typeof window.mobSelectType === 'function') window.mobSelectType(el.dataset.typeId || el.dataset.type, el); break;
       case 'mobClear':           mobClear(); break;
       case 'mobRunInvestigation': mobRunInvestigation(); break;
       case 'mobBackToInput':     mobBackToInput(); break;

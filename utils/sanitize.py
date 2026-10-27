@@ -9,10 +9,27 @@ def sanitize_input(text: str) -> str:
     Strip null bytes and non-printable control characters,
     then hard-cap length to MAX_INPUT_CHARS.
     """
+    if not isinstance(text, str):
+        return ""
     cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
     if len(cleaned) > MAX_INPUT_CHARS:
         cleaned = cleaned[:MAX_INPUT_CHARS]
     return cleaned.strip()
+
+
+def sanitize_artifact_meta(text: str):
+    """Return ``(cleaned_text, truncated)`` for an artifact.
+
+    The truncation flag lets callers tell the analyst that the tail of the
+    evidence was dropped instead of silently analysing a prefix.
+    """
+    if not isinstance(text, str):
+        return "", False
+    cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+    truncated = len(cleaned) > MAX_ARTIFACT_CHARS
+    if truncated:
+        cleaned = cleaned[:MAX_ARTIFACT_CHARS]
+    return cleaned.strip(), truncated
 
 
 def sanitize_artifact(text: str) -> str:
@@ -23,12 +40,7 @@ def sanitize_artifact(text: str) -> str:
     messages. Used by routes/triage.py so artifact text passed to the
     Gemini agent loop is bounded, not unlimited.
     """
-    if not isinstance(text, str):
-        return ""
-    cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
-    if len(cleaned) > MAX_ARTIFACT_CHARS:
-        cleaned = cleaned[:MAX_ARTIFACT_CHARS]
-    return cleaned.strip()
+    return sanitize_artifact_meta(text)[0]
 
 
 def sanitize_filename(filename: str) -> str:

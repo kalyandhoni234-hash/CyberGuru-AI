@@ -1,7 +1,14 @@
 import time
+import random
 import logging
 import requests
-from config import get_gemini_headers, MAX_RETRIES, BASE_BACKOFF
+from config import (
+    get_gemini_headers,
+    BASE_BACKOFF,
+    MAX_BACKOFF,
+    MAX_JITTER,
+    MAX_RETRIES,
+)
 logger = logging.getLogger(__name__)
 
 
@@ -15,11 +22,25 @@ class GeminiServiceError(Exception):
         super().__init__(f"Gemini API error {status_code}")
 
 
+def _backoff(attempt, retry_after=None):
+    """Bounded exponential back-off with jitter (seconds)."""
+    if retry_after is not None:
+        try:
+            seconds = int(retry_after)
+        except (TypeError, ValueError):
+            seconds = 0
+        if seconds > 0:
+            return min(seconds, MAX_BACKOFF)
+    base = min(BASE_BACKOFF * (2 ** attempt), MAX_BACKOFF)
+    return base + random.uniform(0, MAX_JITTER)
+
+
 def gemini_post(url, payload, stream=False, timeout=60):
-    """
-    POST to Gemini with exponential backoff on 429 (rate limit) and 503 (unavailable).
-    Returns the requests.Response object on success, or raises on final failure.
-    Raises GeminiRateLimitError or GeminiServiceError for callers to handle cleanly.
+    """POST to Gemini with a bounded exponential back-off and jitter.
+
+    Retries 429, 500, 502, 503 and 504.  Returns the response on success,
+    or raises GeminiRateLimitError / GeminiServiceError.  Only the HTTP status
+    is retained; response bodies are not exposed to callers.
     """
     last_status = None
     for attempt in range(MAX_RETRIES):
@@ -36,23 +57,28 @@ def gemini_post(url, payload, stream=False, timeout=60):
             return resp
 
         if resp.status_code == 429:
-            retry_after = int(resp.headers.get("Retry-After", 0))
-            wait = retry_after if retry_after > 0 else BASE_BACKOFF * (2 ** attempt)
-            logger.warning("[Retry %d/%d] 429 rate limit — waiting %ds", attempt + 1, MAX_RETRIES, wait)
+            wait = _backoff(attempt, resp.headers.get("Retry-After"))
+            logger.warning("[Retry %d/%d] 429 rate limit — waiting %.1fs", attempt + 1, MAX_RETRIES, wait)
+            resp.close()
             if attempt < MAX_RETRIES - 1:
                 time.sleep(wait)
             else:
                 raise GeminiRateLimitError()
 
-        elif resp.status_code == 503:
-            wait = BASE_BACKOFF * (2 ** attempt)
-            logger.warning("[Retry %d/%d] 503 unavailable — waiting %ds", attempt + 1, MAX_RETRIES, wait)
+        elif resp.status_code in (500, 502, 503, 504):
+            wait = _backoff(attempt)
+            logger.warning(
+                "[Retry %d/%d] %d unavailable — waiting %.1fs",
+                attempt + 1, MAX_RETRIES, resp.status_code, wait,
+            )
+            resp.close()
             if attempt < MAX_RETRIES - 1:
                 time.sleep(wait)
             else:
                 raise GeminiServiceError(last_status)
 
         else:
+            resp.close()
             raise GeminiServiceError(last_status)
 
     raise GeminiServiceError(last_status)

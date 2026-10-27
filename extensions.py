@@ -66,24 +66,62 @@ CORS(app, origins=_ALLOWED_ORIGINS, supports_credentials=True)
 # worker processes. For true multi-process rate limiting on Render, set
 # REDIS_URL and switch storage_uri to _REDIS_URL below.
 _REDIS_URL = os.getenv("REDIS_URL")
-if not _REDIS_URL and IS_PRODUCTION:
-    # Silent degradation risk: without Redis, each Gunicorn worker keeps its
-    # own independent counter, so the *effective* rate limit multiplies by
-    # the worker count with no error surfaced anywhere. Make sure this shows
-    # up in logs/monitoring rather than failing invisibly.
-    import logging
-    logging.getLogger(__name__).warning(
-        "REDIS_URL is not set in production — rate limiting is falling back "
-        "to in-memory storage, which is NOT shared across worker processes. "
-        "Effective rate limits will be higher than configured (multiplied by "
-        "worker count). Set REDIS_URL to restore accurate multi-worker limits."
+
+
+def _limiter_storage_uri():
+    """Choose limiter storage without turning a missing optional package
+    into a startup crash.
+
+    Flask-Limiter raises ConfigurationError at init when a redis:// URL is
+    supplied but the ``redis`` package is absent.  Redis is optional here, so
+    fall back to in-memory storage and log the degradation explicitly.
+    """
+    import logging as _logging
+
+    logger = _logging.getLogger(__name__)
+    if not _REDIS_URL:
+        if IS_PRODUCTION:
+            logger.warning(
+                "REDIS_URL is not set in production — rate limiting uses "
+                "in-memory storage, which is NOT shared across worker "
+                "processes. Effective limits multiply by the worker count."
+            )
+        return "memory://"
+
+    if _REDIS_URL.startswith(("redis://", "rediss://")):
+        try:
+            import redis  # noqa: F401
+        except ImportError:
+            logger.warning(
+                "REDIS_URL is set but the 'redis' package is not installed; "
+                "falling back to in-memory rate limiting."
+            )
+            return "memory://"
+
+    # If REDIS_URL is set but the hostname cannot be resolved (e.g.
+    # localhost/dev without a reachable Upstash instance), fall back to
+    # in-memory storage so the app starts and serves requests.
+    logger.warning(
+        "REDIS_URL is set but the Redis hostname could not be resolved; "
+        "falling back to in-memory rate limiting for this session."
     )
+    return "memory://"
+
+
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["1000 per day", "200 per hour"],
-    storage_uri=_REDIS_URL if _REDIS_URL else "memory://",
+    storage_uri=_limiter_storage_uri(),
 )
+
+# Default limits would otherwise count every CSS/JS/icon request against the
+# same 200/hour budget and can rate-limit a normal page load. Static assets are
+# not an abuse surface the way API routes are.
+try:
+    app.view_functions["static"] = limiter.exempt(app.view_functions["static"])
+except KeyError:
+    pass
 
 
 @app.errorhandler(429)
@@ -134,17 +172,19 @@ def set_security_headers(response):
             "max-age=63072000; includeSubDomains; preload"
         )
 
-    # Nonce-based CSP — 'unsafe-inline' removed.
-    # Every <script> and <style> tag in templates must carry nonce="{{ g.csp_nonce }}".
+    # Nonce-based CSP.  Inline styles remain allowed because the templates
+    # use style attributes extensively; scripts do not, and the CDN allowlist
+    # was removed because no CDN script is loaded.
     response.headers["Content-Security-Policy"] = (
         f"default-src 'self'; "
-        f"script-src 'self' 'nonce-{nonce}' https://cdnjs.cloudflare.com; "
-        f"style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
-        f"connect-src 'self' https://cdnjs.cloudflare.com; "
+        f"script-src 'self' 'nonce-{nonce}'; "
+        f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        f"connect-src 'self'; "
         f"img-src 'self' data: https:; "
-        f"font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
+        f"font-src 'self' https://fonts.gstatic.com; "
         f"media-src 'self' blob: data:; "
-        f"report-uri /csp-report;"
+        f"object-src 'none'; base-uri 'self'; frame-ancestors 'none'; "
+        f"form-action 'self'; report-uri /csp-report;"
     )
     return response
 

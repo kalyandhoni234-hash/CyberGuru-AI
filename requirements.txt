@@ -7,3 +7,9 @@ Flask-Limiter==3.8.0
 psycopg2-binary==2.9.12
 authlib==1.7.2
 google-genai==2.9.0
+# PDF uploads: without pypdf, extract_pdf_text() silently falls back to a
+# worst-effort byte scan and most PDFs fail in production.
+pypdf==6.16.1
+# Optional but documented: REDIS_URL enables shared rate-limit storage and the
+# threat-intel cache. The app degrades to in-memory storage when absent.
+redis==6.4.0

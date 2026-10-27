@@ -69,8 +69,39 @@ class TestUpdateAnalystState:
 
 
 class TestAnalystStateInResponses:
-    def test_analyze_response_defaults_to_new(self, authenticated_client):
+    def test_analyze_response_defaults_to_new(self, authenticated_client, monkeypatch):
         """A fresh investigation starts in the New state."""
+        monkeypatch.setattr(
+            investigate_center,
+            "investigate",
+            lambda artifact, user_id=None, artifact_type="auto": {
+                "status": "completed",
+                "analysis_valid": True,
+                "analysis": {
+                    "status": "completed",
+                    "assessment_valid": True,
+                    "verdict": "benign",
+                    "severity": "low",
+                    "analysis": "test narrative",
+                },
+                "analysis_error": None,
+                "iocs": {},
+                "threat_intel": {},
+                "mitre_techniques": [],
+                "mitre": None,
+                "confidence": 5,
+                "confidence_factors": [],
+                "evidence": [],
+                "recommendations": [],
+                "report": "test report",
+                "pipeline": [],
+                "from_cache": False,
+                "investigation_id": 1,
+                "artifact_type": artifact_type,
+                "analyst_status": "New",
+                "analyst_notes": "",
+            },
+        )
         resp = authenticated_client.post(
             "/api/investigate/analyze",
             json={"artifact": "failed login from 8.8.8.8"},

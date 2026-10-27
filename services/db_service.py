@@ -12,6 +12,7 @@ The pool is initialised once at module import (i.e. at server startup).
 
 import os
 import logging
+import threading
 import psycopg2
 import psycopg2.extras
 import psycopg2.pool
@@ -19,17 +20,30 @@ import psycopg2.pool
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable not found")
 
 # Pool size: min 2 keeps connections warm; max 10 stays within Neon free tier.
 # Adjust max based on your Render plan and Neon connection limit.
-_pool = psycopg2.pool.ThreadedConnectionPool(
-    minconn=2,
-    maxconn=10,
-    dsn=DATABASE_URL,
-    cursor_factory=psycopg2.extras.RealDictCursor,
-)
+#
+# The pool is created lazily on first use rather than at import: importing the
+# module (tests, route collection, tooling) must not open a network connection
+# or crash when the database is temporarily unavailable.
+_pool = None
+_pool_lock = threading.Lock()
+
+
+def _get_pool():
+    """Return the process-wide connection pool, creating it on first use."""
+    global _pool
+    if _pool is None:
+        with _pool_lock:
+            if _pool is None:
+                _pool = psycopg2.pool.ThreadedConnectionPool(
+                    minconn=2,
+                    maxconn=10,
+                    dsn=DATABASE_URL,
+                    cursor_factory=psycopg2.extras.RealDictCursor,
+                )
+    return _pool
 
 
 class _PooledConnection:
@@ -66,15 +80,16 @@ class _PooledConnection:
             return False
 
     def __enter__(self):
+        pool = _get_pool()
         last_conn = None
         for _ in range(2):  # one retry is enough for a stale-on-checkout connection
-            candidate = _pool.getconn()
+            candidate = pool.getconn()
             if self._is_alive(candidate):
                 self._conn = candidate
                 return self._conn
             last_conn = candidate
             try:
-                _pool.putconn(candidate, close=True)
+                pool.putconn(candidate, close=True)
             except Exception:
                 logger.exception("DB pool: failed to discard dead connection")
         # Both attempts were dead — hand back whatever we last got so the
@@ -93,7 +108,7 @@ class _PooledConnection:
                 except Exception:
                     pass
             try:
-                _pool.putconn(self._conn, close=is_connection_error)
+                _get_pool().putconn(self._conn, close=is_connection_error)
             except Exception:
                 logger.exception("DB pool: failed to return connection")
         return False   # do not suppress exceptions
@@ -135,6 +150,9 @@ def init_db():
                     analysis_error  TEXT,
                     analyst_status  TEXT NOT NULL DEFAULT 'New',
                     analyst_notes   TEXT,
+                    analysis_text   TEXT,
+                    analysis_valid  BOOLEAN,
+                    artifact_type   TEXT,
                     created_at      TIMESTAMPTZ DEFAULT NOW()
                 )
             """)
@@ -153,6 +171,21 @@ def init_db():
             cur.execute(
                 "ALTER TABLE investigations "
                 "ADD COLUMN IF NOT EXISTS analyst_notes TEXT"
+            )
+            # Phase 0: preserve the AI narrative and its validation status so a
+            # cached investigation reconstructs the same contract as a fresh
+            # one, and record the requested artifact type.
+            cur.execute(
+                "ALTER TABLE investigations "
+                "ADD COLUMN IF NOT EXISTS analysis_text TEXT"
+            )
+            cur.execute(
+                "ALTER TABLE investigations "
+                "ADD COLUMN IF NOT EXISTS analysis_valid BOOLEAN"
+            )
+            cur.execute(
+                "ALTER TABLE investigations "
+                "ADD COLUMN IF NOT EXISTS artifact_type TEXT"
             )
             cur.execute("""
                 CREATE INDEX IF NOT EXISTS idx_investigations_hash
@@ -202,6 +235,9 @@ def save_investigation(
     report,
     analysis_error=None,
     confidence=None,
+    analysis_text=None,
+    analysis_valid=None,
+    artifact_type=None,
 ):
     """Persist an investigation result, return the row as a dict."""
     with get_db() as conn:
@@ -210,9 +246,11 @@ def save_investigation(
                 INSERT INTO investigations (
                     user_id, artifact_hash, artifact_text, verdict, severity,
                     confidence, mitre_id, mitre_name, iocs, threat_intel,
-                    report, analysis_error
+                    report, analysis_error, analysis_text, analysis_valid,
+                    artifact_type
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s)
                 RETURNING *
             """, (
                 user_id,
@@ -226,7 +264,10 @@ def save_investigation(
                 psycopg2.extras.Json(iocs or {}),
                 psycopg2.extras.Json(threat_intel or {}),
                 report,
-                analysis_error
+                analysis_error,
+                analysis_text,
+                analysis_valid,
+                artifact_type
             ))
             conn.commit()
             return cur.fetchone()
@@ -246,6 +287,11 @@ def find_recent_investigation(artifact_hash, user_id, max_age_hours=24):
                 WHERE artifact_hash = %s
                   AND user_id = %s
                   AND created_at > NOW() - (%s || ' hours')::INTERVAL
+                  -- Failed or unvalidated assessments are never served as
+                  -- successful cached investigations.
+                  AND analysis_error IS NULL
+                  AND (analysis_valid IS NULL OR analysis_valid = TRUE)
+                  AND verdict IS NOT NULL
                 ORDER BY created_at DESC
                 LIMIT 1
             """, (artifact_hash, user_id, str(max_age_hours)))
@@ -253,12 +299,22 @@ def find_recent_investigation(artifact_hash, user_id, max_age_hours=24):
 
 
 def get_investigation_history(user_id, limit=20):
-    """Return the most recent investigations for a user."""
+    """Return the most recent investigations for a user.
+
+    The limit is clamped here as well as in the route: this function is a
+    public service boundary and must not be able to issue an unbounded scan.
+    """
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError):
+        limit = 20
+    limit = max(1, min(limit, 100))
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT id, artifact_hash, verdict, severity, mitre_id, mitre_name,
-                       iocs, confidence, analyst_status, analyst_notes, created_at
+                       iocs, confidence, analyst_status, analyst_notes,
+                       analysis_valid, artifact_type, created_at
                 FROM investigations
                 WHERE user_id = %s
                 ORDER BY created_at DESC
@@ -267,8 +323,12 @@ def get_investigation_history(user_id, limit=20):
             return cur.fetchall()
 
 
-def update_investigation_analyst(investigation_id, user_id, status, notes):
+def update_investigation_analyst(investigation_id, user_id, status, notes=None):
     """Update an investigation's analyst status and notes (scoped to user).
+
+    ``notes=None`` preserves the existing notes; pass an empty string to clear
+    them explicitly.  This prevents a status-only PATCH from silently wiping
+    analyst notes.
 
     Returns the updated row as a dict, or None if the investigation is not
     found / not owned by the user.
@@ -278,7 +338,7 @@ def update_investigation_analyst(investigation_id, user_id, status, notes):
             cur.execute("""
                 UPDATE investigations
                 SET analyst_status = %s,
-                    analyst_notes  = %s
+                    analyst_notes  = COALESCE(%s, analyst_notes)
                 WHERE id = %s AND user_id = %s
                 RETURNING *
             """, (status, notes, investigation_id, user_id))

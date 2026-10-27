@@ -73,6 +73,13 @@ MAX_INPUT_CHARS       = 4_000
 # DoS vector without one.
 MAX_ARTIFACT_CHARS    = 20_000
 
+# Analyst notes are free text, but still bounded server-side so a single
+# request cannot store an arbitrarily large blob in the investigations table.
+MAX_ANALYST_NOTES_CHARS = 10_000
+
+# Maximum number of investigations a single history request may return.
+MAX_HISTORY_ROWS      = 100
+
 # Per-message cap applied when serialising history for the model context.
 MAX_HISTORY_MSG_CHARS = 8_000
 
@@ -155,3 +162,11 @@ MAX_RETRIES  = 3
 BASE_BACKOFF = 5   # seconds — base for exponential back-off
 MAX_BACKOFF  = 30  # seconds — cap so retries never stall a worker indefinitely
 MAX_JITTER   = 2   # seconds — uniform random jitter added to every back-off interval
+
+# Timeout for a single Gemini SDK call (milliseconds).  The SDK's HTTP
+# options require milliseconds; without an explicit timeout a hung socket
+# can pin a Gunicorn worker until the server kills it.
+AI_REQUEST_TIMEOUT_MS = 60_000
+
+# Timeout for a single external threat-intelligence request (seconds).
+THREAT_INTEL_TIMEOUT_SECONDS = 10

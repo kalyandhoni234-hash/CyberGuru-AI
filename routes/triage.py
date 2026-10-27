@@ -12,6 +12,7 @@ from flask import jsonify, request
 
 from extensions import app, limiter, csrf_protect, login_required, get_user_id
 from services.triage_service import (
+    SUPPORTED_ARTIFACT_TYPES,
     analyze_artifact,
     analyze_log,
     analyze_email,
@@ -41,9 +42,23 @@ def triage_analyze():
     }
     """
     try:
-        data = request.get_json(silent=True) or {}
-        artifact = sanitize_artifact(data.get("artifact", ""))
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"error": "Request body must be a JSON object."}), 400
+
+        raw_artifact = data.get("artifact", "")
+        if not isinstance(raw_artifact, str):
+            return jsonify({"error": "artifact must be a string"}), 400
+        artifact = sanitize_artifact(raw_artifact)
+
         artifact_type = data.get("type", "auto")
+        if artifact_type is None:
+            artifact_type = "auto"
+        if not isinstance(artifact_type, str):
+            return jsonify({"error": "type must be a string"}), 400
+        artifact_type = artifact_type.strip().lower() or "auto"
+        if artifact_type not in SUPPORTED_ARTIFACT_TYPES:
+            return jsonify({"error": "Unsupported artifact type."}), 400
 
         if not artifact:
             return jsonify({"error": "artifact field is required"}), 400
@@ -54,6 +69,8 @@ def triage_analyze():
             # triage_service already logged the real error; return a safe message.
             return jsonify({
                 "status": "error",
+                "analysis_valid": False,
+                "error_code": result.get("error_code"),
                 "message": result.get("message", "Analysis failed"),
             }), 500
 
@@ -99,22 +116,39 @@ def triage_analyze_log():
 def triage_analyze_email():
     """Analyze an email for phishing/security threats."""
     try:
-        data = request.get_json(silent=True) or {}
-        email_content = sanitize_artifact(data.get("email", ""))
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"error": "Request body must be a JSON object."}), 400
+        raw_email = data.get("email", "")
+        if not isinstance(raw_email, str):
+            return jsonify({"error": "email must be a string"}), 400
+        email_content = sanitize_artifact(raw_email)
+
+        subject = data.get("subject")
+        sender = data.get("from")
+        urls = data.get("urls", [])
+        if subject is not None and not isinstance(subject, str):
+            return jsonify({"error": "subject must be a string"}), 400
+        if sender is not None and not isinstance(sender, str):
+            return jsonify({"error": "from must be a string"}), 400
+        if not isinstance(urls, list) or not all(isinstance(u, str) for u in urls):
+            return jsonify({"error": "urls must be a list of strings"}), 400
 
         if not email_content:
             return jsonify({"error": "email field is required"}), 400
 
         result = analyze_email(
             email_content,
-            subject=data.get("subject"),
-            sender=data.get("from"),
-            urls=data.get("urls", []),
+            subject=subject,
+            sender=sender,
+            urls=urls[:50],
         )
 
         if result.get("status") == "error":
             return jsonify({
                 "status": "error",
+                "analysis_valid": False,
+                "error_code": result.get("error_code"),
                 "message": result.get("message", "Email analysis failed"),
             }), 500
 

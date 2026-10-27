@@ -102,3 +102,74 @@ class TestDedup:
             mitre_techniques=[{"id": "T1110", "name": "Brute Force"}] * 3,
         )
         assert len(recs) == len(set(recs))
+
+
+class TestContainmentGating:
+    """Disruptive actions require a validated likely_malicious assessment.
+    Failed, benign, or merely suspicious assessments must never be paired
+    with unconditional blocking advice (the Phase 0 honesty rule: a
+    failed or weak assessment is not a containment mandate)."""
+
+    def test_failed_assessment_never_recommends_blocking(self):
+        recs = build_specific_recommendations(
+            verdict=None, severity=None, analysis_valid=False,
+            iocs={"domains": ["susp.example"], "urls": ["http://susp.example/p"],
+                  "emails": ["a@susp.example"]},
+            threat_intel={
+                "abuseipdb": [{"ip": "9.9.9.9",
+                               "result": {"data": {"abuseConfidenceScore": 91}}}],
+                "virustotal": [{"ip": "1.2.3.4",
+                                "result": {"data": {"attributes":
+                                                    {"last_analysis_stats": {"malicious": 7}}}}}],
+            },
+        )
+        joined = "\n".join(recs)
+        assert "unverified" in joined  # the explicit warning comes first
+        assert "Block " not in joined
+        assert "DNS sinkhole" not in joined
+        assert "quarantine traffic" not in joined
+        # Indicators are still surfaced as review steps, not dropped.
+        assert "susp.example" in joined
+
+    def test_benign_verdict_never_recommends_blocking_iocs(self):
+        recs = build_specific_recommendations(
+            verdict="benign", severity="low", analysis_valid=True,
+            iocs={"domains": ["ok.example"], "urls": ["http://ok.example/x"]},
+        )
+        joined = "\n".join(recs)
+        assert "Block " not in joined
+        assert "before deciding on blocking" in joined
+
+    def test_suspicious_verdict_downgrades_high_abuse_block(self):
+        recs = build_specific_recommendations(
+            verdict="suspicious", severity="medium", analysis_valid=True,
+            threat_intel={"abuseipdb": [{"ip": "45.77.65.211",
+                                         "result": {"data": {"abuseConfidenceScore": 91}}}]},
+        )
+        joined = "\n".join(recs)
+        assert "Block 45.77.65.211" not in joined
+        assert "Investigate traffic to/from 45.77.65.211" in joined
+        assert "91%" in joined  # the evidence itself is still surfaced
+
+    def test_suspicious_verdict_downgrades_vt_quarantine(self):
+        recs = build_specific_recommendations(
+            verdict="suspicious", analysis_valid=True,
+            threat_intel={"virustotal": [{"ip": "2.2.2.2",
+                                          "result": {"data": {"attributes":
+                                                              {"last_analysis_stats": {"malicious": 4}}}}}]},
+        )
+        joined = "\n".join(recs)
+        assert "quarantine traffic" not in joined
+        assert "Validate the 4 VirusTotal malicious detections" in joined
+
+    def test_likely_malicious_keeps_containment_actions(self):
+        recs = build_specific_recommendations(
+            verdict="likely_malicious", severity="high", analysis_valid=True,
+            iocs={"domains": ["evil.example"]},
+            threat_intel={"abuseipdb": [{"ip": "45.77.65.211",
+                                         "result": {"data": {"abuseConfidenceScore": 91}}}]},
+        )
+        joined = "\n".join(recs)
+        assert "Block 45.77.65.211" in joined
+        assert "DNS sinkhole" in joined
+        assert "Escalate to incident response" in joined

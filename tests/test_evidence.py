@@ -75,6 +75,62 @@ class TestEvidenceDetails:
         )
         assert evidence[0]["detail"] == "VirusTotal 2.2.2.2: 3 malicious / 1 suspicious vendor flags"
 
+    def test_abuse_not_applicable_entry_mentions_reason(self):
+        evidence = build_evidence(
+            threat_intel={"abuseipdb": [{"ip": "203.0.113.77", "status": "not_applicable", "reason": "Reserved/Documentation Range (RFC 5737 TEST-NET)"}]},
+        )
+        assert "not applicable" in evidence[0]["detail"]
+        assert "RFC 5737 TEST-NET" in evidence[0]["detail"]
+
+    def test_vt_not_found_entry_flagged(self):
+        evidence = build_evidence(
+            threat_intel={"virustotal": [{"ip": "8.8.8.8", "status": "not_found"}]},
+        )
+        assert "no results found" in evidence[0]["detail"]
+
+
+class TestProvenance:
+    def test_successful_provider_lookup_is_verified(self):
+        evidence = build_evidence(
+            threat_intel={
+                "abuseipdb": [
+                    {"ip": "1.1.1.1", "status": "ok", "result": {"data": {"abuseConfidenceScore": 0}}}
+                ]
+            }
+        )
+        assert evidence[0]["verified"] is True
+        assert evidence[0]["provenance"] == "provider"
+
+    def test_failed_lookup_is_not_verified(self):
+        evidence = build_evidence(
+            threat_intel={
+                "abuseipdb": [
+                    {"ip": "1.1.1.1", "status": "error", "error": "timeout"}
+                ]
+            }
+        )
+        assert evidence[0]["verified"] is False
+        assert evidence[0]["provenance"] == "provider-unavailable"
+
+    def test_malformed_provider_payload_is_not_verified(self):
+        evidence = build_evidence(
+            threat_intel={
+                "virustotal": [
+                    {"ip": "1.1.1.1", "status": "ok", "result": {"data": {"attributes": {}}}}
+                ]
+            }
+        )
+        assert evidence[0]["verified"] is False
+        assert evidence[0]["provenance"] == "provider-malformed"
+
+    def test_mitre_and_iocs_are_labelled_unverified(self):
+        evidence = build_evidence(
+            mitre_techniques=[{"id": "T1110", "name": "Brute Force"}],
+            iocs={"ips": ["1.1.1.1"]},
+        )
+        assert all(item["verified"] is False for item in evidence)
+        assert [item["provenance"] for item in evidence] == ["heuristic", "extraction"]
+
 
 class TestFormatEvidenceBlock:
     def test_empty_registry_renders_placeholder(self):

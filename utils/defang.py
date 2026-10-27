@@ -31,14 +31,35 @@ def defang_email(email):
     return defanged
 
 
+def defang_domain(domain):
+    return domain.replace(".", "[.]")
+
+
+def defang_hash(h):
+    # Hashes carry no clickable scheme or host — nothing to neutralise.
+    return h
+
+
 def defang_iocs(iocs):
     """
-    Given an iocs dict ({"ips": [...], "urls": [...], "emails": [...]}),
-    return a new dict with all values defanged. Original dict is left
-    untouched.
+    Given an iocs dict ({"ips": [...], "domains": [...], "urls": [...],
+    "hashes": [...], "emails": [...]}), return a new dict with all values
+    defanged. Original dict is left untouched. Malformed/missing keys are
+    treated as empty so export rendering cannot crash on a legacy row.
     """
+    if not isinstance(iocs, dict):
+        iocs = {}
+
+    def values(key):
+        raw = iocs.get(key)
+        if not isinstance(raw, list):
+            return []
+        return [str(item) for item in raw if isinstance(item, (str, int, float))]
+
     return {
-        "ips": [defang_ip(ip) for ip in iocs.get("ips", [])],
-        "urls": [defang_url(url) for url in iocs.get("urls", [])],
-        "emails": [defang_email(email) for email in iocs.get("emails", [])],
+        "ips": [defang_ip(ip) for ip in values("ips")],
+        "domains": [defang_domain(domain) for domain in values("domains")],
+        "urls": [defang_url(url) for url in values("urls")],
+        "hashes": [defang_hash(h) for h in values("hashes")],
+        "emails": [defang_email(email) for email in values("emails")],
     }
